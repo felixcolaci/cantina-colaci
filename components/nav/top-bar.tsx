@@ -16,14 +16,16 @@ export async function TopBar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b h-14 flex items-center px-4 justify-between">
       <h1 className="font-semibold text-lg">🍷 Cantina Colaci</h1>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Avatar className="h-8 w-8 cursor-pointer">
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger render={
+          <button className="cursor-pointer rounded-full">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+          </button>
+        } />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem asChild>
-            <Link href="/family">Famiglia</Link>
+          <DropdownMenuItem render={<Link href="/family" />}>
+            Famiglia
           </DropdownMenuItem>
           <LogoutButton />
         </DropdownMenuContent>

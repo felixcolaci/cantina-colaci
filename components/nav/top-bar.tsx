@@ -1,0 +1,33 @@
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  DropdownMenu, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { LogoutButton } from './logout-button'
+
+export async function TopBar() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const initials = user?.email?.slice(0, 2).toUpperCase() ?? '?'
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b h-14 flex items-center px-4 justify-between">
+      <h1 className="font-semibold text-lg">🍷 Cantina Colaci</h1>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Avatar className="h-8 w-8 cursor-pointer">
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href="/family">Famiglia</Link>
+          </DropdownMenuItem>
+          <LogoutButton />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </header>
+  )
+}

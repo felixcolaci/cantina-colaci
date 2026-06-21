@@ -11,16 +11,22 @@ export function LoginForm() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setError(null)
     const supabase = createClient()
-    await supabase.auth.signInWithOtp({
+    const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
-    setSent(true)
+    if (otpError) {
+      setError('Invio non riuscito. Riprova tra qualche minuto.')
+    } else {
+      setSent(true)
+    }
     setLoading(false)
   }
 
@@ -54,6 +60,7 @@ export function LoginForm() {
               required
             />
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Invio in corso…' : 'Invia link di accesso'}
           </Button>

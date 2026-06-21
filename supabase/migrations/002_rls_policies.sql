@@ -1,12 +1,20 @@
 -- Helper: check if the current user is a member of a given family
-create or replace function is_family_member(fid uuid)
-returns boolean language sql security definer stable as $$
+create or replace function public.is_family_member(fid uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = ''
+as $$
   select exists (
-    select 1 from family_members
-    where family_members.family_id = fid
-    and family_members.user_id = auth.uid()
+    select 1 from public.family_members
+    where public.family_members.family_id = fid
+    and public.family_members.user_id = auth.uid()
   );
 $$;
+
+revoke execute on function public.is_family_member(uuid) from public;
+grant execute on function public.is_family_member(uuid) to authenticated;
 
 -- Enable RLS on all tables
 alter table families enable row level security;
@@ -44,44 +52,188 @@ create policy "family members can read and manage cellars" on cellars
   for all using (is_family_member(family_id));
 
 -- Wines
-create policy "family members can read and manage wines" on wines
-  for all using (
+create policy "family members can read wines" on wines
+  for select using (
     exists (
-      select 1 from cellars
-      where cellars.id = wines.cellar_id
-      and is_family_member(cellars.family_id)
+      select 1 from public.cellars
+      where public.cellars.id = wines.cellar_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can insert wines" on wines
+  for insert with check (
+    exists (
+      select 1 from public.cellars
+      where public.cellars.id = wines.cellar_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can update wines" on wines
+  for update using (
+    exists (
+      select 1 from public.cellars
+      where public.cellars.id = wines.cellar_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  ) with check (
+    exists (
+      select 1 from public.cellars
+      where public.cellars.id = wines.cellar_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can delete wines" on wines
+  for delete using (
+    exists (
+      select 1 from public.cellars
+      where public.cellars.id = wines.cellar_id
+      and public.is_family_member(public.cellars.family_id)
     )
   );
 
 -- Cellar entries
-create policy "family members can read and manage entries" on cellar_entries
-  for all using (
+create policy "family members can read entries" on cellar_entries
+  for select using (
     exists (
-      select 1 from wines
-      join cellars on cellars.id = wines.cellar_id
-      where wines.id = cellar_entries.wine_id
-      and is_family_member(cellars.family_id)
+      select 1 from public.wines
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.wines.id = cellar_entries.wine_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can insert entries" on cellar_entries
+  for insert with check (
+    exists (
+      select 1 from public.wines
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.wines.id = cellar_entries.wine_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can update entries" on cellar_entries
+  for update using (
+    exists (
+      select 1 from public.wines
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.wines.id = cellar_entries.wine_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  ) with check (
+    exists (
+      select 1 from public.wines
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.wines.id = cellar_entries.wine_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can delete entries" on cellar_entries
+  for delete using (
+    exists (
+      select 1 from public.wines
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.wines.id = cellar_entries.wine_id
+      and public.is_family_member(public.cellars.family_id)
     )
   );
 
 -- Tastings
-create policy "family members can read and manage tastings" on tastings
-  for all using (
+create policy "family members can read tastings" on tastings
+  for select using (
     exists (
-      select 1 from cellar_entries
-      join wines on wines.id = cellar_entries.wine_id
-      join cellars on cellars.id = wines.cellar_id
-      where cellar_entries.id = tastings.cellar_entry_id
-      and is_family_member(cellars.family_id)
+      select 1 from public.cellar_entries
+      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.cellar_entries.id = tastings.cellar_entry_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can insert tastings" on tastings
+  for insert with check (
+    exists (
+      select 1 from public.cellar_entries
+      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.cellar_entries.id = tastings.cellar_entry_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can update tastings" on tastings
+  for update using (
+    exists (
+      select 1 from public.cellar_entries
+      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.cellar_entries.id = tastings.cellar_entry_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  ) with check (
+    exists (
+      select 1 from public.cellar_entries
+      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.cellar_entries.id = tastings.cellar_entry_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can delete tastings" on tastings
+  for delete using (
+    exists (
+      select 1 from public.cellar_entries
+      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      join public.cellars on public.cellars.id = public.wines.cellar_id
+      where public.cellar_entries.id = tastings.cellar_entry_id
+      and public.is_family_member(public.cellars.family_id)
     )
   );
 
 -- Trips
-create policy "family members can read and manage trips" on trips
-  for all using (
+create policy "family members can read trips" on trips
+  for select using (
     exists (
-      select 1 from cellars
-      where cellars.id = trips.cellar_id
-      and is_family_member(cellars.family_id)
+      select 1 from public.cellars
+      where public.cellars.id = trips.cellar_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can insert trips" on trips
+  for insert with check (
+    exists (
+      select 1 from public.cellars
+      where public.cellars.id = trips.cellar_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can update trips" on trips
+  for update using (
+    exists (
+      select 1 from public.cellars
+      where public.cellars.id = trips.cellar_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  ) with check (
+    exists (
+      select 1 from public.cellars
+      where public.cellars.id = trips.cellar_id
+      and public.is_family_member(public.cellars.family_id)
+    )
+  );
+
+create policy "family members can delete trips" on trips
+  for delete using (
+    exists (
+      select 1 from public.cellars
+      where public.cellars.id = trips.cellar_id
+      and public.is_family_member(public.cellars.family_id)
     )
   );

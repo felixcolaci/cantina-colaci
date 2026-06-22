@@ -55,10 +55,20 @@ export async function addWine(formData: FormData) {
 
   if (wineError) throw new Error(wineError.message)
 
+  const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/heic': 'heic',
+  }
+  const MAX_PHOTO_BYTES = 5 * 1024 * 1024 // 5 MB server-side cap (client compresses to 1 MB)
+
   let photo_url: string | null = null
   const photoFile = formData.get('photo') as File | null
   if (photoFile && photoFile.size > 0) {
-    const ext = photoFile.name.split('.').pop() ?? 'jpg'
+    const ext = ALLOWED_IMAGE_TYPES[photoFile.type]
+    if (!ext) throw new Error('Unsupported image type')
+    if (photoFile.size > MAX_PHOTO_BYTES) throw new Error('Image too large')
     const path = `families/${membership.family_id}/wines/${wine.id}.${ext}`
     const { error: uploadError } = await supabase.storage
       .from('wine-photos')
@@ -70,6 +80,17 @@ export async function addWine(formData: FormData) {
     }
   }
 
+  const tripId = (formData.get('trip_id') as string) || null
+  if (tripId) {
+    const { data: trip } = await supabase
+      .from('trips')
+      .select('id')
+      .eq('id', tripId)
+      .eq('cellar_id', cellarId)
+      .maybeSingle()
+    if (!trip) throw new Error('Invalid trip')
+  }
+
   await supabase.from('cellar_entries').insert({
     wine_id: wine.id,
     quantity: parseInt((formData.get('quantity') as string) ?? '1'),
@@ -77,7 +98,7 @@ export async function addWine(formData: FormData) {
     purchase_date: (formData.get('purchase_date') as string) || null,
     purchase_location: (formData.get('purchase_location') as string) || null,
     shelf_location: (formData.get('shelf_location') as string) || null,
-    trip_id: (formData.get('trip_id') as string) || null,
+    trip_id: tripId,
     photo_url,
     status: 'in_stock',
   })

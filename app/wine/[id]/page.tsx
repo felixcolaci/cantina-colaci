@@ -42,7 +42,7 @@ export default async function WineDetailPage({
   const photo = (entries ?? []).find(e => e.photo_url)?.photo_url
 
   const typeLabel: Record<string, string> = {
-    red: 'Rosso', white: 'Bianco', rosé: 'Rosé', sparkling: 'Spumante',
+    red: 'Rotwein', white: 'Weißwein', rosé: 'Rosé', sparkling: 'Schaumwein',
   }
 
   return (
@@ -64,21 +64,21 @@ export default async function WineDetailPage({
 
         <div className="p-4 rounded-lg bg-muted text-center">
           <p className="text-4xl font-bold">{totalBottles}</p>
-          <p className="text-sm text-muted-foreground">bottiglie in cantina</p>
+          <p className="text-sm text-muted-foreground">Flaschen im Keller</p>
         </div>
 
         {inStockEntries.length > 0 && <OpenBottleButton entryId={inStockEntries[0].id} />}
 
         {wine.notes && (
           <div>
-            <h3 className="font-semibold mb-1">Note</h3>
+            <h3 className="font-semibold mb-1">Notizen</h3>
             <p className="text-sm text-muted-foreground">{wine.notes}</p>
           </div>
         )}
 
         {tastings && tastings.length > 0 && (
           <div>
-            <h3 className="font-semibold mb-3">Degustazioni ({tastings.length})</h3>
+            <h3 className="font-semibold mb-3">Verkostungen ({tastings.length})</h3>
             <div className="space-y-2">
               {tastings.map(t => (
                 <div key={t.id} className="p-3 rounded-lg border">

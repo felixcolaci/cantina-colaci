@@ -43,7 +43,7 @@ export default async function HistoryPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
-      <h2 className="text-xl font-semibold">Storia</h2>
+      <h2 className="text-xl font-semibold">Geschichte</h2>
 
       {entries && entries.length > 0 ? (
         <div className="space-y-3">
@@ -66,7 +66,7 @@ export default async function HistoryPage() {
                 <div className="flex gap-2 flex-wrap">
                   {wine?.vintage && <Badge variant="outline">{wine.vintage}</Badge>}
                   <Badge variant={entry.status === 'consumed' ? 'default' : 'secondary'}>
-                    {entry.status === 'consumed' ? 'Bevuto' : 'Regalato'}
+                    {entry.status === 'consumed' ? 'Getrunken' : 'Verschenkt'}
                   </Badge>
                 </div>
                 {tastings.map((t: any) =>
@@ -80,7 +80,7 @@ export default async function HistoryPage() {
         </div>
       ) : (
         <p className="text-center py-8 text-muted-foreground">
-          Nessun vino ancora bevuto — apri una bottiglia! 🍷
+          Noch nichts getrunken — apri una bottiglia! 🍷
         </p>
       )}
     </div>

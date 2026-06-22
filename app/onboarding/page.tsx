@@ -18,7 +18,7 @@ export default async function OnboardingPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-center mb-6">Benvenuto in Cantina Colaci 🍷</h1>
+        <h1 className="text-2xl font-bold text-center mb-6">Benvenuto bei Cantina Colaci! 🍷</h1>
         <OnboardingForm />
       </div>
     </div>

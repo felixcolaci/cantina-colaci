@@ -23,7 +23,7 @@ export function LoginForm() {
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
     if (otpError) {
-      setError('Invio non riuscito. Riprova tra qualche minuto.')
+      setError('Versand fehlgeschlagen. Bitte nochmal versuchen.')
     } else {
       setSent(true)
     }
@@ -34,8 +34,8 @@ export function LoginForm() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Controlla la tua email</CardTitle>
-          <CardDescription>Abbiamo inviato un link di accesso a {email}</CardDescription>
+          <CardTitle>Schau in deine E-Mails</CardTitle>
+          <CardDescription>Ciao! Wir haben dir einen Anmeldelink an {email} geschickt. 👋</CardDescription>
         </CardHeader>
       </Card>
     )
@@ -44,13 +44,13 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Accedi</CardTitle>
-        <CardDescription>Inserisci la tua email per ricevere un link di accesso</CardDescription>
+        <CardTitle>Anmelden</CardTitle>
+        <CardDescription>E-Mail eingeben — wir schicken dir einen magischen Link</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">E-Mail</Label>
             <Input
               id="email"
               type="email"
@@ -62,7 +62,7 @@ export function LoginForm() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Invio in corso…' : 'Invia link di accesso'}
+            {loading ? 'Wird gesendet…' : 'Link senden'}
           </Button>
         </form>
       </CardContent>

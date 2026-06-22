@@ -13,7 +13,7 @@ export default async function LoginPage() {
         <div className="text-center mb-8">
           <p className="text-5xl mb-3">🍷</p>
           <h1 className="text-3xl font-bold">La Cantina Colaci</h1>
-          <p className="text-muted-foreground mt-2">La vostra collezione di vini</p>
+          <p className="text-muted-foreground mt-2">Eure Weinsammlung</p>
         </div>
         <LoginForm />
       </div>

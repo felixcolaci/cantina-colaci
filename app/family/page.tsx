@@ -25,7 +25,7 @@ export default async function FamilyPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
-      <h2 className="text-xl font-semibold">Famiglia</h2>
+      <h2 className="text-xl font-semibold">Familie</h2>
 
       <Card>
         <CardHeader>
@@ -43,9 +43,9 @@ export default async function FamilyPage() {
 
       {membership.role === 'owner' && (
         <div>
-          <h3 className="font-medium mb-2">Invita un membro</h3>
+          <h3 className="font-medium mb-2">Mitglied einladen</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            Condividi il link. Dopo il login, il membro verrà aggiunto automaticamente alla tua famiglia.
+            Link teilen. Nach dem Anmelden wird das Mitglied automatisch zur Familie hinzugefügt.
           </p>
           <CopyInviteLink familyId={membership.family_id} />
         </div>

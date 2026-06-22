@@ -10,19 +10,19 @@ export function OnboardingForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Crea la tua cantina</CardTitle>
+        <CardTitle>Deinen Keller anlegen</CardTitle>
       </CardHeader>
       <CardContent>
         <form action={createFamilyAndCellar} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="familyName">Nome della famiglia</Label>
+            <Label htmlFor="familyName">Familienname</Label>
             <Input id="familyName" name="familyName" placeholder="Colaci" required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cellarName">Nome della cantina</Label>
-            <Input id="cellarName" name="cellarName" placeholder="Cantina principale" required />
+            <Label htmlFor="cellarName">Keller-Name</Label>
+            <Input id="cellarName" name="cellarName" placeholder="Hauptkeller" required />
           </div>
-          <Button type="submit" className="w-full">Crea cantina</Button>
+          <Button type="submit" className="w-full">Keller anlegen</Button>
         </form>
       </CardContent>
     </Card>

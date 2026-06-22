@@ -14,7 +14,7 @@ export function CopyInviteLink({ familyId }: { familyId: string }) {
 
   return (
     <Button variant="outline" className="w-full" onClick={copy}>
-      {copied ? '✓ Link copiato!' : 'Copia link di invito'}
+      {copied ? '✓ Link kopiert!' : 'Einladungslink kopieren'}
     </Button>
   )
 }

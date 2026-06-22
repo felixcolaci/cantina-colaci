@@ -25,7 +25,7 @@ export async function TopBar() {
         } />
         <DropdownMenuContent align="end">
           <DropdownMenuItem render={<Link href="/family" />}>
-            Famiglia
+            Familie
           </DropdownMenuItem>
           <LogoutButton />
         </DropdownMenuContent>

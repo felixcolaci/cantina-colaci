@@ -14,30 +14,30 @@ export function NewTripForm() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={<Button className="w-full" />}>
-        <Plus className="h-4 w-4 mr-2" />Nuovo viaggio
+        <Plus className="h-4 w-4 mr-2" />Neue Reise
       </SheetTrigger>
       <SheetContent side="bottom" className="pb-8">
-        <SheetHeader><SheetTitle>Nuovo viaggio</SheetTitle></SheetHeader>
+        <SheetHeader><SheetTitle>Neue Reise</SheetTitle></SheetHeader>
         <form action={createTrip} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome *</Label>
-            <Input id="name" name="name" placeholder="Toscana Estate 2026" required />
+            <Label htmlFor="name">Name *</Label>
+            <Input id="name" name="name" placeholder="Toskana Sommer 2026" required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="location">Luogo</Label>
-            <Input id="location" name="location" placeholder="Toscana, Italia" />
+            <Label htmlFor="location">Ort</Label>
+            <Input id="location" name="location" placeholder="Toskana, Italien" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="date_start">Inizio</Label>
+              <Label htmlFor="date_start">Beginn</Label>
               <Input id="date_start" name="date_start" type="date" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="date_end">Fine</Label>
+              <Label htmlFor="date_end">Ende</Label>
               <Input id="date_end" name="date_end" type="date" />
             </div>
           </div>
-          <Button type="submit" className="w-full">Crea viaggio</Button>
+          <Button type="submit" className="w-full">Reise anlegen</Button>
         </form>
       </SheetContent>
     </Sheet>

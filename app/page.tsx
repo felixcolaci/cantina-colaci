@@ -51,16 +51,16 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
-      <h2 className="text-xl font-semibold">Benvenuto</h2>
+      <h2 className="text-xl font-semibold">Ciao! Willkommen 🍷</h2>
 
       <div className="grid grid-cols-2 gap-3">
-        <StatsCard title="Bottiglie in cantina" value={totalBottles} />
-        <StatsCard title="Vini diversi" value={wineIds.length} />
+        <StatsCard title="Flaschen im Keller" value={totalBottles} />
+        <StatsCard title="Verschiedene Weine" value={wineIds.length} />
       </div>
 
       {recentTastings && recentTastings.length > 0 && (
         <section>
-          <h3 className="font-medium mb-3">Ultime degustazioni</h3>
+          <h3 className="font-medium mb-3">Letzte Verkostungen</h3>
           <div className="space-y-2">
             {recentTastings.map(t => {
               const wine = (t.cellar_entries as any)?.wines
@@ -81,9 +81,9 @@ export default async function DashboardPage() {
       {wineIds.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
           <p className="text-4xl mb-2">🍾</p>
-          <p>La cantina è vuota</p>
+          <p>Der Keller ist leer</p>
           <Link href="/wine/new" className="mt-3 inline-block text-primary underline">
-            Aggiungi il primo vino
+            Ersten Wein hinzufügen
           </Link>
         </div>
       )}

@@ -34,7 +34,7 @@ export default async function TripsPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
-      <h2 className="text-xl font-semibold">Viaggi</h2>
+      <h2 className="text-xl font-semibold">Reisen</h2>
       <NewTripForm />
 
       {trips && trips.length > 0 ? (
@@ -56,7 +56,7 @@ export default async function TripsPage() {
           ))}
         </div>
       ) : (
-        <p className="text-center py-8 text-muted-foreground">Nessun viaggio ancora 🗺️</p>
+        <p className="text-center py-8 text-muted-foreground">Noch keine Reisen — Andiamo! 🗺️</p>
       )}
     </div>
   )

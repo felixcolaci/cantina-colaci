@@ -32,7 +32,7 @@ export default async function NewWinePage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
-      <h2 className="text-xl font-semibold mb-6">Aggiungi vino</h2>
+      <h2 className="text-xl font-semibold mb-6">Wein hinzufügen</h2>
       <WineForm trips={trips ?? []} />
     </div>
   )

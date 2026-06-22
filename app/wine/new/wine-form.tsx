@@ -36,83 +36,83 @@ export function WineForm({ trips }: WineFormProps) {
   return (
     <form action={handleSubmit} className="space-y-4 pb-8">
       <div className="space-y-2">
-        <Label>Foto della bottiglia</Label>
+        <Label>Foto der Flasche</Label>
         {preview && (
-          <img src={preview} alt="Anteprima" className="w-24 h-32 object-cover rounded border" />
+          <img src={preview} alt="Vorschau" className="w-24 h-32 object-cover rounded border" />
         )}
         <Input type="file" accept="image/*" capture="environment" onChange={handlePhoto} />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="name">Nome *</Label>
+        <Label htmlFor="name">Name *</Label>
         <Input id="name" name="name" required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="producer">Produttore *</Label>
+        <Label htmlFor="producer">Weingut / Hersteller *</Label>
         <Input id="producer" name="producer" required />
       </div>
 
       <div className="space-y-2">
-        <Label>Tipo *</Label>
+        <Label>Weintyp *</Label>
         <Select name="type" required>
-          <SelectTrigger><SelectValue placeholder="Seleziona tipo" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Typ auswählen" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="red">Rosso</SelectItem>
-            <SelectItem value="white">Bianco</SelectItem>
+            <SelectItem value="red">Rotwein</SelectItem>
+            <SelectItem value="white">Weißwein</SelectItem>
             <SelectItem value="rosé">Rosé</SelectItem>
-            <SelectItem value="sparkling">Spumante</SelectItem>
+            <SelectItem value="sparkling">Schaumwein</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="vintage">Annata</Label>
+          <Label htmlFor="vintage">Jahrgang</Label>
           <Input id="vintage" name="vintage" type="number" min="1900" max="2099" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="quantity">Bottiglie</Label>
+          <Label htmlFor="quantity">Flaschen</Label>
           <Input id="quantity" name="quantity" type="number" min="1" defaultValue="1" />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="region">Regione</Label>
-        <Input id="region" name="region" placeholder="es. Toscana" />
+        <Label htmlFor="region">Region</Label>
+        <Input id="region" name="region" placeholder="z.B. Toskana" />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="country">Paese</Label>
-        <Input id="country" name="country" placeholder="es. Italia" />
+        <Label htmlFor="country">Land</Label>
+        <Input id="country" name="country" placeholder="z.B. Italien" />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="grape_variety">Vitigno</Label>
-        <Input id="grape_variety" name="grape_variety" placeholder="es. Sangiovese" />
+        <Label htmlFor="grape_variety">Rebsorte</Label>
+        <Input id="grape_variety" name="grape_variety" placeholder="z.B. Sangiovese" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="purchase_price">Prezzo (€)</Label>
+          <Label htmlFor="purchase_price">Preis (€)</Label>
           <Input id="purchase_price" name="purchase_price" type="number" step="0.01" min="0" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="purchase_date">Data acquisto</Label>
+          <Label htmlFor="purchase_date">Kaufdatum</Label>
           <Input id="purchase_date" name="purchase_date" type="date" />
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="purchase_location">Luogo acquisto</Label>
-        <Input id="purchase_location" name="purchase_location" placeholder="es. Montalcino" />
+        <Label htmlFor="purchase_location">Kaufort</Label>
+        <Input id="purchase_location" name="purchase_location" placeholder="z.B. Montalcino" />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="shelf_location">Posizione in cantina</Label>
-        <Input id="shelf_location" name="shelf_location" placeholder="es. Scaffale B / Fila 3" />
+        <Label htmlFor="shelf_location">Position im Keller</Label>
+        <Input id="shelf_location" name="shelf_location" placeholder="z.B. Regal B / Reihe 3" />
       </div>
 
       {trips.length > 0 && (
         <div className="space-y-2">
-          <Label>Viaggio</Label>
+          <Label>Reise</Label>
           <Select name="trip_id">
-            <SelectTrigger><SelectValue placeholder="Seleziona viaggio (opzionale)" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Reise auswählen (optional)" /></SelectTrigger>
             <SelectContent>
               {trips.map(t => (
                 <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
@@ -123,11 +123,11 @@ export function WineForm({ trips }: WineFormProps) {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Note</Label>
-        <Textarea id="notes" name="notes" placeholder="Note generali sul vino…" />
+        <Label htmlFor="notes">Notizen</Label>
+        <Textarea id="notes" name="notes" placeholder="Allgemeine Notizen zum Wein…" />
       </div>
 
-      <Button type="submit" className="w-full">Aggiungi vino</Button>
+      <Button type="submit" className="w-full">Wein hinzufügen</Button>
     </form>
   )
 }

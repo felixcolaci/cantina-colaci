@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'La Cantina Colaci',
-  description: 'La vostra collezione di vini',
+  description: 'Eure Weinsammlung',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -23,7 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { data: { user } } = await supabase.auth.getUser()
 
   return (
-    <html lang="it">
+    <html lang="de">
       <body className={inter.className}>
         {user && <TopBar />}
         <main className={user ? 'pt-14 pb-16 min-h-screen' : 'min-h-screen'}>

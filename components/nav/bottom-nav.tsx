@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Home', icon: LayoutDashboard },
-  { href: '/cellar', label: 'Cantina', icon: Wine },
-  { href: '/trips', label: 'Viaggi', icon: Map },
-  { href: '/history', label: 'Storia', icon: History },
+  { href: '/cellar', label: 'Keller', icon: Wine },
+  { href: '/trips', label: 'Reisen', icon: Map },
+  { href: '/history', label: 'Geschichte', icon: History },
 ]
 
 export function BottomNav() {

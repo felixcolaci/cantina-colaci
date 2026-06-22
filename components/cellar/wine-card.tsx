@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import type { Wine, CellarEntry } from '@/lib/types'
 
 const typeLabel: Record<string, string> = {
-  red: 'Rosso', white: 'Bianco', rosé: 'Rosé', sparkling: 'Spumante',
+  red: 'Rotwein', white: 'Weißwein', rosé: 'Rosé', sparkling: 'Schaumwein',
 }
 
 interface WineCardProps {
@@ -36,7 +36,7 @@ export function WineCard({ wine, entries }: WineCardProps) {
           </div>
           <div className="text-right shrink-0">
             <p className="text-xl font-bold">{totalBottles}</p>
-            <p className="text-xs text-muted-foreground">bott.</p>
+            <p className="text-xs text-muted-foreground">Fl.</p>
           </div>
         </CardContent>
       </Card>

@@ -8,10 +8,10 @@ import { cn } from '@/lib/utils'
 import type { WineType } from '@/lib/types'
 
 const wineTypes: { value: WineType; label: string }[] = [
-  { value: 'red', label: 'Rosso' },
-  { value: 'white', label: 'Bianco' },
+  { value: 'red', label: 'Rotwein' },
+  { value: 'white', label: 'Weißwein' },
   { value: 'rosé', label: 'Rosé' },
-  { value: 'sparkling', label: 'Spumante' },
+  { value: 'sparkling', label: 'Schaumwein' },
 ]
 
 export default async function CellarPage({
@@ -57,9 +57,9 @@ export default async function CellarPage({
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Cantina</h2>
+        <h2 className="text-xl font-semibold">Weinkeller</h2>
         <Button size="sm" render={<Link href="/wine/new" />}>
-          <Plus className="h-4 w-4 mr-1" />Aggiungi
+          <Plus className="h-4 w-4 mr-1" />Hinzufügen
         </Button>
       </div>
 
@@ -71,7 +71,7 @@ export default async function CellarPage({
             !type ? 'bg-primary text-primary-foreground' : 'bg-background'
           )}
         >
-          Tutti
+          Alle
         </Link>
         {wineTypes.map(t => (
           <Link
@@ -96,9 +96,9 @@ export default async function CellarPage({
       ) : (
         <div className="text-center py-12 text-muted-foreground">
           <p className="text-4xl mb-2">🍾</p>
-          <p>Nessun vino in cantina</p>
+          <p>Keine Weine im Keller</p>
           <Button className="mt-4" render={<Link href="/wine/new" />}>
-            Aggiungi il primo vino
+            Ersten Wein hinzufügen
           </Button>
         </div>
       )}

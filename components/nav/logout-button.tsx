@@ -13,5 +13,5 @@ export function LogoutButton() {
     router.push('/login')
   }
 
-  return <DropdownMenuItem onClick={handleLogout}>Esci</DropdownMenuItem>
+  return <DropdownMenuItem onClick={handleLogout}>Arrivederci</DropdownMenuItem>
 }

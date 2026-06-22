@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
+import { useServerAction } from '@/lib/hooks/use-server-action'
+import { SubmitButton } from '@/components/ui/submit-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,25 +11,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export function LoginForm() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+  const { run, isPending, error } = useServerAction(async () => {
     const supabase = createClient()
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
-    if (otpError) {
-      setError('Versand fehlgeschlagen. Bitte nochmal versuchen.')
-    } else {
-      setSent(true)
-    }
-    setLoading(false)
-  }
+    if (otpError) throw new Error(otpError.message)
+    setSent(true)
+  })
 
   if (sent) {
     return (
@@ -48,7 +40,7 @@ export function LoginForm() {
         <CardDescription>E-Mail eingeben — wir schicken dir einen magischen Link</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={e => { e.preventDefault(); run() }} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
             <Input
@@ -61,9 +53,7 @@ export function LoginForm() {
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Wird gesendet…' : 'Link senden'}
-          </Button>
+          <SubmitButton isPending={isPending} className="w-full">Link senden</SubmitButton>
         </form>
       </CardContent>
     </Card>

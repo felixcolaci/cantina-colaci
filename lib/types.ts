@@ -70,3 +70,12 @@ export interface Trip {
   date_end: string | null
   created_at: string
 }
+
+export interface WineHints {
+  names: string[]
+  producers: string[]
+  grapeVarieties: string[]
+  purchaseLocations: string[]
+  ownRegions: string[]
+  ownCountries: string[]
+}

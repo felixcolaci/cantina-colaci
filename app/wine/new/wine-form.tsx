@@ -10,15 +10,35 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import type { Trip } from '@/lib/types'
+import { Combobox } from '@/components/ui/combobox'
+import { WINE_COUNTRIES, WINE_REGIONS, GRAPE_VARIETIES } from '@/lib/wine-data'
+import type { Trip, WineHints } from '@/lib/types'
 
 interface WineFormProps {
   trips: Pick<Trip, 'id' | 'name'>[]
+  hints: WineHints
 }
 
-export function WineForm({ trips }: WineFormProps) {
+export function WineForm({ trips, hints }: WineFormProps) {
   const [preview, setPreview] = useState<string | null>(null)
   const [compressedFile, setCompressedFile] = useState<File | null>(null)
+  const [name, setName] = useState('')
+  const [producer, setProducer] = useState('')
+  const [country, setCountry] = useState('')
+  const [region, setRegion] = useState('')
+  const [grapeVariety, setGrapeVariety] = useState('')
+  const [purchaseLocation, setPurchaseLocation] = useState('')
+
+  const countryOptions = [...new Set([...WINE_COUNTRIES, ...hints.ownCountries])]
+  const regionOptions = [...new Set([
+    ...(WINE_REGIONS[country] ?? []),
+    ...hints.ownRegions,
+  ])]
+
+  function handleCountryChange(value: string) {
+    setCountry(value)
+    setRegion('')
+  }
 
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -44,12 +64,25 @@ export function WineForm({ trips }: WineFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="name">Name *</Label>
-        <Input id="name" name="name" required />
+        <Label>Name *</Label>
+        <Combobox
+          name="name"
+          value={name}
+          onChange={setName}
+          options={hints.names}
+          placeholder="z.B. Barolo"
+        />
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="producer">Weingut / Hersteller *</Label>
-        <Input id="producer" name="producer" required />
+        <Label>Weingut / Hersteller *</Label>
+        <Combobox
+          name="producer"
+          value={producer}
+          onChange={setProducer}
+          options={hints.producers}
+          placeholder="z.B. Antinori"
+        />
       </div>
 
       <div className="space-y-2">
@@ -77,16 +110,36 @@ export function WineForm({ trips }: WineFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="region">Region</Label>
-        <Input id="region" name="region" placeholder="z.B. Toskana" />
+        <Label>Land</Label>
+        <Combobox
+          name="country"
+          value={country}
+          onChange={handleCountryChange}
+          options={countryOptions}
+          placeholder="z.B. Italien"
+        />
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="country">Land</Label>
-        <Input id="country" name="country" placeholder="z.B. Italien" />
+        <Label>Region</Label>
+        <Combobox
+          name="region"
+          value={region}
+          onChange={setRegion}
+          options={regionOptions}
+          placeholder="z.B. Toskana"
+        />
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="grape_variety">Rebsorte</Label>
-        <Input id="grape_variety" name="grape_variety" placeholder="z.B. Sangiovese" />
+        <Label>Rebsorte</Label>
+        <Combobox
+          name="grape_variety"
+          value={grapeVariety}
+          onChange={setGrapeVariety}
+          options={[...new Set([...GRAPE_VARIETIES, ...hints.grapeVarieties])]}
+          placeholder="z.B. Sangiovese"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -99,10 +152,18 @@ export function WineForm({ trips }: WineFormProps) {
           <Input id="purchase_date" name="purchase_date" type="date" />
         </div>
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor="purchase_location">Kaufort</Label>
-        <Input id="purchase_location" name="purchase_location" placeholder="z.B. Montalcino" />
+        <Label>Kaufort</Label>
+        <Combobox
+          name="purchase_location"
+          value={purchaseLocation}
+          onChange={setPurchaseLocation}
+          options={hints.purchaseLocations}
+          placeholder="z.B. Montalcino"
+        />
       </div>
+
       <div className="space-y-2">
         <Label htmlFor="shelf_location">Position im Keller</Label>
         <Input id="shelf_location" name="shelf_location" placeholder="z.B. Regal B / Reihe 3" />

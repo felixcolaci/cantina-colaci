@@ -6,10 +6,9 @@ function isNetworkError(err: unknown): boolean {
   if (!(err instanceof TypeError)) return false
   const msg = (err as TypeError).message.toLowerCase()
   return (
-    msg.includes('failed to fetch') ||
-    msg.includes('load failed') ||
-    msg.includes('network') ||
-    msg.includes('fetch')
+    msg === 'failed to fetch' ||
+    msg === 'load failed' ||
+    msg === 'networkerror when attempting to fetch resource'
   )
 }
 

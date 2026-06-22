@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { useServerAction } from '@/lib/hooks/use-server-action'
 
 describe('useServerAction', () => {
@@ -72,7 +72,7 @@ describe('useServerAction', () => {
 
     act(() => { result.current.run() })
     await act(() => vi.runAllTimersAsync())
-    expect(result.current.error).not.toBeNull()
+    expect(result.current.error).toBe('Fehler beim Speichern – bitte nochmal versuchen.')
 
     act(() => { result.current.clearError() })
     expect(result.current.error).toBeNull()

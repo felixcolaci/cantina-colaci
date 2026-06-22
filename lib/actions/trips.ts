@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
 export async function createTrip(formData: FormData) {
@@ -8,14 +8,16 @@ export async function createTrip(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const admin = createAdminClient()
+
+  const { data: membership } = await admin
     .from('family_members')
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) redirect('/onboarding')
 
-  const { data: cellar } = await supabase
+  const { data: cellar } = await admin
     .from('cellars')
     .select('id')
     .eq('family_id', membership.family_id)
@@ -24,7 +26,7 @@ export async function createTrip(formData: FormData) {
     .maybeSingle()
   if (!cellar) redirect('/onboarding')
 
-  await supabase.from('trips').insert({
+  await admin.from('trips').insert({
     cellar_id: cellar.id,
     name: formData.get('name') as string,
     location: (formData.get('location') as string) || null,

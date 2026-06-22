@@ -22,3 +22,21 @@ export async function createClient() {
     }
   )
 }
+
+// Service-role client for database operations.
+// Supabase Auth v3 issues ES256 JWTs that PostgREST cannot verify with its HS256
+// secret, so auth.uid() returns NULL and all RLS policies fail. As a workaround,
+// server-side code uses this client (which authenticates via the service-role HS256
+// JWT) after verifying the user identity through createClient().auth.getUser().
+export function createAdminClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll: () => [],
+        setAll: () => {},
+      },
+    }
+  )
+}

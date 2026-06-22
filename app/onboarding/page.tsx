@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { OnboardingForm } from './onboarding-form'
 
@@ -7,7 +7,8 @@ export default async function OnboardingPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const admin = createAdminClient()
+  const { data: membership } = await admin
     .from('family_members')
     .select('family_id')
     .eq('user_id', user.id)

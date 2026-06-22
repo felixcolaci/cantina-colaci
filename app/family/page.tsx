@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -9,14 +9,16 @@ export default async function FamilyPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const admin = createAdminClient()
+
+  const { data: membership } = await admin
     .from('family_members')
     .select('family_id, role, families(name)')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) redirect('/onboarding')
 
-  const { data: members } = await supabase
+  const { data: members } = await admin
     .from('family_members')
     .select('user_id, role, joined_at')
     .eq('family_id', membership.family_id)

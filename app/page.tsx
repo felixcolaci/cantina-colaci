@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { StatsCard } from '@/components/dashboard/stats-card'
 import Link from 'next/link'
@@ -8,7 +8,9 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const admin = createAdminClient()
+
+  const { data: membership } = await admin
     .from('family_members')
     .select('family_id')
     .eq('user_id', user.id)
@@ -16,7 +18,7 @@ export default async function DashboardPage() {
 
   if (!membership) redirect('/onboarding')
 
-  const { data: cellar } = await supabase
+  const { data: cellar } = await admin
     .from('cellars')
     .select('id')
     .eq('family_id', membership.family_id)
@@ -26,7 +28,7 @@ export default async function DashboardPage() {
 
   if (!cellar) redirect('/onboarding')
 
-  const { data: wines } = await supabase
+  const { data: wines } = await admin
     .from('wines')
     .select('id')
     .eq('cellar_id', cellar.id)
@@ -34,7 +36,7 @@ export default async function DashboardPage() {
   const wineIds = (wines ?? []).map(w => w.id)
 
   const { data: inStockEntries } = wineIds.length
-    ? await supabase
+    ? await admin
         .from('cellar_entries')
         .select('quantity')
         .in('wine_id', wineIds)
@@ -43,7 +45,7 @@ export default async function DashboardPage() {
 
   const totalBottles = (inStockEntries ?? []).reduce((sum, e) => sum + e.quantity, 0)
 
-  const { data: recentTastings } = await supabase
+  const { data: recentTastings } = await admin
     .from('tastings')
     .select('id, date, rating, cellar_entries(wines(name, producer))')
     .order('created_at', { ascending: false })

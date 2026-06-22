@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 
@@ -7,14 +7,16 @@ export default async function HistoryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const admin = createAdminClient()
+
+  const { data: membership } = await admin
     .from('family_members')
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) redirect('/onboarding')
 
-  const { data: cellar } = await supabase
+  const { data: cellar } = await admin
     .from('cellars')
     .select('id')
     .eq('family_id', membership.family_id)
@@ -23,13 +25,13 @@ export default async function HistoryPage() {
     .maybeSingle()
 
   const { data: wines } = cellar
-    ? await supabase.from('wines').select('id').eq('cellar_id', cellar.id)
+    ? await admin.from('wines').select('id').eq('cellar_id', cellar.id)
     : { data: [] }
 
   const wineIds = (wines ?? []).map(w => w.id)
 
   const { data: entries } = wineIds.length
-    ? await supabase
+    ? await admin
         .from('cellar_entries')
         .select(`
           id, status, created_at,

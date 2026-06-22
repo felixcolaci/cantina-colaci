@@ -1,46 +1,36 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { WineType } from '@/lib/types'
-
-async function getCellarId(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
-  const { data: membership } = await supabase
-    .from('family_members')
-    .select('family_id')
-    .eq('user_id', userId)
-    .maybeSingle()
-  if (!membership) return null
-
-  const { data: cellar } = await supabase
-    .from('cellars')
-    .select('id')
-    .eq('family_id', membership.family_id)
-    .order('created_at')
-    .limit(1)
-    .maybeSingle()
-  return cellar?.id ?? null
-}
 
 export async function addWine(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const admin = createAdminClient()
+
+  const { data: membership } = await admin
     .from('family_members')
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) redirect('/onboarding')
 
-  const cellarId = await getCellarId(supabase, user.id)
-  if (!cellarId) redirect('/onboarding')
+  const { data: cellar } = await admin
+    .from('cellars')
+    .select('id')
+    .eq('family_id', membership.family_id)
+    .order('created_at')
+    .limit(1)
+    .maybeSingle()
+  if (!cellar) redirect('/onboarding')
 
-  const { data: wine, error: wineError } = await supabase
+  const { data: wine, error: wineError } = await admin
     .from('wines')
     .insert({
-      cellar_id: cellarId,
+      cellar_id: cellar.id,
       name: formData.get('name') as string,
       producer: formData.get('producer') as string,
       vintage: formData.get('vintage') ? parseInt(formData.get('vintage') as string) : null,
@@ -61,7 +51,7 @@ export async function addWine(formData: FormData) {
     'image/webp': 'webp',
     'image/heic': 'heic',
   }
-  const MAX_PHOTO_BYTES = 5 * 1024 * 1024 // 5 MB server-side cap (client compresses to 1 MB)
+  const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
   let photo_url: string | null = null
   const photoFile = formData.get('photo') as File | null
@@ -70,28 +60,28 @@ export async function addWine(formData: FormData) {
     if (!ext) throw new Error('Unsupported image type')
     if (photoFile.size > MAX_PHOTO_BYTES) throw new Error('Image too large')
     const path = `families/${membership.family_id}/wines/${wine.id}.${ext}`
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await admin.storage
       .from('wine-photos')
       .upload(path, photoFile, { contentType: photoFile.type })
 
     if (!uploadError) {
-      const { data: urlData } = supabase.storage.from('wine-photos').getPublicUrl(path)
+      const { data: urlData } = admin.storage.from('wine-photos').getPublicUrl(path)
       photo_url = urlData.publicUrl
     }
   }
 
   const tripId = (formData.get('trip_id') as string) || null
   if (tripId) {
-    const { data: trip } = await supabase
+    const { data: trip } = await admin
       .from('trips')
       .select('id')
       .eq('id', tripId)
-      .eq('cellar_id', cellarId)
+      .eq('cellar_id', cellar.id)
       .maybeSingle()
     if (!trip) throw new Error('Invalid trip')
   }
 
-  await supabase.from('cellar_entries').insert({
+  await admin.from('cellar_entries').insert({
     wine_id: wine.id,
     quantity: parseInt((formData.get('quantity') as string) ?? '1'),
     purchase_price: formData.get('purchase_price') ? parseFloat(formData.get('purchase_price') as string) : null,

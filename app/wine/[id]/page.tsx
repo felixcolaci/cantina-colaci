@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { OpenBottleButton } from './open-bottle-button'
@@ -13,15 +13,36 @@ export default async function WineDetailPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: wine } = await supabase
+  const admin = createAdminClient()
+
+  // Verify the wine belongs to the user's family before fetching anything
+  const { data: membership } = await admin
+    .from('family_members')
+    .select('family_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!membership) redirect('/onboarding')
+
+  const { data: cellar } = await admin
+    .from('cellars')
+    .select('id')
+    .eq('family_id', membership.family_id)
+    .order('created_at')
+    .limit(1)
+    .maybeSingle()
+  if (!cellar) redirect('/onboarding')
+
+  // Scope the wine query to the user's cellar — prevents IDOR
+  const { data: wine } = await admin
     .from('wines')
     .select('*')
     .eq('id', id)
+    .eq('cellar_id', cellar.id)
     .maybeSingle()
 
   if (!wine) notFound()
 
-  const { data: entries } = await supabase
+  const { data: entries } = await admin
     .from('cellar_entries')
     .select('*')
     .eq('wine_id', id)
@@ -30,7 +51,7 @@ export default async function WineDetailPage({
   const entryIds = (entries ?? []).map(e => e.id)
 
   const { data: tastings } = entryIds.length
-    ? await supabase
+    ? await admin
         .from('tastings')
         .select('*')
         .in('cellar_entry_id', entryIds)

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { WineCard } from '@/components/cellar/wine-card'
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,9 @@ export default async function CellarPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
+  const admin = createAdminClient()
+
+  const { data: membership } = await admin
     .from('family_members')
     .select('family_id')
     .eq('user_id', user.id)
@@ -32,7 +34,7 @@ export default async function CellarPage({
 
   if (!membership) redirect('/onboarding')
 
-  const { data: cellar } = await supabase
+  const { data: cellar } = await admin
     .from('cellars')
     .select('id')
     .eq('family_id', membership.family_id)
@@ -42,7 +44,7 @@ export default async function CellarPage({
 
   if (!cellar) redirect('/onboarding')
 
-  let query = supabase
+  let query = admin
     .from('wines')
     .select('*, cellar_entries!inner(quantity, photo_url, status)')
     .eq('cellar_id', cellar.id)

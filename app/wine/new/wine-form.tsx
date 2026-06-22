@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { addWine } from '@/lib/actions/wine'
 import { compressImage } from '@/lib/image-compress'
-import { Button } from '@/components/ui/button'
+import { useServerAction } from '@/lib/hooks/use-server-action'
+import { SubmitButton } from '@/components/ui/submit-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -29,6 +30,11 @@ export function WineForm({ trips, hints }: WineFormProps) {
   const [grapeVariety, setGrapeVariety] = useState('')
   const [purchaseLocation, setPurchaseLocation] = useState('')
 
+  const { run, isPending, error } = useServerAction(async (formData: FormData) => {
+    if (compressedFile) formData.set('photo', compressedFile)
+    await addWine(formData)
+  })
+
   const countryOptions = [...new Set([...WINE_COUNTRIES, ...hints.ownCountries])]
   const regionOptions = [...new Set([
     ...(WINE_REGIONS[country] ?? []),
@@ -48,13 +54,11 @@ export function WineForm({ trips, hints }: WineFormProps) {
     setPreview(URL.createObjectURL(compressed))
   }
 
-  async function handleSubmit(formData: FormData) {
-    if (compressedFile) formData.set('photo', compressedFile)
-    await addWine(formData)
-  }
-
   return (
-    <form action={handleSubmit} className="space-y-4 pb-8">
+    <form
+      onSubmit={e => { e.preventDefault(); run(new FormData(e.currentTarget)) }}
+      className="space-y-4 pb-8"
+    >
       <div className="space-y-2">
         <Label>Foto der Flasche</Label>
         {preview && (
@@ -188,7 +192,8 @@ export function WineForm({ trips, hints }: WineFormProps) {
         <Textarea id="notes" name="notes" placeholder="Allgemeine Notizen zum Wein…" />
       </div>
 
-      <Button type="submit" className="w-full">Wein hinzufügen</Button>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <SubmitButton isPending={isPending} className="w-full">Wein hinzufügen</SubmitButton>
     </form>
   )
 }

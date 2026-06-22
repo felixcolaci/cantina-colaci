@@ -4,7 +4,7 @@
 
 **Goal:** Add a family-scoped feature flag system that gates features by subscription plan, with per-family overrides. All flags start enabled during beta; billing can be wired later without touching feature code.
 
-**Architecture:** `plan` column on `families` + `feature_flag_overrides` table in Supabase. Flag resolution in `lib/flags.ts` (override → plan default → global default). Flags flow server → client as props, never fetched client-side. Admin override UI at `/admin/flags`.
+**Architecture:** `plan` column on `families` + `feature_flag_overrides` table in Supabase. Flag resolution in `lib/flags.ts` (override → plan default → global default). Flags flow server → client as props, never fetched client-side. Admin management handled via the separate `apps/admin` backoffice (see `2026-06-21-monorepo-admin-design.md`) — no `/admin` routes in the web app.
 
 **Tech Stack:** Same as main app — Next.js 15 App Router, Supabase, shadcn/ui, TypeScript, Vitest
 
@@ -21,14 +21,8 @@ lib/
   __tests__/
     flags.test.ts                    # Unit tests for flag resolution logic
 
-app/
-  admin/
-    flags/
-      page.tsx                       # Admin: list families + toggle overrides (server)
-      flag-toggle.tsx                # Toggle switch per flag per family (client)
-
 lib/actions/
-  admin-flags.ts                     # setFlagOverride server action (admin only)
+  admin-flags.ts                     # ← REMOVED: lives in apps/admin instead
 ```
 
 ---
@@ -334,6 +328,10 @@ git commit -m "feat: wire feature flags into cellar limit and wine creation"
 
 ## Task 4: Admin Override UI
 
+> **MOVED** — Admin flag management lives in `apps/admin` (see `2026-06-21-monorepo-admin-plan.md`). Skip this task; use Supabase Studio directly to manage flags until the admin app is built.
+
+<!--
+
 **Files:**
 - Create: `lib/actions/admin-flags.ts`
 - Create: `app/admin/flags/page.tsx`
@@ -547,6 +545,8 @@ git push origin main
 ```
 
 ---
+
+-->
 
 ## Run all tests
 

@@ -37,10 +37,7 @@ export function Combobox({
   }
 
   function handleOpenChange(isOpen: boolean) {
-    if (!isOpen && search.trim()) {
-      onChange(search.trim())
-      setSearch('')
-    }
+    if (!isOpen) setSearch('')
     setOpen(isOpen)
   }
 

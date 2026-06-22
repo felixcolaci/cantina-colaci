@@ -48,12 +48,23 @@ export default async function NewWinePage() {
     ? await supabase.from('cellar_entries').select('purchase_location').in('wine_id', wineIds)
     : { data: [] }
 
+  // Build a map of country → regions from user's own wines
+  const ownRegionsByCountry: Record<string, string[]> = {}
+  for (const wine of wines) {
+    if (wine.country && wine.region) {
+      if (!ownRegionsByCountry[wine.country]) ownRegionsByCountry[wine.country] = []
+      if (!ownRegionsByCountry[wine.country].includes(wine.region)) {
+        ownRegionsByCountry[wine.country].push(wine.region)
+      }
+    }
+  }
+
   const hints: WineHints = {
     names: distinct(wines.map((w: { name: string }) => w.name)),
     producers: distinct(wines.map((w: { producer: string }) => w.producer)),
     grapeVarieties: distinct(wines.map((w: { grape_variety: string | null }) => w.grape_variety)),
     purchaseLocations: distinct((entriesResult.data ?? []).map((e: { purchase_location: string | null }) => e.purchase_location)),
-    ownRegions: distinct(wines.map((w: { region: string | null }) => w.region)),
+    ownRegionsByCountry,
     ownCountries: distinct(wines.map((w: { country: string | null }) => w.country)),
   }
 

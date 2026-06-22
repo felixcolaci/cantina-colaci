@@ -32,7 +32,7 @@ export function WineForm({ trips, hints }: WineFormProps) {
   const countryOptions = [...new Set([...WINE_COUNTRIES, ...hints.ownCountries])]
   const regionOptions = [...new Set([
     ...(WINE_REGIONS[country] ?? []),
-    ...hints.ownRegions,
+    ...(hints.ownRegionsByCountry[country] ?? []),
   ])]
 
   function handleCountryChange(value: string) {

@@ -76,6 +76,6 @@ export interface WineHints {
   producers: string[]
   grapeVarieties: string[]
   purchaseLocations: string[]
-  ownRegions: string[]
+  ownRegionsByCountry: Record<string, string[]>
   ownCountries: string[]
 }

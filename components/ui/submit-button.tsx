@@ -9,7 +9,7 @@ export function SubmitButton({
   ...props
 }: ButtonProps & { isPending: boolean }) {
   return (
-    <Button type="submit" disabled={isPending} {...props}>
+    <Button {...props} type="submit" disabled={isPending}>
       {isPending && <Loader2 className="animate-spin" />}
       <span className={isPending ? 'opacity-60' : undefined}>{children}</span>
     </Button>

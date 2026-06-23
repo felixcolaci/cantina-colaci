@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { WineType } from '@/lib/types'
+import { getFeatureFlags } from '@/lib/flags'
 
 export async function addWine(formData: FormData) {
   const supabase = await createClient()
@@ -26,6 +27,17 @@ export async function addWine(formData: FormData) {
     .limit(1)
     .maybeSingle()
   if (!cellar) redirect('/onboarding')
+
+  const flags = await getFeatureFlags(membership.family_id)
+  if (!flags.unlimited_cellar) {
+    const { count } = await admin
+      .from('wines')
+      .select('*', { count: 'exact', head: true })
+      .eq('cellar_id', cellar.id)
+    if ((count ?? 0) >= 50) {
+      throw new Error('Limite raggiunto: massimo 50 vini nel piano gratuito.')
+    }
+  }
 
   const { data: wine, error: wineError } = await admin
     .from('wines')

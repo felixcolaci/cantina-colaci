@@ -17,9 +17,9 @@ const wineTypes: { value: WineType; label: string }[] = [
 export default async function CellarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>
+  searchParams: Promise<{ type?: string; location?: string }>
 }) {
-  const { type } = await searchParams
+  const { type, location } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -44,15 +44,22 @@ export default async function CellarPage({
 
   if (!cellar) redirect('/onboarding')
 
+  const { data: locations } = await admin
+    .from('storage_locations')
+    .select('id, name')
+    .eq('cellar_id', cellar.id)
+    .order('name')
+
   let query = admin
     .from('wines')
-    .select('*, cellar_entries!inner(quantity, photo_url, status)')
+    .select('*, cellar_entries!inner(quantity, photo_url, status, storage_location_id)')
     .eq('cellar_id', cellar.id)
     .eq('cellar_entries.status', 'in_stock')
     .gt('cellar_entries.quantity', 0)
     .order('name')
 
   if (type) query = (query as any).eq('type', type)
+  if (location) query = (query as any).eq('cellar_entries.storage_location_id', location)
 
   const { data: wines } = await query
 
@@ -88,6 +95,37 @@ export default async function CellarPage({
           </Link>
         ))}
       </div>
+
+      {locations && locations.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+          <Link
+            href={type ? `/cellar?type=${type}` : '/cellar'}
+            className={cn(
+              'shrink-0 px-3 py-1 rounded-full text-sm border transition-colors',
+              !location ? 'bg-primary text-primary-foreground' : 'bg-background'
+            )}
+          >
+            Alle Orte
+          </Link>
+          {locations.map(loc => {
+            const params = new URLSearchParams()
+            if (type) params.set('type', type)
+            if (location !== loc.id) params.set('location', loc.id)
+            return (
+              <Link
+                key={loc.id}
+                href={`/cellar?${params.toString()}`}
+                className={cn(
+                  'shrink-0 px-3 py-1 rounded-full text-sm border transition-colors',
+                  location === loc.id ? 'bg-primary text-primary-foreground' : 'bg-background'
+                )}
+              >
+                {loc.name}
+              </Link>
+            )
+          })}
+        </div>
+      )}
 
       {wines && wines.length > 0 ? (
         <div className="space-y-2">

@@ -44,7 +44,7 @@ export default async function WineDetailPage({
 
   const { data: entries } = await admin
     .from('cellar_entries')
-    .select('*')
+    .select('*, storage_locations(name, type)')
     .eq('wine_id', id)
     .order('created_at', { ascending: false })
 
@@ -97,6 +97,11 @@ export default async function WineDetailPage({
         <div className="p-4 rounded-lg bg-muted text-center">
           <p className="text-4xl font-bold">{totalBottles}</p>
           <p className="text-sm text-muted-foreground">Flaschen im Keller</p>
+          {inStockEntries[0]?.storage_locations && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {(inStockEntries[0].storage_locations as { name: string }).name}
+            </p>
+          )}
         </div>
 
         {inStockEntries.length > 0 && <OpenBottleButton entryId={inStockEntries[0].id} />}

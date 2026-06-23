@@ -16,7 +16,7 @@ export default async function TripsPage() {
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/onboarding')
+  if (!membership) redirect('/login')
 
   const { data: cellar } = await admin
     .from('cellars')

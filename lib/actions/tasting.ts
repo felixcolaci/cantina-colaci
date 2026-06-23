@@ -16,7 +16,7 @@ export async function openBottle(formData: FormData) {
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/onboarding')
+  if (!membership) redirect('/login')
 
   const { data: entry } = await admin
     .from('cellar_entries')

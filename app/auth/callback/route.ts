@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
+import { seedDemoCellar } from '@/lib/actions/demo'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -14,6 +15,21 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (error) {
       return NextResponse.redirect(new URL('/login?error=auth', origin))
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+      const { data: membership } = await supabase
+        .from('family_members')
+        .select('family_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      // New user — auto-seed demo cellar
+      if (!membership) {
+        await seedDemoCellar(user.id)
+      }
     }
   }
 

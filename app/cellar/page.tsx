@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { WineType } from '@/lib/types'
 import { getFeatureFlags } from '@/lib/flags'
+import { DemoBanner } from './demo-banner'
 
 const wineTypes: { value: WineType; label: string }[] = [
   { value: 'red', label: 'Rotwein' },
@@ -33,7 +34,7 @@ export default async function CellarPage({
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (!membership) redirect('/onboarding')
+  if (!membership) redirect('/login')
 
   const { data: cellar } = await admin
     .from('cellars')
@@ -43,15 +44,20 @@ export default async function CellarPage({
     .limit(1)
     .maybeSingle()
 
-  if (!cellar) redirect('/onboarding')
+  if (!cellar) redirect('/login')
 
-  const [flags, locationsResult, winesResult] = await Promise.all([
+  const [flags, locationsResult, familyResult, winesResult] = await Promise.all([
     getFeatureFlags(membership.family_id),
     admin
       .from('storage_locations')
       .select('id, name')
       .eq('cellar_id', cellar.id)
       .order('name'),
+    admin
+      .from('families')
+      .select('is_demo')
+      .eq('id', membership.family_id)
+      .maybeSingle(),
     (async () => {
       let query = admin
         .from('wines')
@@ -68,11 +74,14 @@ export default async function CellarPage({
   ])
 
   const locations = locationsResult.data
+  const isDemo = familyResult.data?.is_demo ?? false
   const { data: wines } = await winesResult
   const atLimit = !flags.unlimited_cellar && (wines?.length ?? 0) >= 50
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
+      {isDemo && <DemoBanner />}
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">Weinkeller</h2>
         <Button size="sm" render={<Link href="/wine/new" />}>

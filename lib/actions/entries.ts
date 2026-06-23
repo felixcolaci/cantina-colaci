@@ -35,7 +35,7 @@ export async function updateEntry(formData: FormData) {
     purchase_price: formData.get('purchase_price') ? parseFloat(formData.get('purchase_price') as string) : null,
     purchase_date: (formData.get('purchase_date') as string) || null,
     purchase_location: (formData.get('purchase_location') as string) || null,
-  }).eq('id', id)
+  }).eq('id', id).eq('wine_id', wineId)
 
   redirect(`/wine/${wineId}`)
 }

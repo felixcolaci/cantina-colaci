@@ -108,3 +108,34 @@ export async function addWine(formData: FormData) {
 
   redirect(`/wine/${wine.id}`)
 }
+
+export async function updateWine(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const admin = createAdminClient()
+  const id = formData.get('id') as string
+
+  const { data: membership } = await admin
+    .from('family_members').select('family_id').eq('user_id', user.id).maybeSingle()
+  if (!membership) throw new Error('Kein Zugriff')
+
+  const { data: cellar } = await admin
+    .from('cellars').select('id').eq('family_id', membership.family_id)
+    .order('created_at').limit(1).maybeSingle()
+  if (!cellar) throw new Error('Kein Keller gefunden')
+
+  await admin.from('wines').update({
+    name: formData.get('name') as string,
+    producer: formData.get('producer') as string,
+    vintage: formData.get('vintage') ? parseInt(formData.get('vintage') as string) : null,
+    type: formData.get('type') as WineType,
+    region: (formData.get('region') as string) || null,
+    country: (formData.get('country') as string) || null,
+    grape_variety: (formData.get('grape_variety') as string) || null,
+    notes: (formData.get('notes') as string) || null,
+  }).eq('id', id).eq('cellar_id', cellar.id)
+
+  redirect(`/wine/${id}`)
+}

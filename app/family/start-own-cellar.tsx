@@ -14,8 +14,8 @@ export function StartOwnCellar() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button className="w-full">Eigene Cantina starten</Button>
+      <SheetTrigger render={<Button className="w-full" />}>
+        Eigene Cantina starten
       </SheetTrigger>
       <SheetContent side="bottom" className="pb-8">
         <SheetHeader>

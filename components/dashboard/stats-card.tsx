@@ -1,5 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
 interface StatsCardProps {
   title: string
   value: string | number
@@ -7,13 +5,28 @@ interface StatsCardProps {
 
 export function StatsCard({ title, value }: StatsCardProps) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold">{value}</p>
-      </CardContent>
-    </Card>
+    <div
+      style={{
+        background: 'var(--card)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-sm)',
+        padding: 'var(--space-4) var(--space-5)',
+      }}
+    >
+      <p className="eyebrow mb-2">{title}</p>
+      <p
+        className="nums"
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 'var(--text-3xl)',
+          fontWeight: 700,
+          lineHeight: 1,
+          color: 'var(--foreground)',
+        }}
+      >
+        {value}
+      </p>
+    </div>
   )
 }

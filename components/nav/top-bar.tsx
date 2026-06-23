@@ -41,6 +41,9 @@ export async function TopBar() {
           <DropdownMenuItem render={<Link href="/settings/locations" />}>
             Lagerorte
           </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/settings/api-keys" />}>
+            API-Schlüssel
+          </DropdownMenuItem>
           <LogoutButton />
         </DropdownMenuContent>
       </DropdownMenu>

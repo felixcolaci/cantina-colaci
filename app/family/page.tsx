@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { CopyInviteLink } from './copy-invite-link'
+import { StartOwnCellar } from './start-own-cellar'
 
 export default async function FamilyPage() {
   const supabase = await createClient()
@@ -13,7 +14,7 @@ export default async function FamilyPage() {
 
   const { data: membership } = await admin
     .from('family_members')
-    .select('family_id, role, families(name)')
+    .select('family_id, role, families(name, is_demo)')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) redirect('/login')
@@ -42,6 +43,16 @@ export default async function FamilyPage() {
           ))}
         </CardContent>
       </Card>
+
+      {family?.is_demo && (
+        <div id="start">
+          <h3 className="font-medium mb-2">Demo-Modus</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            Du nutzt aktuell die Demo-Cantina mit Beispielweinen. Starte jetzt mit deinen eigenen.
+          </p>
+          <StartOwnCellar />
+        </div>
+      )}
 
       {membership.role === 'owner' && (
         <div>

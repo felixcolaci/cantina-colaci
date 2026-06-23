@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { WineType } from '@/lib/types'
+import { getFeatureFlags } from '@/lib/flags'
 
 const wineTypes: { value: WineType; label: string }[] = [
   { value: 'red', label: 'Rotwein' },
@@ -44,24 +45,31 @@ export default async function CellarPage({
 
   if (!cellar) redirect('/onboarding')
 
-  const { data: locations } = await admin
-    .from('storage_locations')
-    .select('id, name')
-    .eq('cellar_id', cellar.id)
-    .order('name')
+  const [flags, locationsResult, winesResult] = await Promise.all([
+    getFeatureFlags(membership.family_id),
+    admin
+      .from('storage_locations')
+      .select('id, name')
+      .eq('cellar_id', cellar.id)
+      .order('name'),
+    (async () => {
+      let query = admin
+        .from('wines')
+        .select('*, cellar_entries!inner(quantity, photo_url, status, storage_location_id)')
+        .eq('cellar_id', cellar.id)
+        .eq('cellar_entries.status', 'in_stock')
+        .gt('cellar_entries.quantity', 0)
+        .order('name')
 
-  let query = admin
-    .from('wines')
-    .select('*, cellar_entries!inner(quantity, photo_url, status, storage_location_id)')
-    .eq('cellar_id', cellar.id)
-    .eq('cellar_entries.status', 'in_stock')
-    .gt('cellar_entries.quantity', 0)
-    .order('name')
+      if (type) query = (query as any).eq('type', type)
+      if (location) query = (query as any).eq('cellar_entries.storage_location_id', location)
+      return query
+    })(),
+  ])
 
-  if (type) query = (query as any).eq('type', type)
-  if (location) query = (query as any).eq('cellar_entries.storage_location_id', location)
-
-  const { data: wines } = await query
+  const locations = locationsResult.data
+  const { data: wines } = await winesResult
+  const atLimit = !flags.unlimited_cellar && (wines?.length ?? 0) >= 50
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
@@ -124,6 +132,13 @@ export default async function CellarPage({
               </Link>
             )
           })}
+        </div>
+      )}
+
+      {atLimit && (
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 mb-4">
+          Limite von 50 Weinen im kostenlosen Plan erreicht.
+          <span className="font-medium ml-1">Wechsle zu Pro für unbegrenzten Keller.</span>
         </div>
       )}
 

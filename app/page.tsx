@@ -53,7 +53,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
-      <h2 className="text-xl font-semibold">Ciao! Willkommen 🍷</h2>
+      <h2 className="text-xl font-semibold">Ciao, willkommen.</h2>
 
       <div className="grid grid-cols-2 gap-3">
         <StatsCard title="Flaschen im Keller" value={totalBottles} />
@@ -62,17 +62,35 @@ export default async function DashboardPage() {
 
       {recentTastings && recentTastings.length > 0 && (
         <section>
-          <h3 className="font-medium mb-3">Letzte Verkostungen</h3>
+          <h3 className="eyebrow mb-3">Letzte Verkostungen</h3>
           <div className="space-y-2">
             {recentTastings.map(t => {
               const wine = (t.cellar_entries as any)?.wines
               return (
-                <div key={t.id} className="flex justify-between items-center p-3 rounded-lg border">
+                <div
+                  key={t.id}
+                  className="flex justify-between items-center p-3 rounded-lg border"
+                  style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                >
                   <div>
-                    <p className="font-medium text-sm">{wine?.name ?? '—'}</p>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 'var(--text-base)',
+                        fontWeight: 600,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {wine?.name ?? '—'}
+                    </p>
                     <p className="text-xs text-muted-foreground">{t.date}</p>
                   </div>
-                  <span className="font-bold">{t.rating}/10</span>
+                  <span
+                    className="nums font-bold"
+                    style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)' }}
+                  >
+                    {t.rating}/10
+                  </span>
                 </div>
               )
             })}
@@ -82,13 +100,26 @@ export default async function DashboardPage() {
 
       {wineIds.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
-          <p className="text-4xl mb-2">🍾</p>
-          <p>Der Keller ist leer</p>
+          <BottleGlyph />
+          <p className="mt-3">Der Keller ist noch leer.</p>
           <Link href="/wine/new" className="mt-3 inline-block text-primary underline">
             Ersten Wein hinzufügen
           </Link>
         </div>
       )}
     </div>
+  )
+}
+
+function BottleGlyph() {
+  return (
+    <svg
+      width="32" height="64" viewBox="0 0 22 56" fill="none"
+      stroke="var(--clay)" strokeWidth="1.6" strokeLinejoin="round"
+      aria-hidden="true" style={{ opacity: 0.5, margin: '0 auto', display: 'block' }}
+    >
+      <path d="M8 2h6v9c0 1.5 1 2.5 2 3.8 1.8 1.8 3 3.6 3 7.2v28a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V22c0-3.6 1.2-5.4 3-7.2 1-1.3 2-2.3 2-3.8V2Z" />
+      <line x1="3.5" y1="34" x2="18.5" y2="34" />
+    </svg>
   )
 }

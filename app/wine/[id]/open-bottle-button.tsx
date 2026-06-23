@@ -18,11 +18,11 @@ export function OpenBottleButton({ entryId }: { entryId: string }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={<Button variant="outline" className="w-full" />}>
-        🍾 Flasche öffnen
+        Flasche öffnen
       </SheetTrigger>
       <SheetContent side="bottom" className="pb-8">
         <SheetHeader>
-          <SheetTitle>Verkostung — Salute! 🥂</SheetTitle>
+          <SheetTitle>Verkostung</SheetTitle>
         </SheetHeader>
         <form
           onSubmit={e => { e.preventDefault(); run(new FormData(e.currentTarget)) }}

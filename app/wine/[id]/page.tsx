@@ -73,7 +73,18 @@ export default async function WineDetailPage({
       )}
       <div className="px-4 py-6 space-y-6">
         <div>
-          <h2 className="text-2xl font-bold">{wine.name}</h2>
+          <h2
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-3xl)',
+              fontWeight: 700,
+              letterSpacing: 'var(--tracking-tight)',
+              lineHeight: 'var(--leading-snug)',
+              margin: 0,
+            }}
+          >
+            {wine.name}
+          </h2>
           <p className="text-muted-foreground">{wine.producer}</p>
           <div className="flex gap-2 mt-2 flex-wrap">
             {wine.vintage && <Badge variant="outline">{wine.vintage}</Badge>}

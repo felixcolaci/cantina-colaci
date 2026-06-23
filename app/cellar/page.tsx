@@ -97,8 +97,15 @@ export default async function CellarPage({
         </div>
       ) : (
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-4xl mb-2">🍾</p>
-          <p>Keine Weine im Keller</p>
+          <svg
+            width="32" height="64" viewBox="0 0 22 56" fill="none"
+            stroke="var(--clay)" strokeWidth="1.6" strokeLinejoin="round"
+            aria-hidden="true" style={{ opacity: 0.5, margin: '0 auto', display: 'block' }}
+          >
+            <path d="M8 2h6v9c0 1.5 1 2.5 2 3.8 1.8 1.8 3 3.6 3 7.2v28a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V22c0-3.6 1.2-5.4 3-7.2 1-1.3 2-2.3 2-3.8V2Z" />
+            <line x1="3.5" y1="34" x2="18.5" y2="34" />
+          </svg>
+          <p className="mt-3">Keine Weine im Keller.</p>
           <Button className="mt-4" render={<Link href="/wine/new" />}>
             Ersten Wein hinzufügen
           </Button>

@@ -82,7 +82,7 @@ export default async function HistoryPage() {
         </div>
       ) : (
         <p className="text-center py-8 text-muted-foreground">
-          Noch nichts getrunken — apri una bottiglia! 🍷
+          Noch nichts getrunken — apri una bottiglia!
         </p>
       )}
     </div>

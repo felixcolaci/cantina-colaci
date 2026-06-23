@@ -11,8 +11,19 @@ export default async function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <p className="text-5xl mb-3">🍷</p>
-          <h1 className="text-3xl font-bold">La Cantina Colaci</h1>
+          <h1
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--text-4xl)',
+              fontWeight: 700,
+              letterSpacing: 'var(--tracking-tight)',
+              color: 'var(--primary)',
+              lineHeight: 1.1,
+              marginBottom: '0.25rem',
+            }}
+          >
+            La Cantina Colaci
+          </h1>
           <p className="text-muted-foreground mt-2">Eure Weinsammlung</p>
         </div>
         <LoginForm />

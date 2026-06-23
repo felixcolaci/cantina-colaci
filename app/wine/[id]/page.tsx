@@ -21,7 +21,7 @@ export default async function WineDetailPage({
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/onboarding')
+  if (!membership) redirect('/login')
 
   const { data: cellar } = await admin
     .from('cellars')
@@ -30,7 +30,7 @@ export default async function WineDetailPage({
     .order('created_at')
     .limit(1)
     .maybeSingle()
-  if (!cellar) redirect('/onboarding')
+  if (!cellar) redirect('/login')
 
   // Scope the wine query to the user's cellar — prevents IDOR
   const { data: wine } = await admin

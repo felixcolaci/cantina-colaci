@@ -16,7 +16,7 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (!membership) redirect('/onboarding')
+  if (!membership) redirect('/login')
 
   const { data: cellar } = await admin
     .from('cellars')
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     .limit(1)
     .maybeSingle()
 
-  if (!cellar) redirect('/onboarding')
+  if (!cellar) redirect('/login')
 
   const { data: wines } = await admin
     .from('wines')

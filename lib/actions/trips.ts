@@ -15,7 +15,7 @@ export async function createTrip(formData: FormData) {
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/onboarding')
+  if (!membership) redirect('/login')
 
   const { data: cellar } = await admin
     .from('cellars')
@@ -24,7 +24,7 @@ export async function createTrip(formData: FormData) {
     .order('created_at')
     .limit(1)
     .maybeSingle()
-  if (!cellar) redirect('/onboarding')
+  if (!cellar) redirect('/login')
 
   await admin.from('trips').insert({
     cellar_id: cellar.id,

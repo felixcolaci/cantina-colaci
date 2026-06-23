@@ -16,7 +16,7 @@ export default async function FamilyPage() {
     .select('family_id, role, families(name)')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/onboarding')
+  if (!membership) redirect('/login')
 
   const { data: members } = await admin
     .from('family_members')

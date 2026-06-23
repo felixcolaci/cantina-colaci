@@ -33,7 +33,7 @@ export default async function CellarPage({
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (!membership) redirect('/onboarding')
+  if (!membership) redirect('/login')
 
   const { data: cellar } = await admin
     .from('cellars')
@@ -43,7 +43,7 @@ export default async function CellarPage({
     .limit(1)
     .maybeSingle()
 
-  if (!cellar) redirect('/onboarding')
+  if (!cellar) redirect('/login')
 
   const [flags, locationsResult, winesResult] = await Promise.all([
     getFeatureFlags(membership.family_id),

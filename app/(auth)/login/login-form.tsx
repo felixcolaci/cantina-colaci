@@ -27,7 +27,7 @@ export function LoginForm() {
       <Card>
         <CardHeader>
           <CardTitle>Schau in deine E-Mails</CardTitle>
-          <CardDescription>Ciao! Wir haben dir einen Anmeldelink an {email} geschickt. 👋</CardDescription>
+          <CardDescription>Ciao! Wir haben dir einen Anmeldelink an {email} geschickt.</CardDescription>
         </CardHeader>
       </Card>
     )

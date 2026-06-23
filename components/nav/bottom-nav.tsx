@@ -61,7 +61,7 @@ export function BottomNav() {
         background: 'color-mix(in oklab, var(--card) 88%, transparent)',
         backdropFilter: 'saturate(140%) blur(12px)',
         borderTop: '1px solid var(--border)',
-        boxShadow: '0 -4px 16px rgba(61,38,22,0.06)',
+        boxShadow: 'var(--shadow-nav-top)',
         padding: '8px 10px',
         paddingBottom: 'calc(8px + var(--safe-bottom))',
       }}

@@ -38,6 +38,9 @@ export async function TopBar() {
           <DropdownMenuItem render={<Link href="/family" />}>
             Familie
           </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/settings/locations" />}>
+            Lagerorte
+          </DropdownMenuItem>
           <LogoutButton />
         </DropdownMenuContent>
       </DropdownMenu>

@@ -71,6 +71,16 @@ export interface Trip {
   created_at: string
 }
 
+export type StorageLocationType = 'fridge' | 'cellar' | 'climate_cabinet' | 'other'
+
+export interface StorageLocation {
+  id: string
+  cellar_id: string
+  name: string
+  type: StorageLocationType
+  created_at: string
+}
+
 export interface WineHints {
   names: string[]
   producers: string[]

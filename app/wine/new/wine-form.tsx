@@ -13,14 +13,15 @@ import {
 } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
 import { WINE_COUNTRIES, WINE_REGIONS, GRAPE_VARIETIES } from '@/lib/wine-data'
-import type { Trip, WineHints } from '@/lib/types'
+import type { Trip, WineHints, StorageLocation } from '@/lib/types'
 
 interface WineFormProps {
   trips: Pick<Trip, 'id' | 'name'>[]
   hints: WineHints
+  storageLocations: Pick<StorageLocation, 'id' | 'name' | 'type'>[]
 }
 
-export function WineForm({ trips, hints }: WineFormProps) {
+export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
   const [preview, setPreview] = useState<string | null>(null)
   const [compressedFile, setCompressedFile] = useState<File | null>(null)
   const [name, setName] = useState('')
@@ -168,9 +169,23 @@ export function WineForm({ trips, hints }: WineFormProps) {
         />
       </div>
 
+      {storageLocations.length > 0 && (
+        <div className="space-y-2">
+          <Label>Lagerort</Label>
+          <Select name="storage_location_id">
+            <SelectTrigger><SelectValue placeholder="Lagerort auswählen (optional)" /></SelectTrigger>
+            <SelectContent>
+              {storageLocations.map(loc => (
+                <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <div className="space-y-2">
-        <Label htmlFor="shelf_location">Position im Keller</Label>
-        <Input id="shelf_location" name="shelf_location" placeholder="z.B. Regal B / Reihe 3" />
+        <Label htmlFor="shelf_location">Genaue Position (optional)</Label>
+        <Input id="shelf_location" name="shelf_location" placeholder="z.B. Reihe 2, Fach B" />
       </div>
 
       {trips.length > 0 && (

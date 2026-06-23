@@ -38,9 +38,25 @@ export async function revokeApiKey(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const { data: membership } = await supabase
+    .from('family_members')
+    .select('family_id, role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!membership || membership.role !== 'owner') {
+    throw new Error('Nur der Familienbesitzer kann API-Schlüssel widerrufen.')
+  }
+
   const id = formData.get('id') as string
   const serviceClient = createAdminClient()
-  await serviceClient.from('api_keys').delete().eq('id', id)
+
+  // Scope delete to caller's family to prevent cross-family IDOR
+  await serviceClient
+    .from('api_keys')
+    .delete()
+    .eq('id', id)
+    .eq('family_id', membership.family_id)
 
   redirect('/settings/api-keys')
 }

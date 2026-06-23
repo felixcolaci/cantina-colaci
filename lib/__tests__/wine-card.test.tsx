@@ -9,6 +9,7 @@ const baseWine = {
   type: 'red' as const,
   vintage: 2019,
   region: null,
+  country: null,
   grape_variety: null,
   notes: null,
   cellar_id: 'c1',
@@ -46,6 +47,11 @@ describe('WineCard', () => {
   it('renders the type badge label for sparkling wine', () => {
     render(<WineCard wine={{ ...baseWine, type: 'sparkling' }} entries={baseEntries} />)
     expect(screen.getByText('Schaumwein')).toBeInTheDocument()
+  })
+
+  it('renders the type badge label for rosé wine', () => {
+    render(<WineCard wine={{ ...baseWine, type: 'rosé' }} entries={baseEntries} />)
+    expect(screen.getByText('Rosé')).toBeInTheDocument()
   })
 
   it('renders an img when photo_url is provided', () => {

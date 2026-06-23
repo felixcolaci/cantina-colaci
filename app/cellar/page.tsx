@@ -61,22 +61,28 @@ export default async function CellarPage({
     (async () => {
       let query = admin
         .from('wines')
-        .select('*, cellar_entries!inner(quantity, photo_url, status, storage_location_id)')
+        .select('*, cellar_entries(quantity, photo_url, status, storage_location_id)')
         .eq('cellar_id', cellar.id)
-        .eq('cellar_entries.status', 'in_stock')
-        .gt('cellar_entries.quantity', 0)
         .order('name')
 
       if (type) query = (query as any).eq('type', type)
-      if (location) query = (query as any).eq('cellar_entries.storage_location_id', location)
       return query
     })(),
   ])
 
   const locations = locationsResult.data
   const isDemo = familyResult.data?.is_demo ?? false
-  const { data: wines } = await winesResult
-  const atLimit = !flags.unlimited_cellar && (wines?.length ?? 0) >= 50
+  const { data: rawWines } = await winesResult
+  const wines = rawWines
+    ?.map(w => ({
+      ...w,
+      cellar_entries: (w.cellar_entries as any[]).filter(
+        e => e.status === 'in_stock' && e.quantity > 0 &&
+             (!location || e.storage_location_id === location)
+      ),
+    }))
+    .filter(w => w.cellar_entries.length > 0) ?? []
+  const atLimit = !flags.unlimited_cellar && wines.length >= 50
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">

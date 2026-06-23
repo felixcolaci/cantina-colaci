@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { WineForm } from './wine-form'
-import type { WineHints } from '@/lib/types'
+import type { WineHints, StorageLocation } from '@/lib/types'
 
 function distinct(values: (string | null)[]): string[] {
   return [...new Set(values.filter((v): v is string => !!v))]
@@ -29,7 +29,7 @@ export default async function NewWinePage() {
 
   const cellarId = cellar?.id
 
-  const [tripsResult, winesResult, wineIdsResult] = await Promise.all([
+  const [tripsResult, winesResult, wineIdsResult, locationsResult] = await Promise.all([
     cellarId
       ? supabase.from('trips').select('id, name').eq('cellar_id', cellarId).order('created_at', { ascending: false })
       : Promise.resolve({ data: [] }),
@@ -38,6 +38,9 @@ export default async function NewWinePage() {
       : Promise.resolve({ data: [] }),
     cellarId
       ? supabase.from('wines').select('id').eq('cellar_id', cellarId)
+      : Promise.resolve({ data: [] }),
+    cellarId
+      ? supabase.from('storage_locations').select('id, name, type').eq('cellar_id', cellarId).order('name')
       : Promise.resolve({ data: [] }),
   ])
 
@@ -71,7 +74,11 @@ export default async function NewWinePage() {
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       <h2 className="text-xl font-semibold mb-6">Wein hinzufügen</h2>
-      <WineForm trips={tripsResult.data ?? []} hints={hints} />
+      <WineForm
+        trips={tripsResult.data ?? []}
+        hints={hints}
+        storageLocations={(locationsResult.data ?? []) as StorageLocation[]}
+      />
     </div>
   )
 }

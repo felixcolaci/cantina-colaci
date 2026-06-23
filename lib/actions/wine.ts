@@ -88,6 +88,7 @@ export async function addWine(formData: FormData) {
     purchase_date: (formData.get('purchase_date') as string) || null,
     purchase_location: (formData.get('purchase_location') as string) || null,
     shelf_location: (formData.get('shelf_location') as string) || null,
+    storage_location_id: (formData.get('storage_location_id') as string) || null,
     trip_id: tripId,
     photo_url,
     status: 'in_stock',

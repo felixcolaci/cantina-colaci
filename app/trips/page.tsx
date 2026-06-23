@@ -58,7 +58,7 @@ export default async function TripsPage() {
           ))}
         </div>
       ) : (
-        <p className="text-center py-8 text-muted-foreground">Noch keine Reisen — Andiamo! 🗺️</p>
+        <p className="text-center py-8 text-muted-foreground">Noch keine Reisen — Andiamo!</p>
       )}
     </div>
   )

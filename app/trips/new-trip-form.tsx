@@ -1,15 +1,18 @@
 'use client'
 
-import { useState } from 'react'
 import { createTrip } from '@/lib/actions/trips'
+import { useServerAction } from '@/lib/hooks/use-server-action'
+import { SubmitButton } from '@/components/ui/submit-button'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { useState } from 'react'
 import { Plus } from 'lucide-react'
 
 export function NewTripForm() {
   const [open, setOpen] = useState(false)
+  const { run, isPending, error } = useServerAction(createTrip)
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -18,7 +21,10 @@ export function NewTripForm() {
       </SheetTrigger>
       <SheetContent side="bottom" className="pb-8">
         <SheetHeader><SheetTitle>Neue Reise</SheetTitle></SheetHeader>
-        <form action={createTrip} className="space-y-4 mt-4">
+        <form
+          onSubmit={e => { e.preventDefault(); run(new FormData(e.currentTarget)) }}
+          className="space-y-4 mt-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="name">Name *</Label>
             <Input id="name" name="name" placeholder="Toskana Sommer 2026" required />
@@ -37,7 +43,8 @@ export function NewTripForm() {
               <Input id="date_end" name="date_end" type="date" />
             </div>
           </div>
-          <Button type="submit" className="w-full">Reise anlegen</Button>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <SubmitButton isPending={isPending} className="w-full">Reise anlegen</SubmitButton>
         </form>
       </SheetContent>
     </Sheet>

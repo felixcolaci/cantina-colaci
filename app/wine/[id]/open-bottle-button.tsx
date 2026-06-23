@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { openBottle } from '@/lib/actions/tasting'
+import { useServerAction } from '@/lib/hooks/use-server-action'
+import { SubmitButton } from '@/components/ui/submit-button'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
@@ -10,18 +12,22 @@ import { Textarea } from '@/components/ui/textarea'
 
 export function OpenBottleButton({ entryId }: { entryId: string }) {
   const [open, setOpen] = useState(false)
+  const { run, isPending, error } = useServerAction(openBottle)
   const today = new Date().toISOString().split('T')[0]
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={<Button variant="outline" className="w-full" />}>
-        🍾 Flasche öffnen
+        Flasche öffnen
       </SheetTrigger>
       <SheetContent side="bottom" className="pb-8">
         <SheetHeader>
-          <SheetTitle>Verkostung — Salute! 🥂</SheetTitle>
+          <SheetTitle>Verkostung</SheetTitle>
         </SheetHeader>
-        <form action={openBottle} className="space-y-4 mt-4">
+        <form
+          onSubmit={e => { e.preventDefault(); run(new FormData(e.currentTarget)) }}
+          className="space-y-4 mt-4"
+        >
           <input type="hidden" name="cellar_entry_id" value={entryId} />
           <div className="space-y-2">
             <Label htmlFor="date">Datum</Label>
@@ -35,7 +41,8 @@ export function OpenBottleButton({ entryId }: { entryId: string }) {
             <Label htmlFor="notes">Verkostungsnotizen</Label>
             <Textarea id="notes" name="notes" placeholder="Duft, Geschmack, Begleitung…" />
           </div>
-          <Button type="submit" className="w-full">Verkostung speichern</Button>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <SubmitButton isPending={isPending} className="w-full">Verkostung speichern</SubmitButton>
         </form>
       </SheetContent>
     </Sheet>

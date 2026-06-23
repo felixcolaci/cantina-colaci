@@ -14,7 +14,18 @@ export async function TopBar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b h-14 flex items-center px-4 justify-between">
-      <h1 className="font-semibold text-lg">🍷 Cantina Colaci</h1>
+      <h1
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 'var(--text-xl)',
+          fontWeight: 600,
+          letterSpacing: 'var(--tracking-tight)',
+          margin: 0,
+          lineHeight: 1,
+        }}
+      >
+        Cantina Colaci
+      </h1>
       <DropdownMenu>
         <DropdownMenuTrigger render={
           <button className="cursor-pointer rounded-full">

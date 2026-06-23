@@ -12,6 +12,15 @@ function isNetworkError(err: unknown): boolean {
   )
 }
 
+function isRedirectError(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    typeof (err as { digest?: unknown }).digest === 'string' &&
+    (err as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+  )
+}
+
 async function withRetry<T extends unknown[]>(
   action: (...args: T) => Promise<void>,
   args: T,
@@ -23,6 +32,7 @@ async function withRetry<T extends unknown[]>(
       await action(...args)
       return
     } catch (err) {
+      if (isRedirectError(err)) throw err
       if (!isNetworkError(err) || attempt === maxAttempts - 1) throw err
       await new Promise<void>(resolve => setTimeout(resolve, delayMs))
     }
@@ -41,6 +51,7 @@ export function useServerAction<T extends unknown[]>(action: (...args: T) => Pro
       try {
         await withRetry(actionRef.current, args)
       } catch (err) {
+        if (isRedirectError(err)) throw err
         if (isNetworkError(err)) {
           setError('Netzwerkfehler – bitte Verbindung prüfen.')
         } else {

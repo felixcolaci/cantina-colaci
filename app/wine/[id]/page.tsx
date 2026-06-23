@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 import { OpenBottleButton } from './open-bottle-button'
 import { WineEditSheet } from './wine-edit-sheet'
 import { EntryCard } from './entry-card'
+import { PhotoGallery } from './photo-gallery'
 import type { WineType } from '@/lib/types'
 
 const TYPE_CONFIG: Record<WineType, { label: string; bg: string; fg: string; hero: string }> = {
@@ -51,15 +52,17 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
     .order('created_at').limit(1).maybeSingle()
   if (!cellar) redirect('/login')
 
-  const [wineResult, storageLocResult] = await Promise.all([
+  const [wineResult, storageLocResult, photosResult] = await Promise.all([
     admin.from('wines').select('*').eq('id', id).eq('cellar_id', cellar.id).maybeSingle(),
     admin.from('storage_locations').select('id, name').eq('cellar_id', cellar.id).order('name'),
+    admin.from('wine_photos').select('id, url').eq('wine_id', id).order('sort_order').order('created_at'),
   ])
 
   const wine = wineResult.data
   if (!wine) notFound()
 
   const storageLocations = storageLocResult.data ?? []
+  const winePhotos = (photosResult.data ?? []) as { id: string; url: string }[]
 
   const { data: entries } = await admin
     .from('cellar_entries')
@@ -74,38 +77,19 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
 
   const inStockEntries = (entries ?? []).filter(e => e.status === 'in_stock')
   const totalBottles = inStockEntries.reduce((sum, e) => sum + e.quantity, 0)
-  const photo = (entries ?? []).find(e => e.photo_url)?.photo_url
+  const legacyPhoto = (entries ?? []).find(e => e.photo_url)?.photo_url ?? null
 
   const typeConf = TYPE_CONFIG[wine.type as WineType] ?? TYPE_CONFIG.red
 
   return (
     <div className="max-w-lg mx-auto">
       {/* Hero */}
-      <div className="relative" style={{ height: 224 }}>
-        {photo ? (
-          <img
-            src={photo}
-            alt={wine.name}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0" style={{ background: typeConf.hero }}>
-            <div className="absolute inset-0 flex items-center justify-center opacity-15">
-              <svg width="48" height="120" viewBox="0 0 24 60" fill="none"
-                stroke="white" strokeWidth="1.2" strokeLinejoin="round">
-                <path d="M9 2h6v9.5c0 1.5 1 2.5 2 3.8 1.8 2 3 3.8 3 7.7v29a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 2 52V23c0-3.9 1.2-5.7 3-7.7 1-1.3 2-2.3 2-3.8V2Z" />
-                <line x1="2.5" y1="37" x2="21.5" y2="37" />
-              </svg>
-            </div>
-          </div>
-        )}
-
-        {/* Scrim */}
-        <div
-          className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)' }}
-        />
-
+      <PhotoGallery
+        photos={winePhotos}
+        wineId={wine.id}
+        fallbackUrl={legacyPhoto}
+        heroBg={typeConf.hero}
+      >
         {/* Back button */}
         <Link
           href="/cellar"
@@ -151,7 +135,7 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
             )}
           </h1>
         </div>
-      </div>
+      </PhotoGallery>
 
       {/* Content */}
       <div className="px-4 py-5 space-y-6">

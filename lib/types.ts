@@ -81,6 +81,14 @@ export interface StorageLocation {
   created_at: string
 }
 
+export interface ApiKey {
+  id: string
+  family_id: string
+  name: string
+  key_hash: string
+  created_at: string
+}
+
 export interface WineHints {
   names: string[]
   producers: string[]

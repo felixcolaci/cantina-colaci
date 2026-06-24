@@ -77,7 +77,9 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
 
   const inStockEntries = (entries ?? []).filter(e => e.status === 'in_stock')
   const totalBottles = inStockEntries.reduce((sum, e) => sum + e.quantity, 0)
-  const legacyPhoto = (entries ?? []).find(e => e.photo_url)?.photo_url ?? null
+  const legacyEntry = (entries ?? []).find(e => e.photo_url) ?? null
+  const legacyPhoto = legacyEntry?.photo_url ?? null
+  const legacyEntryId = legacyEntry?.id ?? null
 
   const typeConf = TYPE_CONFIG[wine.type as WineType] ?? TYPE_CONFIG.red
 
@@ -88,6 +90,7 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
         photos={winePhotos}
         wineId={wine.id}
         fallbackUrl={legacyPhoto}
+        fallbackEntryId={legacyEntryId}
         heroBg={typeConf.hero}
       >
         {/* Back button */}

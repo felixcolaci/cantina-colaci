@@ -39,3 +39,33 @@ export async function updateEntry(formData: FormData) {
 
   redirect(`/wine/${wineId}`)
 }
+
+export async function clearEntryPhoto(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const admin = createAdminClient()
+  const entryId = formData.get('entry_id') as string
+  const wineId = formData.get('wine_id') as string
+
+  const { data: membership } = await admin
+    .from('family_members').select('family_id').eq('user_id', user.id).maybeSingle()
+  if (!membership) throw new Error('Kein Zugriff')
+
+  const { data: cellar } = await admin
+    .from('cellars').select('id').eq('family_id', membership.family_id)
+    .order('created_at').limit(1).maybeSingle()
+  if (!cellar) throw new Error('Kein Keller')
+
+  const { data: wine } = await admin
+    .from('wines').select('id').eq('id', wineId).eq('cellar_id', cellar.id).maybeSingle()
+  if (!wine) throw new Error('Wein nicht gefunden')
+
+  await admin.from('cellar_entries')
+    .update({ photo_url: null })
+    .eq('id', entryId)
+    .eq('wine_id', wineId)
+
+  redirect(`/wine/${wineId}`)
+}

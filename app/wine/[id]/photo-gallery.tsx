@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { Camera, Trash2 } from 'lucide-react'
 import { addWinePhoto, deleteWinePhoto } from '@/lib/actions/wine-photos'
+import { clearEntryPhoto } from '@/lib/actions/entries'
 import { compressImage } from '@/lib/image-compress'
 import { useServerAction } from '@/lib/hooks/use-server-action'
 
@@ -12,12 +13,14 @@ export function PhotoGallery({
   photos,
   wineId,
   fallbackUrl,
+  fallbackEntryId,
   heroBg,
   children,
 }: {
   photos: Photo[]
   wineId: string
   fallbackUrl: string | null
+  fallbackEntryId: string | null
   heroBg: string
   children: React.ReactNode
 }) {
@@ -25,6 +28,7 @@ export function PhotoGallery({
   const [currentIndex, setCurrentIndex] = useState(0)
   const { run: runAdd, isPending: addPending } = useServerAction(addWinePhoto)
   const { run: runDelete, isPending: deletePending } = useServerAction(deleteWinePhoto)
+  const { run: runClearLegacy, isPending: clearPending } = useServerAction(clearEntryPhoto)
 
   const slides: Photo[] =
     photos.length > 0
@@ -53,6 +57,14 @@ export function PhotoGallery({
     runDelete(fd)
   }
 
+  function handleClearLegacy() {
+    if (!fallbackEntryId) return
+    const fd = new FormData()
+    fd.append('wine_id', wineId)
+    fd.append('entry_id', fallbackEntryId)
+    runClearLegacy(fd)
+  }
+
   return (
     <div className="relative" style={{ height: 224 }}>
       {/* Background */}
@@ -72,17 +84,17 @@ export function PhotoGallery({
               style={{ scrollSnapAlign: 'start' }}
             >
               <img src={photo.url} alt="" className="w-full h-full object-cover" />
-              {photo.id !== '__legacy__' && (
-                <button
-                  onClick={() => handleDelete(photo.id)}
-                  disabled={deletePending}
-                  className="absolute bottom-16 right-3 flex items-center justify-center w-8 h-8 rounded-full"
-                  style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', color: 'white' }}
-                  aria-label="Foto löschen"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
+              <button
+                onClick={() =>
+                  photo.id === '__legacy__' ? handleClearLegacy() : handleDelete(photo.id)
+                }
+                disabled={deletePending || clearPending}
+                className="absolute bottom-16 right-3 flex items-center justify-center w-8 h-8 rounded-full"
+                style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', color: 'white' }}
+                aria-label="Foto löschen"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             </div>
           ))}
         </div>

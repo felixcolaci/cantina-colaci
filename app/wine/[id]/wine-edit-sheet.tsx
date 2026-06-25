@@ -14,6 +14,7 @@ import type { Wine } from '@/lib/types'
 
 export function WineEditSheet({ wine }: { wine: Wine }) {
   const [open, setOpen] = useState(false)
+  const [wineType, setWineType] = useState(wine.type)
   const { run, isPending, error } = useServerAction(updateWine)
 
   return (
@@ -56,7 +57,8 @@ export function WineEditSheet({ wine }: { wine: Wine }) {
               </div>
               <div className="space-y-2">
                 <Label>Typ *</Label>
-                <Select name="type" defaultValue={wine.type} required>
+                <input type="hidden" name="type" value={wineType} />
+                <Select value={wineType} onValueChange={v => setWineType(v as typeof wineType)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="red">Rotwein</SelectItem>

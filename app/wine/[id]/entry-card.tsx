@@ -32,6 +32,7 @@ export function EntryCard({
   storageLocations: StorageLocation[]
 }) {
   const [open, setOpen] = useState(false)
+  const [locId, setLocId] = useState(entry.storage_location_id ?? '')
   const { run, isPending, error } = useServerAction(updateEntry)
 
   const locName = entry.storage_locations?.name
@@ -110,7 +111,8 @@ export function EntryCard({
             {storageLocations.length > 0 && (
               <div className="space-y-2">
                 <Label>Lagerort</Label>
-                <Select name="storage_location_id" defaultValue={entry.storage_location_id ?? ''}>
+                <input type="hidden" name="storage_location_id" value={locId} />
+                <Select value={locId} onValueChange={v => setLocId(v ?? '')}>
                   <SelectTrigger><SelectValue placeholder="Kein Lagerort" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Kein Lagerort</SelectItem>

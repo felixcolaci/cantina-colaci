@@ -6,6 +6,11 @@ import { addWinePhoto, deleteWinePhoto } from '@/lib/actions/wine-photos'
 import { clearEntryPhoto } from '@/lib/actions/entries'
 import { compressImage } from '@/lib/image-compress'
 import { useServerAction } from '@/lib/hooks/use-server-action'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter, DialogClose,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 type Photo = { id: string; url: string }
 
@@ -26,6 +31,7 @@ export function PhotoGallery({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; isLegacy: boolean } | null>(null)
   const { run: runAdd, isPending: addPending } = useServerAction(addWinePhoto)
   const { run: runDelete, isPending: deletePending } = useServerAction(deleteWinePhoto)
   const { run: runClearLegacy, isPending: clearPending } = useServerAction(clearEntryPhoto)
@@ -85,9 +91,7 @@ export function PhotoGallery({
             >
               <img src={photo.url} alt="" className="w-full h-full object-cover" />
               <button
-                onClick={() =>
-                  photo.id === '__legacy__' ? handleClearLegacy() : handleDelete(photo.id)
-                }
+                onClick={() => setPendingDelete({ id: photo.id, isLegacy: photo.id === '__legacy__' })}
                 disabled={deletePending || clearPending}
                 className="absolute bottom-16 right-3 flex items-center justify-center w-8 h-8 rounded-full"
                 style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', color: 'white' }}
@@ -158,6 +162,35 @@ export function PhotoGallery({
 
       {/* Overlaid content: back link, edit button, wine name */}
       {children}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={pendingDelete !== null} onOpenChange={open => { if (!open) setPendingDelete(null) }}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Foto löschen?</DialogTitle>
+            <DialogDescription>
+              Das Foto wird unwiderruflich gelöscht.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Abbrechen
+            </DialogClose>
+            <Button
+              variant="destructive"
+              disabled={deletePending || clearPending}
+              onClick={() => {
+                if (!pendingDelete) return
+                if (pendingDelete.isLegacy) handleClearLegacy()
+                else handleDelete(pendingDelete.id)
+                setPendingDelete(null)
+              }}
+            >
+              Löschen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

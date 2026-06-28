@@ -4,7 +4,6 @@ import { WineCard } from '@/components/cellar/wine-card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { WineType } from '@/lib/types'
 import { getFeatureFlags } from '@/lib/flags'
 import { DemoBanner } from './demo-banner'
@@ -89,7 +88,7 @@ export default async function CellarPage({
       {isDemo && <DemoBanner />}
 
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Weinkeller</h2>
+        <h2 style={{ fontSize: 'var(--text-xl)' }}>Weinkeller</h2>
         <Button size="sm" render={<Link href="/wine/new" />}>
           <Plus className="h-4 w-4 mr-1" />Hinzufügen
         </Button>
@@ -98,50 +97,86 @@ export default async function CellarPage({
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
         <Link
           href="/cellar"
-          className={cn(
-            'shrink-0 px-3 py-1 rounded-full text-sm border transition-colors',
-            !type ? 'bg-primary text-primary-foreground' : 'bg-background'
-          )}
+          style={{
+            flexShrink: 0,
+            padding: 'var(--space-1) var(--space-3)',
+            borderRadius: 'var(--radius-full)',
+            fontSize: 'var(--text-sm)',
+            fontFamily: 'var(--font-body)',
+            border: !type ? 'none' : '1px solid var(--border)',
+            background: !type ? 'var(--primary)' : 'var(--background)',
+            color: !type ? 'var(--primary-foreground)' : 'var(--foreground)',
+            transition: `background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard)`,
+            whiteSpace: 'nowrap',
+          }}
         >
           Alle
         </Link>
-        {wineTypes.map(t => (
-          <Link
-            key={t.value}
-            href={type === t.value ? '/cellar' : `/cellar?type=${t.value}`}
-            className={cn(
-              'shrink-0 px-3 py-1 rounded-full text-sm border transition-colors',
-              type === t.value ? 'bg-primary text-primary-foreground' : 'bg-background'
-            )}
-          >
-            {t.label}
-          </Link>
-        ))}
+        {wineTypes.map(t => {
+          const active = type === t.value
+          return (
+            <Link
+              key={t.value}
+              href={active ? '/cellar' : `/cellar?type=${t.value}`}
+              style={{
+                flexShrink: 0,
+                padding: 'var(--space-1) var(--space-3)',
+                borderRadius: 'var(--radius-full)',
+                fontSize: 'var(--text-sm)',
+                fontFamily: 'var(--font-body)',
+                border: active ? 'none' : '1px solid var(--border)',
+                background: active ? 'var(--primary)' : 'var(--background)',
+                color: active ? 'var(--primary-foreground)' : 'var(--foreground)',
+                transition: `background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard)`,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {t.label}
+            </Link>
+          )
+        })}
       </div>
 
       {locations && locations.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           <Link
             href={type ? `/cellar?type=${type}` : '/cellar'}
-            className={cn(
-              'shrink-0 px-3 py-1 rounded-full text-sm border transition-colors',
-              !location ? 'bg-primary text-primary-foreground' : 'bg-background'
-            )}
+            style={{
+              flexShrink: 0,
+              padding: 'var(--space-1) var(--space-3)',
+              borderRadius: 'var(--radius-full)',
+              fontSize: 'var(--text-sm)',
+              fontFamily: 'var(--font-body)',
+              border: !location ? 'none' : '1px solid var(--border)',
+              background: !location ? 'var(--primary)' : 'var(--background)',
+              color: !location ? 'var(--primary-foreground)' : 'var(--foreground)',
+              transition: `background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard)`,
+              whiteSpace: 'nowrap',
+            }}
           >
             Alle Orte
           </Link>
           {locations.map(loc => {
+            const active = location === loc.id
             const params = new URLSearchParams()
             if (type) params.set('type', type)
-            if (location !== loc.id) params.set('location', loc.id)
+            if (!active) params.set('location', loc.id)
             return (
               <Link
                 key={loc.id}
                 href={`/cellar?${params.toString()}`}
-                className={cn(
-                  'shrink-0 px-3 py-1 rounded-full text-sm border transition-colors',
-                  location === loc.id ? 'bg-primary text-primary-foreground' : 'bg-background'
-                )}
+                style={{
+                  flexShrink: 0,
+                  padding: 'var(--space-1) var(--space-3)',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: 'var(--text-sm)',
+                  fontFamily: 'var(--font-body)',
+                  border: active ? 'none' : '1px solid var(--border)',
+                  background: active ? 'var(--primary)' : 'var(--background)',
+                  color: active ? 'var(--primary-foreground)' : 'var(--foreground)',
+                  transition: `background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard)`,
+                  whiteSpace: 'nowrap',
+                }}
               >
                 {loc.name}
               </Link>
@@ -151,9 +186,21 @@ export default async function CellarPage({
       )}
 
       {atLimit && (
-        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 mb-4">
+        <div
+          style={{
+            padding: 'var(--space-3)',
+            borderRadius: 'var(--radius-md)',
+            background: 'color-mix(in oklab, var(--warning) 10%, var(--background))',
+            border: '1px solid color-mix(in oklab, var(--warning) 30%, transparent)',
+            color: 'var(--warning)',
+            fontSize: 'var(--text-sm)',
+            marginBottom: 'var(--space-4)',
+          }}
+        >
           Limite von 50 Weinen im kostenlosen Plan erreicht.
-          <span className="font-medium ml-1">Wechsle zu Pro für unbegrenzten Keller.</span>
+          <span style={{ fontWeight: 'var(--weight-semibold)' as any, marginLeft: 'var(--space-1)' }}>
+            Wechsle zu Pro für unbegrenzten Keller.
+          </span>
         </div>
       )}
 

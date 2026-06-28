@@ -12,6 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
+import { DatePicker } from '@/components/ui/date-picker'
 import { WINE_COUNTRIES, WINE_REGIONS, GRAPE_VARIETIES } from '@/lib/wine-data'
 import type { Trip, WineHints, StorageLocation } from '@/lib/types'
 
@@ -30,6 +31,8 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
   const [region, setRegion] = useState('')
   const [grapeVariety, setGrapeVariety] = useState('')
   const [purchaseLocation, setPurchaseLocation] = useState('')
+  const [vintage, setVintage] = useState<number | null>(null)
+  const [purchaseDate, setPurchaseDate] = useState<string | null>(null)
 
   const { run, isPending, error } = useServerAction(async (formData: FormData) => {
     if (compressedFile) formData.set('photo', compressedFile)
@@ -105,8 +108,14 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="vintage">Jahrgang</Label>
-          <Input id="vintage" name="vintage" type="number" min="1900" max="2099" />
+          <Label>Jahrgang</Label>
+          <DatePicker
+            mode="year"
+            name="vintage"
+            value={vintage}
+            onChange={v => setVintage(v as number | null)}
+            placeholder="Jahrgang wählen"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="quantity">Flaschen</Label>
@@ -153,8 +162,14 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
           <Input id="purchase_price" name="purchase_price" type="number" step="0.01" min="0" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="purchase_date">Kaufdatum</Label>
-          <Input id="purchase_date" name="purchase_date" type="date" />
+          <Label>Kaufdatum</Label>
+          <DatePicker
+            mode="partial"
+            name="purchase_date"
+            value={purchaseDate}
+            onChange={v => setPurchaseDate(v as string | null)}
+            placeholder="Kaufdatum (optional)"
+          />
         </div>
       </div>
 

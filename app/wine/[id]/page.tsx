@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 import { OpenBottleButton } from './open-bottle-button'
 import { WineEditSheet } from './wine-edit-sheet'
 import { SkuCard } from './sku-card'
+import { AddSkuSheet } from './add-sku-sheet'
 import { PhotoGallery } from './photo-gallery'
 import type { WineType } from '@/lib/types'
 
@@ -189,7 +190,10 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
 
         {/* Keller section */}
         <div>
-          <p className="eyebrow mb-3">Im Keller</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="eyebrow">Im Keller</p>
+            <AddSkuSheet wineId={wine.id} storageLocations={storageLocations} />
+          </div>
           {inStockEntries.length === 0 ? (
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
               Keine Flaschen mehr vorhanden.

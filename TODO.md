@@ -1,0 +1,40 @@
+# Cantina Colaci — UX Roadmap
+
+Ziel: alle Bereiche auf eine runde, konsistente Experience bringen.
+Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann step-by-step abarbeiten.
+
+---
+
+## Pläne fertig — bereit zur Implementation
+
+| # | Feature | Spec | Plan |
+|---|---------|------|------|
+| 1 | Dashboard redesign — Wine Hero, Stats, Letzte Verkostungen | [spec](docs/superpowers/specs/2026-06-28-dashboard-redesign-design.md) | [plan](docs/superpowers/plans/2026-06-28-dashboard-redesign.md) |
+
+---
+
+## Pläne noch ausstehend
+
+### Brauchen Spec + Plan (Brainstorming zuerst)
+
+| # | Feature | Status |
+|---|---------|--------|
+| 2 | Trips-Seite — Design-System-Redesign + Wein-Verknüpfung | ⬜ Spec fehlt |
+| 5 | Rating-Input im Verkostungs-Sheet visuell aufwerten | ⬜ Spec fehlt |
+| 6 | Nachkaufen-Funktion — Flaschen zu bestehendem Wein hinzufügen | ⬜ Spec fehlt |
+| 9 | Family-Seite — Editorial-Styling + lesbare Mitgliedernamen | ⬜ Spec fehlt |
+
+### Direkt zum Plan (kein Brainstorming nötig)
+
+| # | Feature | Status |
+|---|---------|--------|
+| 3 | DatePicker in „Flasche öffnen"-Sheet einbauen | ⬜ Plan fehlt |
+| 4 | DatePicker in Entry-Bearbeiten-Form einbauen | ⬜ Plan fehlt |
+| 7 | Keller-Filterleiste — CSS-Tokens statt Tailwind-Klassen | ⬜ Plan fehlt |
+| 8 | Top-Bar — Glasmorphismus-Effekt wie Bottom-Nav | ⬜ Plan fehlt |
+
+---
+
+## Abgeschlossen
+
+*(wird hier nachgetragen sobald Implementation + Push erfolgt)*

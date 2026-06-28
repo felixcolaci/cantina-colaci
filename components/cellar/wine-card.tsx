@@ -2,10 +2,10 @@ import Link from 'next/link'
 import type { Wine, CellarEntry } from '@/lib/types'
 
 const TYPE_CONFIG = {
-  red:      { bg: 'var(--type-red-bg)',       fg: 'var(--type-red-fg)',       label: 'Rotwein' },
-  white:    { bg: 'var(--type-white-bg)',      fg: 'var(--type-white-fg)',     label: 'Weißwein' },
-  'rosé':   { bg: 'var(--type-rose-bg)',       fg: 'var(--type-rose-fg)',      label: 'Rosé' },
-  sparkling:{ bg: 'var(--type-sparkling-bg)',  fg: 'var(--type-sparkling-fg)', label: 'Schaumwein' },
+  red:      { bg: 'var(--type-red-bg)',       fg: 'var(--type-red-fg)',       dot: '#7c2d12', label: 'Rotwein' },
+  white:    { bg: 'var(--type-white-bg)',      fg: 'var(--type-white-fg)',     dot: '#c9a227', label: 'Weißwein' },
+  'rosé':   { bg: 'var(--type-rose-bg)',       fg: 'var(--type-rose-fg)',      dot: '#c98a8f', label: 'Rosé' },
+  sparkling:{ bg: 'var(--type-sparkling-bg)',  fg: 'var(--type-sparkling-fg)', dot: '#5f8aac', label: 'Schaumwein' },
 } as const
 
 interface WineCardProps {
@@ -71,17 +71,27 @@ export function WineCard({ wine, entries }: WineCardProps) {
           </span>
           <div className="flex flex-wrap gap-1.5 items-center mt-0.5">
             <span
-              className="inline-flex items-center px-2 py-0.5"
+              className="inline-flex items-center gap-1.5 px-2 py-0.5"
               style={{
                 background: type.bg,
                 color: type.fg,
                 borderRadius: 'var(--radius-full)',
+                fontFamily: 'var(--font-mono)',
                 fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.1em',
+                fontWeight: 500,
+                letterSpacing: '0.06em',
                 textTransform: 'uppercase',
+                lineHeight: 1,
+                height: 20,
               }}
             >
+              <span
+                style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: type.dot, flexShrink: 0,
+                  boxShadow: '0 0 0 1.5px color-mix(in oklab, currentColor 18%, transparent)',
+                }}
+              />
               {type.label}
             </span>
           </div>

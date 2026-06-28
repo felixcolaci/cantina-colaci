@@ -8,29 +8,33 @@ import { EntryCard } from './entry-card'
 import { PhotoGallery } from './photo-gallery'
 import type { WineType } from '@/lib/types'
 
-const TYPE_CONFIG: Record<WineType, { label: string; bg: string; fg: string; hero: string }> = {
+const TYPE_CONFIG: Record<WineType, { label: string; bg: string; fg: string; dot: string; hero: string }> = {
   red: {
     label: 'Rotwein',
     bg: 'var(--type-red-bg)',
     fg: 'var(--type-red-fg)',
+    dot: '#7c2d12',
     hero: 'linear-gradient(160deg, #5b1e22 0%, #3d1417 55%, #2d1008 100%)',
   },
   white: {
     label: 'Weißwein',
     bg: 'var(--type-white-bg)',
     fg: 'var(--type-white-fg)',
+    dot: '#c9a227',
     hero: 'linear-gradient(160deg, #9a7611 0%, #6b520d 55%, #4a3908 100%)',
   },
   rosé: {
     label: 'Rosé',
     bg: 'var(--type-rose-bg)',
     fg: 'var(--type-rose-fg)',
+    dot: '#c98a8f',
     hero: 'linear-gradient(160deg, #b06a72 0%, #7a3a40 55%, #3a1417 100%)',
   },
   sparkling: {
     label: 'Schaumwein',
     bg: 'var(--type-sparkling-bg)',
     fg: 'var(--type-sparkling-fg)',
+    dot: '#5f8aac',
     hero: 'linear-gradient(160deg, #4f7390 0%, #2d4d64 55%, #1a2d3d 100%)',
   },
 }
@@ -111,10 +115,10 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
           {wine.producer && (
             <p style={{
               color: 'rgba(255,255,255,0.7)',
-              fontFamily: 'var(--font-body)',
+              fontFamily: 'var(--font-mono)',
               fontSize: '0.7rem',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
+              fontWeight: 500,
+              letterSpacing: '0.08em',
               textTransform: 'uppercase',
               marginBottom: 3,
             }}>
@@ -145,9 +149,27 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
         {/* Tags */}
         <div className="flex flex-wrap gap-2">
           <span
-            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold tracking-widest uppercase"
-            style={{ background: typeConf.bg, color: typeConf.fg }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1"
+            style={{
+              background: typeConf.bg,
+              color: typeConf.fg,
+              borderRadius: 'var(--radius-full)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 500,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              lineHeight: 1,
+              height: 25,
+            }}
           >
+            <span
+              style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: typeConf.dot, flexShrink: 0,
+                boxShadow: '0 0 0 1.5px color-mix(in oklab, currentColor 18%, transparent)',
+              }}
+            />
             {typeConf.label}
           </span>
           {wine.country && (

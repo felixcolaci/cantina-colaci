@@ -23,7 +23,7 @@ export function NewLocationForm() {
       </div>
       <div className="space-y-2">
         <Label>Typ</Label>
-        <Select name="type" required>
+        <Select name="type" required items={typeLabels}>
           <SelectTrigger><SelectValue placeholder="Typ auswählen" /></SelectTrigger>
           <SelectContent>
             {typeLabels.map(t => (

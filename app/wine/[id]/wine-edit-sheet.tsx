@@ -65,7 +65,16 @@ export function WineEditSheet({ wine }: { wine: Wine }) {
               <div className="space-y-2">
                 <Label>Typ *</Label>
                 <input type="hidden" name="type" value={wineType} />
-                <Select value={wineType} onValueChange={v => setWineType(v as typeof wineType)}>
+                <Select
+                  value={wineType}
+                  onValueChange={v => setWineType(v as typeof wineType)}
+                  items={[
+                    { value: 'red', label: 'Rotwein' },
+                    { value: 'white', label: 'Weißwein' },
+                    { value: 'rosé', label: 'Rosé' },
+                    { value: 'sparkling', label: 'Schaumwein' },
+                  ]}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="red">Rotwein</SelectItem>

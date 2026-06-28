@@ -1,6 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
 
 export default async function HistoryPage() {
   const supabase = await createClient()
@@ -24,65 +23,112 @@ export default async function HistoryPage() {
     .limit(1)
     .maybeSingle()
 
-  const { data: wines } = cellar
-    ? await admin.from('wines').select('id').eq('cellar_id', cellar.id)
-    : { data: [] }
-
-  const wineIds = (wines ?? []).map(w => w.id)
-
-  const { data: entries } = wineIds.length
+  const { data: tastings } = cellar
     ? await admin
-        .from('cellar_entries')
+        .from('tastings')
         .select(`
-          id, status, created_at,
-          wine:wines(name, producer, vintage, type),
-          tastings(id, date, rating, notes)
+          id, date, rating, notes,
+          cellar_entries!inner(
+            wine_id,
+            wines!inner(name, producer, vintage, type, cellar_id)
+          )
         `)
-        .in('wine_id', wineIds)
-        .in('status', ['consumed', 'gifted'])
-        .order('created_at', { ascending: false })
+        .eq('cellar_entries.wines.cellar_id', cellar.id)
+        .order('date', { ascending: false })
     : { data: [] }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
-      <h2 className="text-xl font-semibold">Geschichte</h2>
+    <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
+      <h1 style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 600,
+        letterSpacing: 'var(--tracking-tight)',
+        lineHeight: 'var(--leading-snug)',
+        color: 'var(--foreground)',
+        margin: 0,
+      }}>
+        Kellerchronik
+      </h1>
 
-      {entries && entries.length > 0 ? (
+      {tastings && tastings.length > 0 ? (
         <div className="space-y-3">
-          {entries.map(entry => {
-            const wine = entry.wine as any
-            const tastings = (entry.tastings ?? []) as any[]
-            const avgRating = tastings.length
-              ? (tastings.reduce((s: number, t: any) => s + t.rating, 0) / tastings.length).toFixed(1)
-              : null
+          {tastings.map(tasting => {
+            const wine = (tasting.cellar_entries as any)?.wines
+            if (!wine) return null
 
             return (
-              <div key={entry.id} className="p-4 rounded-lg border space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold">{wine?.name}</p>
-                    <p className="text-sm text-muted-foreground">{wine?.producer}</p>
+              <div
+                key={tasting.id}
+                style={{
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  boxShadow: 'var(--shadow-sm)',
+                  padding: 'var(--space-4)',
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    {wine.producer && (
+                      <p className="eyebrow truncate mb-0.5">{wine.producer}</p>
+                    )}
+                    <p style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 'var(--text-xl)',
+                      fontWeight: 600,
+                      lineHeight: 1.12,
+                      letterSpacing: '-0.01em',
+                      color: 'var(--foreground)',
+                    }}>
+                      {wine.name}
+                      {wine.vintage && (
+                        <span className="nums" style={{ color: 'var(--muted-foreground)', fontWeight: 500, fontStyle: 'italic' }}>
+                          {' '}{wine.vintage}
+                        </span>
+                      )}
+                    </p>
+                    <p className="mono mt-1" style={{ fontSize: 'var(--text-xs)', color: 'var(--muted-foreground)' }}>
+                      {new Date(tasting.date).toLocaleDateString('de-DE', {
+                        day: 'numeric', month: 'long', year: 'numeric',
+                      })}
+                    </p>
                   </div>
-                  {avgRating && <span className="text-xl font-bold">{avgRating}/10</span>}
+
+                  <div className="flex-none text-right">
+                    <span className="nums" style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 'var(--text-2xl)',
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      color: 'var(--primary)',
+                    }}>
+                      {tasting.rating}
+                    </span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--muted-foreground)' }}>/10</span>
+                  </div>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  {wine?.vintage && <Badge variant="outline">{wine.vintage}</Badge>}
-                  <Badge variant={entry.status === 'consumed' ? 'default' : 'secondary'}>
-                    {entry.status === 'consumed' ? 'Getrunken' : 'Verschenkt'}
-                  </Badge>
-                </div>
-                {tastings.map((t: any) =>
-                  t.notes ? (
-                    <p key={t.id} className="text-sm text-muted-foreground italic">"{t.notes}"</p>
-                  ) : null
+
+                {tasting.notes && (
+                  <>
+                    <hr className="rule-gold my-3" />
+                    <p style={{
+                      fontSize: 'var(--text-sm)',
+                      lineHeight: 'var(--leading-relaxed)',
+                      color: 'var(--ink-700)',
+                      fontStyle: 'italic',
+                    }}>
+                      {tasting.notes}
+                    </p>
+                  </>
                 )}
               </div>
             )
           })}
         </div>
       ) : (
-        <p className="text-center py-8 text-muted-foreground">
-          Noch nichts getrunken — apri una bottiglia!
+        <p className="text-center py-10" style={{ color: 'var(--muted-foreground)' }}>
+          Noch keine Verkostungen — apri una bottiglia!
         </p>
       )}
     </div>

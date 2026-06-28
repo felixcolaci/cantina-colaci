@@ -2,6 +2,16 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+
+function parseDate(input: FormDataEntryValue | null): string | null {
+  if (!input || typeof input !== 'string' || !input.trim()) return null
+  const s = input.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+  return null
+}
 
 export async function createTrip(formData: FormData) {
   const supabase = await createClient()
@@ -26,13 +36,16 @@ export async function createTrip(formData: FormData) {
     .maybeSingle()
   if (!cellar) redirect('/login')
 
-  await admin.from('trips').insert({
+  const { error } = await admin.from('trips').insert({
     cellar_id: cellar.id,
     name: formData.get('name') as string,
     location: (formData.get('location') as string) || null,
-    date_start: (formData.get('date_start') as string) || null,
-    date_end: (formData.get('date_end') as string) || null,
+    date_start: parseDate(formData.get('date_start')),
+    date_end: parseDate(formData.get('date_end')),
   })
 
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/trips')
   redirect('/trips')
 }

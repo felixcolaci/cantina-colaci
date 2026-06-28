@@ -112,7 +112,14 @@ export function EntryCard({
               <div className="space-y-2">
                 <Label>Lagerort</Label>
                 <input type="hidden" name="storage_location_id" value={locId} />
-                <Select value={locId} onValueChange={v => setLocId(v ?? '')}>
+                <Select
+                  value={locId}
+                  onValueChange={v => setLocId(v ?? '')}
+                  items={[
+                    { value: '', label: 'Kein Lagerort' },
+                    ...storageLocations.map(loc => ({ value: loc.id, label: loc.name })),
+                  ]}
+                >
                   <SelectTrigger><SelectValue placeholder="Kein Lagerort" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Kein Lagerort</SelectItem>

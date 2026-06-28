@@ -95,7 +95,12 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
 
       <div className="space-y-2">
         <Label>Weintyp *</Label>
-        <Select name="type" required>
+        <Select name="type" required items={[
+          { value: 'red', label: 'Rotwein' },
+          { value: 'white', label: 'Weißwein' },
+          { value: 'rosé', label: 'Rosé' },
+          { value: 'sparkling', label: 'Schaumwein' },
+        ]}>
           <SelectTrigger><SelectValue placeholder="Typ auswählen" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="red">Rotwein</SelectItem>
@@ -187,7 +192,7 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
       {storageLocations.length > 0 && (
         <div className="space-y-2">
           <Label>Lagerort</Label>
-          <Select name="storage_location_id">
+          <Select name="storage_location_id" items={storageLocations.map(loc => ({ value: loc.id, label: loc.name }))}>
             <SelectTrigger><SelectValue placeholder="Lagerort auswählen (optional)" /></SelectTrigger>
             <SelectContent>
               {storageLocations.map(loc => (
@@ -206,7 +211,7 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
       {trips.length > 0 && (
         <div className="space-y-2">
           <Label>Reise</Label>
-          <Select name="trip_id">
+          <Select name="trip_id" items={trips.map(t => ({ value: t.id, label: t.name }))}>
             <SelectTrigger><SelectValue placeholder="Reise auswählen (optional)" /></SelectTrigger>
             <SelectContent>
               {trips.map(t => (

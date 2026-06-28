@@ -40,7 +40,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/history',
-    label: 'Geschichte',
+    label: 'Chronik',
     icon: (
       <>
         <path d="M12 8v13" />

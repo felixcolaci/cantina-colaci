@@ -4,6 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { NewTripForm } from './new-trip-form'
 
+function formatDate(iso: string): string {
+  const [y, m, d] = iso.split('-')
+  return `${d}.${m}.${y}`
+}
+
 export default async function TripsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -50,7 +55,7 @@ export default async function TripsPage() {
                 {trip.location && <Badge variant="outline">{trip.location}</Badge>}
                 {trip.date_start && (
                   <span className="text-sm text-muted-foreground">
-                    {trip.date_start}{trip.date_end ? ` → ${trip.date_end}` : ''}
+                    {formatDate(trip.date_start)}{trip.date_end ? ` → ${formatDate(trip.date_end)}` : ''}
                   </span>
                 )}
               </CardContent>

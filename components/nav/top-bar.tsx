@@ -13,7 +13,16 @@ export async function TopBar() {
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? '?'
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b h-14 flex items-center px-4 justify-between">
+    <header
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4"
+      style={{
+        height: '3.5rem',
+        background: 'color-mix(in oklab, var(--card) 88%, transparent)',
+        backdropFilter: 'saturate(140%) blur(12px)',
+        borderBottom: '1px solid var(--border)',
+        boxShadow: '0 4px 16px rgba(61,38,22,0.06)',
+      }}
+    >
       <h1
         style={{
           fontFamily: 'var(--font-display)',

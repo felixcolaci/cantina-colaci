@@ -9,9 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
+import { DatePicker } from '@/components/ui/date-picker'
 
 export function NewTripForm() {
   const [open, setOpen] = useState(false)
+  const [dateStart, setDateStart] = useState<string | null>(null)
+  const [dateEnd, setDateEnd] = useState<string | null>(null)
   const { run, isPending, error } = useServerAction(createTrip)
 
   return (
@@ -35,12 +38,24 @@ export function NewTripForm() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="date_start">Beginn</Label>
-              <Input id="date_start" name="date_start" type="date" />
+              <Label>Beginn</Label>
+              <DatePicker
+                mode="full"
+                name="date_start"
+                value={dateStart}
+                onChange={v => setDateStart(v as string | null)}
+                placeholder="Beginn"
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="date_end">Ende</Label>
-              <Input id="date_end" name="date_end" type="date" />
+              <Label>Ende</Label>
+              <DatePicker
+                mode="full"
+                name="date_end"
+                value={dateEnd}
+                onChange={v => setDateEnd(v as string | null)}
+                placeholder="Ende"
+              />
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

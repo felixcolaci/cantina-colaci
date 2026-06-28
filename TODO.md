@@ -16,6 +16,7 @@ Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann ste
 | 6 | Nachkaufen — cellar_entries → skus, vintage per Posten, AddSkuSheet | [spec](docs/superpowers/specs/2026-06-28-nachkaufen-sku-design.md) | [plan](docs/superpowers/plans/2026-06-28-nachkaufen-sku.md) |
 | 7 | Keller-Filterleiste — CSS-Tokens statt Tailwind-Klassen | — | [plan](docs/superpowers/plans/2026-06-28-cellar-filter-css-tokens.md) |
 | 8 | Top-Bar — Glasmorphismus-Effekt wie Bottom-Nav | — | [plan](docs/superpowers/plans/2026-06-28-topbar-glass-effect.md) |
+| 9 | Family-Seite — Editorial-Styling + Mitgliedernamen | [spec](docs/superpowers/specs/2026-06-28-family-page-design.md) | [plan](docs/superpowers/plans/2026-06-28-family-page-redesign.md) |
 
 ---
 
@@ -28,7 +29,7 @@ Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann ste
 | 2 | Trips-Seite — Design-System-Redesign + Wein-Verknüpfung | ✅ Erledigt |
 | 5 | Rating-Input im Verkostungs-Sheet visuell aufwerten | ✅ Erledigt |
 | 6 | Nachkaufen-Funktion — Flaschen zu bestehendem Wein hinzufügen | ✅ Erledigt |
-| 9 | Family-Seite — Editorial-Styling + lesbare Mitgliedernamen | ⬜ Spec fehlt |
+| 9 | Family-Seite — Editorial-Styling + lesbare Mitgliedernamen | ✅ Erledigt |
 
 ### Direkt zum Plan (kein Brainstorming nötig)
 

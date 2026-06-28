@@ -45,7 +45,6 @@ export async function addWine(formData: FormData) {
       cellar_id: cellar.id,
       name: formData.get('name') as string,
       producer: formData.get('producer') as string,
-      vintage: formData.get('vintage') ? parseInt(formData.get('vintage') as string) : null,
       region: (formData.get('region') as string) || null,
       country: (formData.get('country') as string) || null,
       grape_variety: (formData.get('grape_variety') as string) || null,
@@ -93,8 +92,9 @@ export async function addWine(formData: FormData) {
     if (!trip) throw new Error('Invalid trip')
   }
 
-  await admin.from('cellar_entries').insert({
+  await admin.from('skus').insert({
     wine_id: wine.id,
+    vintage: formData.get('vintage') ? parseInt(formData.get('vintage') as string) : null,
     quantity: parseInt((formData.get('quantity') as string) ?? '1'),
     purchase_price: formData.get('purchase_price') ? parseFloat(formData.get('purchase_price') as string) : null,
     purchase_date: (formData.get('purchase_date') as string) || null,
@@ -129,7 +129,6 @@ export async function updateWine(formData: FormData) {
   await admin.from('wines').update({
     name: formData.get('name') as string,
     producer: formData.get('producer') as string,
-    vintage: formData.get('vintage') ? parseInt(formData.get('vintage') as string) : null,
     type: formData.get('type') as WineType,
     region: (formData.get('region') as string) || null,
     country: (formData.get('country') as string) || null,

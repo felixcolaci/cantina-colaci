@@ -69,7 +69,7 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
   const winePhotos = (photosResult.data ?? []) as { id: string; url: string }[]
 
   const { data: entries } = await admin
-    .from('cellar_entries')
+    .from('skus')
     .select('*, storage_locations(name, type)')
     .eq('wine_id', id)
     .order('created_at', { ascending: false })
@@ -135,11 +135,6 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
             margin: 0,
           }}>
             {wine.name}
-            {wine.vintage && (
-              <span style={{ fontStyle: 'italic', fontWeight: 500, opacity: 0.8, fontSize: '0.8em' }}>
-                {' '}{wine.vintage}
-              </span>
-            )}
           </h1>
         </div>
       </PhotoGallery>

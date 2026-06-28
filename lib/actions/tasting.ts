@@ -19,7 +19,7 @@ export async function openBottle(formData: FormData) {
   if (!membership) redirect('/login')
 
   const { data: entry } = await admin
-    .from('cellar_entries')
+    .from('skus')
     .select('id, quantity, wine_id, wines(cellar_id, cellars(family_id))')
     .eq('id', cellarEntryId)
     .maybeSingle()
@@ -41,7 +41,7 @@ export async function openBottle(formData: FormData) {
 
   const newQuantity = entry.quantity - 1
   await admin
-    .from('cellar_entries')
+    .from('skus')
     .update({ quantity: newQuantity, status: newQuantity <= 0 ? 'consumed' : 'in_stock' })
     .eq('id', cellarEntryId)
 

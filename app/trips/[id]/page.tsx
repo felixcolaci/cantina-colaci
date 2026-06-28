@@ -43,8 +43,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
       .maybeSingle(),
     admin
       .from('wines')
-      .select('*, cellar_entries(id, quantity, photo_url, status, storage_location_id, purchase_price)')
-      .eq('trip_id', id)
+      .select('*, skus(id, vintage, quantity, photo_url, status, storage_location_id, purchase_price, trip_id)')
       .eq('cellar_id', cellar.id)
       .order('name'),
   ])
@@ -52,33 +51,40 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
   const trip = tripResult.data
   if (!trip) notFound()
 
-  const wines = winesResult.data ?? []
+  const allWines = winesResult.data ?? []
+  const wines = allWines.filter(w =>
+    (w.skus as any[]).some((s: any) => s.trip_id === id)
+  )
 
-  const entryIds = wines.flatMap(w => (w.cellar_entries as any[]).map((e: any) => e.id))
-  const { data: tastings } = entryIds.length
-    ? await admin.from('tastings').select('rating').in('cellar_entry_id', entryIds)
+  const skuIds = wines.flatMap(w => (w.skus as any[]).map((s: any) => s.id))
+  const { data: tastings } = skuIds.length
+    ? await admin.from('tastings').select('rating').in('cellar_entry_id', skuIds)
     : { data: [] as { rating: number }[] }
 
-  const allEntries = wines.flatMap(w => w.cellar_entries as any[])
-  const inStockEntries = allEntries.filter(e => e.status === 'in_stock')
-  const totalBottles = inStockEntries.reduce((s: number, e: any) => s + e.quantity, 0)
+  const allSkus = wines.flatMap(w => w.skus as any[])
+  const inStockSkus = allSkus.filter(s => s.status === 'in_stock')
+  const totalBottles = inStockSkus.reduce((sum: number, s: any) => sum + s.quantity, 0)
 
   const ratings = (tastings ?? []).map(t => t.rating)
   const avgRating = ratings.length
     ? (ratings.reduce((s, r) => s + r, 0) / ratings.length).toFixed(1)
     : null
 
-  const prices = allEntries
-    .map((e: any) => e.purchase_price)
+  const prices = allSkus
+    .map((s: any) => s.purchase_price)
     .filter((p: unknown): p is number => typeof p === 'number')
   const totalSpend = prices.length ? prices.reduce((s, p) => s + p, 0) : null
 
-  const winesForCard = wines.map(w => ({
-    ...w,
-    cellar_entries: (w.cellar_entries as any[]).filter(
-      e => e.status === 'in_stock' && e.quantity > 0
-    ),
-  }))
+  const winesForCard = wines.map(w => {
+    const filteredSkus = (w.skus as any[]).filter(
+      s => s.status === 'in_stock' && s.quantity > 0
+    )
+    const latestVintage = filteredSkus
+      .map((s: any) => s.vintage)
+      .filter(Boolean)
+      .sort((a: number, b: number) => b - a)[0] ?? null
+    return { ...w, skus: filteredSkus, vintage: latestVintage }
+  })
 
   const dateLabel = trip.date_start
     ? trip.date_end
@@ -135,7 +141,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
         {wines.length > 0 ? (
           <div className="space-y-2">
             {winesForCard.map(wine => (
-              <WineCard key={wine.id} wine={wine} entries={wine.cellar_entries} />
+              <WineCard key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage} />
             ))}
           </div>
         ) : (

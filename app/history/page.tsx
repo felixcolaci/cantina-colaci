@@ -29,11 +29,12 @@ export default async function HistoryPage() {
         .from('tastings')
         .select(`
           id, date, rating, notes,
-          cellar_entries!inner(
-            wines!inner(name, producer, vintage, cellar_id)
+          skus!inner(
+            vintage,
+            wines!inner(name, producer, cellar_id)
           )
         `)
-        .eq('cellar_entries.wines.cellar_id', cellar.id)
+        .eq('skus.wines.cellar_id', cellar.id)
         .order('date', { ascending: false })
     : { data: [] }
 
@@ -54,7 +55,8 @@ export default async function HistoryPage() {
       {tastings && tastings.length > 0 ? (
         <div className="space-y-3">
           {tastings.map(tasting => {
-            const wine = (tasting.cellar_entries as any)?.wines
+            const sku = tasting.skus as any
+            const wine = sku?.wines
             if (!wine) return null
             return (
               <TastingCard
@@ -68,7 +70,7 @@ export default async function HistoryPage() {
                 wine={{
                   name: wine.name,
                   producer: wine.producer ?? null,
-                  vintage: wine.vintage ?? null,
+                  vintage: sku?.vintage ?? null,
                 }}
               />
             )

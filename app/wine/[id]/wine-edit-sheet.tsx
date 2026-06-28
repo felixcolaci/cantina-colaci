@@ -10,13 +10,11 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { DatePicker } from '@/components/ui/date-picker'
 import type { Wine } from '@/lib/types'
 
 export function WineEditSheet({ wine }: { wine: Wine }) {
   const [open, setOpen] = useState(false)
   const [wineType, setWineType] = useState(wine.type)
-  const [vintage, setVintage] = useState<number | null>(wine.vintage ?? null)
   const { run, isPending, error } = useServerAction(updateWine)
 
   return (
@@ -51,20 +49,9 @@ export function WineEditSheet({ wine }: { wine: Wine }) {
               <Input id="producer" name="producer" defaultValue={wine.producer} required />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Jahrgang</Label>
-                <DatePicker
-                  mode="year"
-                  name="vintage"
-                  value={vintage}
-                  onChange={v => setVintage(v as number | null)}
-                  placeholder="Jahrgang wählen"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Typ *</Label>
-                <input type="hidden" name="type" value={wineType} />
+            <div className="space-y-2">
+              <Label>Typ *</Label>
+              <input type="hidden" name="type" value={wineType} />
                 <Select
                   value={wineType}
                   onValueChange={v => setWineType(v as typeof wineType)}
@@ -83,7 +70,6 @@ export function WineEditSheet({ wine }: { wine: Wine }) {
                     <SelectItem value="sparkling">Schaumwein</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
             </div>
 
             <div className="space-y-2">

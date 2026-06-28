@@ -39,22 +39,23 @@ export default async function DashboardPage() {
 
   const [inStockResult, tastingsResult, latestWineResult] = await Promise.all([
     wineIds.length
-      ? admin.from('cellar_entries').select('quantity').in('wine_id', wineIds).eq('status', 'in_stock')
+      ? admin.from('skus').select('quantity').in('wine_id', wineIds).eq('status', 'in_stock')
       : Promise.resolve({ data: [] as { quantity: number }[] }),
     admin
       .from('tastings')
       .select(`
         id, date, rating, notes,
-        cellar_entries!inner(
-          wines!inner(name, producer, vintage, cellar_id)
+        skus!inner(
+          vintage,
+          wines!inner(name, producer, cellar_id)
         )
       `)
-      .eq('cellar_entries.wines.cellar_id', cellar.id)
+      .eq('skus.wines.cellar_id', cellar.id)
       .order('date', { ascending: false })
       .limit(3),
     admin
       .from('wines')
-      .select('id, name, producer, vintage, type')
+      .select('id, name, producer, type, skus(vintage)')
       .eq('cellar_id', cellar.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -64,7 +65,13 @@ export default async function DashboardPage() {
   const wineCount = wineIds.length
   const totalBottles = (inStockResult.data ?? []).reduce((sum, e) => sum + e.quantity, 0)
   const recentTastings = tastingsResult.data ?? []
-  const latestWine = latestWineResult.data
+  const latestWineRaw = latestWineResult.data
+  const latestWine = latestWineRaw
+    ? {
+        ...latestWineRaw,
+        vintage: (latestWineRaw.skus as any)?.[0]?.vintage ?? null,
+      }
+    : null
 
   if (!latestWine) {
     return (
@@ -92,7 +99,8 @@ export default async function DashboardPage() {
           <p className="eyebrow mb-3">Letzte Verkostungen</p>
           <div className="space-y-3">
             {recentTastings.map(t => {
-              const wine = (t.cellar_entries as any)?.wines
+              const sku = t.skus as any
+              const wine = sku?.wines
               if (!wine) return null
               return (
                 <TastingCard
@@ -106,7 +114,7 @@ export default async function DashboardPage() {
                   wine={{
                     name: wine.name,
                     producer: wine.producer ?? null,
-                    vintage: wine.vintage ?? null,
+                    vintage: sku?.vintage ?? null,
                   }}
                 />
               )

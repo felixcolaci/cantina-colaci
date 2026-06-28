@@ -60,7 +60,7 @@ export default async function CellarPage({
     (async () => {
       let query = admin
         .from('wines')
-        .select('*, cellar_entries(quantity, photo_url, status, storage_location_id)')
+        .select('*, skus(id, vintage, quantity, photo_url, status, storage_location_id)')
         .eq('cellar_id', cellar.id)
         .order('name')
 
@@ -73,14 +73,18 @@ export default async function CellarPage({
   const isDemo = familyResult.data?.is_demo ?? false
   const { data: rawWines } = await winesResult
   const wines = rawWines
-    ?.map(w => ({
-      ...w,
-      cellar_entries: (w.cellar_entries as any[]).filter(
-        e => e.status === 'in_stock' && e.quantity > 0 &&
-             (!location || e.storage_location_id === location)
-      ),
-    }))
-    .filter(w => w.cellar_entries.length > 0) ?? []
+    ?.map(w => {
+      const filteredSkus = (w.skus as any[]).filter(
+        s => s.status === 'in_stock' && s.quantity > 0 &&
+             (!location || s.storage_location_id === location)
+      )
+      const latestVintage = filteredSkus
+        .map((s: any) => s.vintage)
+        .filter(Boolean)
+        .sort((a: number, b: number) => b - a)[0] ?? null
+      return { ...w, skus: filteredSkus, vintage: latestVintage }
+    })
+    .filter(w => w.skus.length > 0) ?? []
   const atLimit = !flags.unlimited_cellar && wines.length >= 50
 
   return (
@@ -207,7 +211,7 @@ export default async function CellarPage({
       {wines && wines.length > 0 ? (
         <div className="space-y-2">
           {wines.map(wine => (
-            <WineCard key={wine.id} wine={wine} entries={wine.cellar_entries} />
+            <WineCard key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage} />
           ))}
         </div>
       ) : (

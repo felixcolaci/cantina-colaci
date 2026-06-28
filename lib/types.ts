@@ -28,7 +28,6 @@ export interface Wine {
   cellar_id: string
   name: string
   producer: string
-  vintage: number | null
   region: string | null
   country: string | null
   grape_variety: string | null
@@ -37,9 +36,10 @@ export interface Wine {
   created_at: string
 }
 
-export interface CellarEntry {
+export interface Sku {
   id: string
   wine_id: string
+  vintage: number | null
   quantity: number
   purchase_price: number | null
   purchase_date: string | null

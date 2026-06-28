@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { Wine, CellarEntry } from '@/lib/types'
+import type { Wine, Sku } from '@/lib/types'
 
 const TYPE_CONFIG = {
   red:      { bg: 'var(--type-red-bg)',       fg: 'var(--type-red-fg)',       dot: '#7c2d12', label: 'Rotwein' },
@@ -10,12 +10,13 @@ const TYPE_CONFIG = {
 
 interface WineCardProps {
   wine: Wine
-  entries: Pick<CellarEntry, 'quantity' | 'photo_url'>[]
+  skus: Pick<Sku, 'quantity' | 'photo_url'>[]
+  vintage: number | null
 }
 
-export function WineCard({ wine, entries }: WineCardProps) {
-  const totalBottles = entries.reduce((sum, e) => sum + e.quantity, 0)
-  const photo = entries.find(e => e.photo_url)?.photo_url
+export function WineCard({ wine, skus, vintage }: WineCardProps) {
+  const totalBottles = skus.reduce((sum, s) => sum + s.quantity, 0)
+  const photo = skus.find(s => s.photo_url)?.photo_url
   const type = TYPE_CONFIG[wine.type as keyof typeof TYPE_CONFIG] ?? TYPE_CONFIG.red
 
   return (
@@ -63,9 +64,9 @@ export function WineCard({ wine, entries }: WineCardProps) {
             }}
           >
             {wine.name}
-            {wine.vintage && (
+            {vintage && (
               <span style={{ color: 'var(--muted-foreground)', fontWeight: 500, fontStyle: 'italic' }}>
-                {'  '}{wine.vintage}
+                {'  '}{vintage}
               </span>
             )}
           </span>

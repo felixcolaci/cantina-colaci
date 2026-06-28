@@ -54,7 +54,6 @@ export async function seedDemoCellar(userId: string): Promise<void> {
         cellar_id: cellar.id,
         name: demoWine.name,
         producer: demoWine.producer,
-        vintage: demoWine.vintage,
         type: demoWine.type,
         region: demoWine.region,
         country: demoWine.country,
@@ -76,9 +75,10 @@ export async function seedDemoCellar(userId: string): Promise<void> {
       .getPublicUrl(demoWine.demoPhotoPath)
 
     const { data: entry } = await supabase
-      .from('cellar_entries')
+      .from('skus')
       .insert({
         wine_id: wine.id,
+        vintage: demoWine.vintage,
         quantity: demoWine.quantity,
         purchase_price: demoWine.purchase_price,
         purchase_location: demoWine.purchase_location,
@@ -136,7 +136,7 @@ export async function clearDemoCellar(formData: FormData) {
 
   if (wineIds.length > 0) {
     const { data: entries } = await supabase
-      .from('cellar_entries')
+      .from('skus')
       .select('id')
       .in('wine_id', wineIds)
 
@@ -144,7 +144,7 @@ export async function clearDemoCellar(formData: FormData) {
 
     if (entryIds.length > 0) {
       await supabase.from('tastings').delete().in('cellar_entry_id', entryIds)
-      await supabase.from('cellar_entries').delete().in('id', entryIds)
+      await supabase.from('skus').delete().in('id', entryIds)
     }
 
     await supabase.from('wines').delete().in('id', wineIds)

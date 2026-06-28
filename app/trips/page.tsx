@@ -1,13 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { TripCard } from '@/components/trips/trip-card'
 import { NewTripForm } from './new-trip-form'
-
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split('-')
-  return `${d}.${m}.${y}`
-}
 
 export default async function TripsPage() {
   const supabase = await createClient()
@@ -34,37 +28,63 @@ export default async function TripsPage() {
   const { data: trips } = cellar
     ? await admin
         .from('trips')
-        .select('*')
+        .select('id, name, location, date_start, date_end, wines(id)')
         .eq('cellar_id', cellar.id)
         .order('created_at', { ascending: false })
     : { data: [] }
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
-      <h2 className="text-xl font-semibold">Reisen</h2>
-      <NewTripForm />
+      <div className="flex items-center justify-between">
+        <h1 style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 'var(--text-3xl)',
+          fontWeight: 600,
+          letterSpacing: 'var(--tracking-tight)',
+          lineHeight: 'var(--leading-snug)',
+          color: 'var(--foreground)',
+          margin: 0,
+        }}>
+          Reisen
+        </h1>
+        <NewTripForm />
+      </div>
 
       {trips && trips.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {trips.map(trip => (
-            <Card key={trip.id}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{trip.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-2 flex-wrap">
-                {trip.location && <Badge variant="outline">{trip.location}</Badge>}
-                {trip.date_start && (
-                  <span className="text-sm text-muted-foreground">
-                    {formatDate(trip.date_start)}{trip.date_end ? ` → ${formatDate(trip.date_end)}` : ''}
-                  </span>
-                )}
-              </CardContent>
-            </Card>
+            <TripCard
+              key={trip.id}
+              trip={{
+                id: trip.id,
+                name: trip.name,
+                location: trip.location,
+                date_start: trip.date_start,
+                date_end: trip.date_end,
+              }}
+              wineCount={(trip.wines as any[])?.length ?? 0}
+            />
           ))}
         </div>
       ) : (
-        <p className="text-center py-8 text-muted-foreground">Noch keine Reisen — Andiamo!</p>
+        <div className="text-center py-12" style={{ color: 'var(--muted-foreground)' }}>
+          <LocationPinGlyph />
+          <p className="mt-3">Noch keine Reisen — Andiamo!</p>
+        </div>
       )}
     </div>
+  )
+}
+
+function LocationPinGlyph() {
+  return (
+    <svg
+      width="32" height="40" viewBox="0 0 24 32" fill="none"
+      stroke="var(--clay)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" style={{ opacity: 0.5, margin: '0 auto', display: 'block' }}
+    >
+      <path d="M12 2a7 7 0 0 1 7 7c0 4.5-7 13-7 13S5 13.5 5 9a7 7 0 0 1 7-7Z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </svg>
   )
 }

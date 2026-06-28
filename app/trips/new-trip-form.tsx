@@ -19,8 +19,8 @@ export function NewTripForm() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button className="w-full" />}>
-        <Plus className="h-4 w-4 mr-2" />Neue Reise
+      <SheetTrigger render={<Button size="sm" />}>
+        <Plus className="h-4 w-4 mr-1" />Hinzufügen
       </SheetTrigger>
       <SheetContent side="bottom" className="pb-8">
         <SheetHeader><SheetTitle>Neue Reise</SheetTitle></SheetHeader>

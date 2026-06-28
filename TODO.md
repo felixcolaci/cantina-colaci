@@ -10,6 +10,7 @@ Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann ste
 | # | Feature | Spec | Plan |
 |---|---------|------|------|
 | 1 | Dashboard redesign — Wine Hero, Stats, Letzte Verkostungen | [spec](docs/superpowers/specs/2026-06-28-dashboard-redesign-design.md) | [plan](docs/superpowers/plans/2026-06-28-dashboard-redesign.md) |
+| 2 | Trips-Seite — TripCard, Detail-Seite, Stats | [spec](docs/superpowers/specs/2026-06-28-trips-redesign-design.md) | [plan](docs/superpowers/plans/2026-06-28-trips-redesign.md) |
 
 ---
 
@@ -19,7 +20,7 @@ Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann ste
 
 | # | Feature | Status |
 |---|---------|--------|
-| 2 | Trips-Seite — Design-System-Redesign + Wein-Verknüpfung | ⬜ Spec fehlt |
+| 2 | Trips-Seite — Design-System-Redesign + Wein-Verknüpfung | ✅ Erledigt |
 | 5 | Rating-Input im Verkostungs-Sheet visuell aufwerten | ⬜ Spec fehlt |
 | 6 | Nachkaufen-Funktion — Flaschen zu bestehendem Wein hinzufügen | ⬜ Spec fehlt |
 | 9 | Family-Seite — Editorial-Styling + lesbare Mitgliedernamen | ⬜ Spec fehlt |

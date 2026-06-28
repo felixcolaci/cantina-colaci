@@ -273,7 +273,7 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
                     >
                       {t.rating}
                       <span style={{ fontSize: '0.65em', fontWeight: 400, color: 'var(--muted-foreground)' }}>
-                        /10
+                        /5
                       </span>
                     </span>
                   </div>

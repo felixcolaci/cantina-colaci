@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { Camera, Trash2 } from 'lucide-react'
 import { addWinePhoto, deleteWinePhoto } from '@/lib/actions/wine-photos'
-import { clearEntryPhoto } from '@/lib/actions/entries'
+import { clearSkuPhoto } from '@/lib/actions/skus'
 import { compressImage } from '@/lib/image-compress'
 import { useServerAction } from '@/lib/hooks/use-server-action'
 import {
@@ -34,7 +34,7 @@ export function PhotoGallery({
   const [pendingDelete, setPendingDelete] = useState<{ id: string; isLegacy: boolean } | null>(null)
   const { run: runAdd, isPending: addPending } = useServerAction(addWinePhoto)
   const { run: runDelete, isPending: deletePending } = useServerAction(deleteWinePhoto)
-  const { run: runClearLegacy, isPending: clearPending } = useServerAction(clearEntryPhoto)
+  const { run: runClearLegacy, isPending: clearPending } = useServerAction(clearSkuPhoto)
 
   const slides: Photo[] =
     photos.length > 0

@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { OpenBottleButton } from './open-bottle-button'
 import { WineEditSheet } from './wine-edit-sheet'
-import { EntryCard } from './entry-card'
+import { SkuCard } from './sku-card'
 import { PhotoGallery } from './photo-gallery'
 import type { WineType } from '@/lib/types'
 
@@ -197,11 +197,12 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
           ) : (
             <div className="space-y-3">
               {inStockEntries.map(entry => (
-                <EntryCard
+                <SkuCard
                   key={entry.id}
-                  entry={{
+                  sku={{
                     id: entry.id,
                     wine_id: entry.wine_id,
+                    vintage: entry.vintage ?? null,
                     quantity: entry.quantity,
                     purchase_price: entry.purchase_price,
                     purchase_date: entry.purchase_date,

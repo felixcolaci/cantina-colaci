@@ -8,7 +8,7 @@ import { CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import 'react-day-picker/src/style.css'
+import 'react-day-picker/style.css'
 
 export type DatePickerMode = 'year' | 'full' | 'partial'
 export type Precision = 'year' | 'month' | 'day'

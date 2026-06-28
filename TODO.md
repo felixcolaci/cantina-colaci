@@ -14,6 +14,8 @@ Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann ste
 | 3+4 | DatePicker in "Flasche öffnen" + Entry-Edit | — | [plan](docs/superpowers/plans/2026-06-28-datepicker-remaining-forms.md) |
 | 5 | Rating-Input 1–5 visuell + /5 Anzeige überall | [spec](docs/superpowers/specs/2026-06-28-rating-input-design.md) | [plan](docs/superpowers/plans/2026-06-28-rating-input.md) |
 | 6 | Nachkaufen — cellar_entries → skus, vintage per Posten, AddSkuSheet | [spec](docs/superpowers/specs/2026-06-28-nachkaufen-sku-design.md) | [plan](docs/superpowers/plans/2026-06-28-nachkaufen-sku.md) |
+| 7 | Keller-Filterleiste — CSS-Tokens statt Tailwind-Klassen | — | [plan](docs/superpowers/plans/2026-06-28-cellar-filter-css-tokens.md) |
+| 8 | Top-Bar — Glasmorphismus-Effekt wie Bottom-Nav | — | [plan](docs/superpowers/plans/2026-06-28-topbar-glass-effect.md) |
 
 ---
 
@@ -34,8 +36,8 @@ Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann ste
 |---|---------|--------|
 | 3 | DatePicker in „Flasche öffnen"-Sheet einbauen | ✅ Erledigt |
 | 4 | DatePicker in Entry-Bearbeiten-Form einbauen | ✅ Erledigt |
-| 7 | Keller-Filterleiste — CSS-Tokens statt Tailwind-Klassen | ⬜ Plan fehlt |
-| 8 | Top-Bar — Glasmorphismus-Effekt wie Bottom-Nav | ⬜ Plan fehlt |
+| 7 | Keller-Filterleiste — CSS-Tokens statt Tailwind-Klassen | ✅ Erledigt |
+| 8 | Top-Bar — Glasmorphismus-Effekt wie Bottom-Nav | ✅ Erledigt |
 
 ---
 

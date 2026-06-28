@@ -1,6 +1,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { StatsCard } from '@/components/dashboard/stats-card'
+import { WineHeroCard } from '@/components/dashboard/wine-hero-card'
+import { TastingCard } from '@/components/dashboard/tasting-card'
+import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
@@ -15,7 +18,6 @@ export default async function DashboardPage() {
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
-
   if (!membership) redirect('/login')
 
   const { data: cellar } = await admin
@@ -25,9 +27,9 @@ export default async function DashboardPage() {
     .order('created_at')
     .limit(1)
     .maybeSingle()
-
   if (!cellar) redirect('/login')
 
+  // wines first — needed for inStock count via .in()
   const { data: wines } = await admin
     .from('wines')
     .select('id')
@@ -35,77 +37,82 @@ export default async function DashboardPage() {
 
   const wineIds = (wines ?? []).map(w => w.id)
 
-  const { data: inStockEntries } = wineIds.length
-    ? await admin
-        .from('cellar_entries')
-        .select('quantity')
-        .in('wine_id', wineIds)
-        .eq('status', 'in_stock')
-    : { data: [] }
+  const [inStockResult, tastingsResult, latestWineResult] = await Promise.all([
+    wineIds.length
+      ? admin.from('cellar_entries').select('quantity').in('wine_id', wineIds).eq('status', 'in_stock')
+      : Promise.resolve({ data: [] as { quantity: number }[] }),
+    admin
+      .from('tastings')
+      .select(`
+        id, date, rating, notes,
+        cellar_entries!inner(
+          wines!inner(name, producer, vintage, cellar_id)
+        )
+      `)
+      .eq('cellar_entries.wines.cellar_id', cellar.id)
+      .order('date', { ascending: false })
+      .limit(3),
+    admin
+      .from('wines')
+      .select('id, name, producer, vintage, type')
+      .eq('cellar_id', cellar.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
 
-  const totalBottles = (inStockEntries ?? []).reduce((sum, e) => sum + e.quantity, 0)
+  const wineCount = wineIds.length
+  const totalBottles = (inStockResult.data ?? []).reduce((sum, e) => sum + e.quantity, 0)
+  const recentTastings = tastingsResult.data ?? []
+  const latestWine = latestWineResult.data
 
-  const { data: recentTastings } = await admin
-    .from('tastings')
-    .select('id, date, rating, cellar_entries(wines(name, producer))')
-    .order('created_at', { ascending: false })
-    .limit(3)
+  if (!latestWine) {
+    return (
+      <div className="px-4 py-12 max-w-lg mx-auto text-center space-y-4">
+        <BottleGlyph />
+        <p style={{ color: 'var(--muted-foreground)' }}>Der Keller ist noch leer.</p>
+        <Button render={<Link href="/wine/new" />}>
+          Ersten Wein hinzufügen
+        </Button>
+      </div>
+    )
+  }
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
-      <h2 className="text-xl font-semibold">Ciao, willkommen.</h2>
+    <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
+      <WineHeroCard wine={latestWine} />
 
       <div className="grid grid-cols-2 gap-3">
         <StatsCard title="Flaschen im Keller" value={totalBottles} />
-        <StatsCard title="Verschiedene Weine" value={wineIds.length} />
+        <StatsCard title="Verschiedene Weine" value={wineCount} />
       </div>
 
-      {recentTastings && recentTastings.length > 0 && (
+      {recentTastings.length > 0 && (
         <section>
-          <h3 className="eyebrow mb-3">Letzte Verkostungen</h3>
-          <div className="space-y-2">
+          <p className="eyebrow mb-3">Letzte Verkostungen</p>
+          <div className="space-y-3">
             {recentTastings.map(t => {
               const wine = (t.cellar_entries as any)?.wines
+              if (!wine) return null
               return (
-                <div
+                <TastingCard
                   key={t.id}
-                  className="flex justify-between items-center p-3 rounded-lg border"
-                  style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
-                >
-                  <div>
-                    <p
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: 'var(--text-base)',
-                        fontWeight: 600,
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {wine?.name ?? '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{t.date}</p>
-                  </div>
-                  <span
-                    className="nums font-bold"
-                    style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)' }}
-                  >
-                    {t.rating}/10
-                  </span>
-                </div>
+                  tasting={{
+                    id: t.id,
+                    date: t.date,
+                    rating: t.rating,
+                    notes: t.notes,
+                  }}
+                  wine={{
+                    name: wine.name,
+                    producer: wine.producer ?? null,
+                    vintage: wine.vintage ?? null,
+                  }}
+                />
               )
             })}
           </div>
         </section>
-      )}
-
-      {wineIds.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          <BottleGlyph />
-          <p className="mt-3">Der Keller ist noch leer.</p>
-          <Link href="/wine/new" className="mt-3 inline-block text-primary underline">
-            Ersten Wein hinzufügen
-          </Link>
-        </div>
       )}
     </div>
   )

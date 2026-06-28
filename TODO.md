@@ -11,6 +11,7 @@ Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann ste
 |---|---------|------|------|
 | 1 | Dashboard redesign — Wine Hero, Stats, Letzte Verkostungen | [spec](docs/superpowers/specs/2026-06-28-dashboard-redesign-design.md) | [plan](docs/superpowers/plans/2026-06-28-dashboard-redesign.md) |
 | 2 | Trips-Seite — TripCard, Detail-Seite, Stats | [spec](docs/superpowers/specs/2026-06-28-trips-redesign-design.md) | [plan](docs/superpowers/plans/2026-06-28-trips-redesign.md) |
+| 3+4 | DatePicker in "Flasche öffnen" + Entry-Edit | — | [plan](docs/superpowers/plans/2026-06-28-datepicker-remaining-forms.md) |
 
 ---
 
@@ -29,8 +30,8 @@ Workflow: Spec → Plan → Implementation. Erst alle Pläne schreiben, dann ste
 
 | # | Feature | Status |
 |---|---------|--------|
-| 3 | DatePicker in „Flasche öffnen"-Sheet einbauen | ⬜ Plan fehlt |
-| 4 | DatePicker in Entry-Bearbeiten-Form einbauen | ⬜ Plan fehlt |
+| 3 | DatePicker in „Flasche öffnen"-Sheet einbauen | ✅ Erledigt |
+| 4 | DatePicker in Entry-Bearbeiten-Form einbauen | ✅ Erledigt |
 | 7 | Keller-Filterleiste — CSS-Tokens statt Tailwind-Klassen | ⬜ Plan fehlt |
 | 8 | Top-Bar — Glasmorphismus-Effekt wie Bottom-Nav | ⬜ Plan fehlt |
 

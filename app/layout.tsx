@@ -4,6 +4,7 @@ import './globals.css'
 import { TopBar } from '@/components/nav/top-bar'
 import { BottomNav } from '@/components/nav/bottom-nav'
 import { OfflineToast } from '@/components/ui/offline-toast'
+import { SwUpdateBanner } from '@/components/ui/sw-update-banner'
 import { createClient } from '@/lib/supabase/server'
 
 const displayFont = Cormorant_Garamond({
@@ -61,6 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </main>
         {user && <BottomNav />}
         {user && <OfflineToast />}
+        {user && <SwUpdateBanner />}
       </body>
     </html>
   )

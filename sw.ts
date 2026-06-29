@@ -5,7 +5,7 @@ declare const self: ServiceWorkerGlobalScope & typeof globalThis & { __SW_MANIFE
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  skipWaiting: true,
+  skipWaiting: false,   // wait until user confirms update
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
@@ -20,3 +20,10 @@ const serwist = new Serwist({
 })
 
 serwist.addEventListeners()
+
+// Allow the client to trigger skipWaiting on demand
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})

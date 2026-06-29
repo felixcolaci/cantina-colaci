@@ -14,4 +14,5 @@ CREATE INDEX ON api_usage_logs (family_id, created_at DESC);
 
 ALTER TABLE api_usage_logs ENABLE ROW LEVEL SECURITY;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.api_usage_logs TO authenticated, service_role;
+GRANT SELECT ON public.api_usage_logs TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.api_usage_logs TO service_role;

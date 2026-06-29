@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Plus_Jakarta_Sans, DM_Mono } from 'next/font/google
 import './globals.css'
 import { TopBar } from '@/components/nav/top-bar'
 import { BottomNav } from '@/components/nav/bottom-nav'
+import { OfflineToast } from '@/components/ui/offline-toast'
 import { createClient } from '@/lib/supabase/server'
 
 const displayFont = Cormorant_Garamond({
@@ -52,6 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </main>
         {user && <BottomNav />}
+        {user && <OfflineToast />}
       </body>
     </html>
   )

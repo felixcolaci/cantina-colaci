@@ -45,11 +45,21 @@ export async function quickAddWine(formData: FormData) {
 
   if (wineError) throw new Error(wineError.message)
 
+  const rawLocId = (formData.get('storage_location_id') as string) || null
+  let storage_location_id: string | null = null
+  if (rawLocId) {
+    const { data: loc } = await admin
+      .from('storage_locations').select('id')
+      .eq('id', rawLocId).eq('cellar_id', cellar.id).maybeSingle()
+    if (!loc) throw new Error('Ungültiger Lagerort')
+    storage_location_id = loc.id
+  }
+
   await admin.from('skus').insert({
     wine_id: wine.id,
     vintage: formData.get('vintage') ? parseInt(formData.get('vintage') as string) : null,
     quantity: parseInt((formData.get('quantity') as string) ?? '1'),
-    storage_location_id: (formData.get('storage_location_id') as string) || null,
+    storage_location_id,
     status: 'in_stock',
     purchase_price: null,
     purchase_date: null,

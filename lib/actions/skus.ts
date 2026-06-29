@@ -3,6 +3,19 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
+async function resolveStorageLocation(
+  admin: ReturnType<typeof createAdminClient>,
+  rawId: string | null,
+  cellarId: string,
+): Promise<string | null> {
+  if (!rawId) return null
+  const { data: loc } = await admin
+    .from('storage_locations').select('id')
+    .eq('id', rawId).eq('cellar_id', cellarId).maybeSingle()
+  if (!loc) throw new Error('Ungültiger Lagerort')
+  return loc.id
+}
+
 export async function updateSku(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -28,12 +41,15 @@ export async function updateSku(formData: FormData) {
   const qty = parseInt(formData.get('quantity') as string)
   const vintageRaw = formData.get('vintage') as string
   const vintage = vintageRaw ? parseInt(vintageRaw) : null
+  const storage_location_id = await resolveStorageLocation(
+    admin, (formData.get('storage_location_id') as string) || null, cellar.id,
+  )
 
   await admin.from('skus').update({
     vintage,
     quantity: qty,
     status: qty <= 0 ? 'consumed' : 'in_stock',
-    storage_location_id: (formData.get('storage_location_id') as string) || null,
+    storage_location_id,
     shelf_location: (formData.get('shelf_location') as string) || null,
     purchase_price: formData.get('purchase_price') ? parseFloat(formData.get('purchase_price') as string) : null,
     purchase_date: (formData.get('purchase_date') as string) || null,
@@ -97,6 +113,9 @@ export async function addSku(formData: FormData) {
   const vintageRaw = formData.get('vintage') as string
   const vintage = vintageRaw ? parseInt(vintageRaw) : null
   const quantity = parseInt(formData.get('quantity') as string)
+  const storage_location_id = await resolveStorageLocation(
+    admin, (formData.get('storage_location_id') as string) || null, cellar.id,
+  )
 
   await admin.from('skus').insert({
     wine_id: wineId,
@@ -106,7 +125,7 @@ export async function addSku(formData: FormData) {
     purchase_price: formData.get('purchase_price') ? parseFloat(formData.get('purchase_price') as string) : null,
     purchase_date: (formData.get('purchase_date') as string) || null,
     purchase_location: (formData.get('purchase_location') as string) || null,
-    storage_location_id: (formData.get('storage_location_id') as string) || null,
+    storage_location_id,
   })
 
   redirect(`/wine/${wineId}`)

@@ -35,6 +35,7 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
   const [purchaseLocation, setPurchaseLocation] = useState('')
   const [vintage, setVintage] = useState<number | null>(null)
   const [purchaseDate, setPurchaseDate] = useState<string | null>(null)
+  const [wineType, setWineType] = useState<'red' | 'white' | 'rosé' | 'sparkling' | ''>('')
 
   const { run, isPending, error } = useServerAction(async (formData: FormData) => {
     if (compressedFile) formData.set('photo', compressedFile)
@@ -67,6 +68,7 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
     if (result.country)       setCountry(result.country)
     if (result.region)        setRegion(result.region)
     if (result.grape_variety) setGrapeVariety(result.grape_variety)
+    if (result.type) setWineType(result.type)
   }
 
   return (
@@ -113,7 +115,7 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
           { value: 'white', label: 'Weißwein' },
           { value: 'rosé', label: 'Rosé' },
           { value: 'sparkling', label: 'Schaumwein' },
-        ]}>
+        ]} value={wineType} onValueChange={(v) => setWineType(v as 'red' | 'white' | 'rosé' | 'sparkling')}>
           <SelectTrigger><SelectValue placeholder="Typ auswählen" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="red">Rotwein</SelectItem>

@@ -13,3 +13,5 @@ CREATE TABLE IF NOT EXISTS api_usage_logs (
 CREATE INDEX ON api_usage_logs (family_id, created_at DESC);
 
 ALTER TABLE api_usage_logs ENABLE ROW LEVEL SECURITY;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.api_usage_logs TO authenticated, service_role;

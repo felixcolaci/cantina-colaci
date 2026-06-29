@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { TastingCard } from '@/components/dashboard/tasting-card'
 
 export default async function HistoryPage() {
@@ -30,8 +31,8 @@ export default async function HistoryPage() {
         .select(`
           id, date, rating, notes,
           skus!inner(
-            vintage,
-            wines!inner(name, producer, cellar_id)
+            vintage, wine_id,
+            wines!inner(id, name, producer, cellar_id)
           )
         `)
         .eq('skus.wines.cellar_id', cellar.id)
@@ -58,21 +59,23 @@ export default async function HistoryPage() {
             const sku = tasting.skus as any
             const wine = sku?.wines
             if (!wine) return null
+            const wineId = sku?.wine_id ?? wine.id
             return (
-              <TastingCard
-                key={tasting.id}
-                tasting={{
-                  id: tasting.id,
-                  date: tasting.date,
-                  rating: tasting.rating,
-                  notes: tasting.notes,
-                }}
-                wine={{
-                  name: wine.name,
-                  producer: wine.producer ?? null,
-                  vintage: sku?.vintage ?? null,
-                }}
-              />
+              <Link key={tasting.id} href={`/wine/${wineId}`} className="block">
+                <TastingCard
+                  tasting={{
+                    id: tasting.id,
+                    date: tasting.date,
+                    rating: tasting.rating,
+                    notes: tasting.notes,
+                  }}
+                  wine={{
+                    name: wine.name,
+                    producer: wine.producer ?? null,
+                    vintage: sku?.vintage ?? null,
+                  }}
+                />
+              </Link>
             )
           })}
         </div>

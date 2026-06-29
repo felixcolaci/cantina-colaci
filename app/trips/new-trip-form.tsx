@@ -13,7 +13,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 
 export function NewTripForm() {
   const [open, setOpen] = useState(false)
-  const [dateStart, setDateStart] = useState<string | null>(null)
+  const [dateStart, setDateStart] = useState<string | null>(new Date().toISOString().split('T')[0])
   const [dateEnd, setDateEnd] = useState<string | null>(null)
   const { run, isPending, error } = useServerAction(createTrip)
 

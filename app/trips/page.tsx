@@ -28,7 +28,7 @@ export default async function TripsPage() {
   const { data: trips } = cellar
     ? await admin
         .from('trips')
-        .select('id, name, location, date_start, date_end, wines(id)')
+        .select('id, name, location, date_start, date_end, skus(wine_id)')
         .eq('cellar_id', cellar.id)
         .order('created_at', { ascending: false })
     : { data: [] }
@@ -62,7 +62,7 @@ export default async function TripsPage() {
                 date_start: trip.date_start,
                 date_end: trip.date_end,
               }}
-              wineCount={(trip.wines as any[])?.length ?? 0}
+              wineCount={new Set((trip.skus as any[]).map((s: any) => s.wine_id)).size}
             />
           ))}
         </div>

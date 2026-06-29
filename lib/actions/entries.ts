@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { resolveStorageLocation } from './_utils'
 
 export async function updateEntry(formData: FormData) {
   const supabase = await createClient()
@@ -26,11 +27,14 @@ export async function updateEntry(formData: FormData) {
   if (!wine) throw new Error('Wein nicht gefunden')
 
   const qty = parseInt(formData.get('quantity') as string)
+  const storage_location_id = await resolveStorageLocation(
+    admin, (formData.get('storage_location_id') as string) || null, cellar.id,
+  )
 
   await admin.from('cellar_entries').update({
     quantity: qty,
     status: qty <= 0 ? 'consumed' : 'in_stock',
-    storage_location_id: (formData.get('storage_location_id') as string) || null,
+    storage_location_id,
     shelf_location: (formData.get('shelf_location') as string) || null,
     purchase_price: formData.get('purchase_price') ? parseFloat(formData.get('purchase_price') as string) : null,
     purchase_date: (formData.get('purchase_date') as string) || null,

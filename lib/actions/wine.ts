@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { WineType } from '@/lib/types'
 import { getFeatureFlags } from '@/lib/flags'
+import { resolveStorageLocation } from './_utils'
 
 export async function addWine(formData: FormData) {
   const supabase = await createClient()
@@ -92,6 +93,10 @@ export async function addWine(formData: FormData) {
     if (!trip) throw new Error('Invalid trip')
   }
 
+  const storage_location_id = await resolveStorageLocation(
+    admin, (formData.get('storage_location_id') as string) || null, cellar.id,
+  )
+
   await admin.from('skus').insert({
     wine_id: wine.id,
     vintage: formData.get('vintage') ? parseInt(formData.get('vintage') as string) : null,
@@ -100,7 +105,7 @@ export async function addWine(formData: FormData) {
     purchase_date: (formData.get('purchase_date') as string) || null,
     purchase_location: (formData.get('purchase_location') as string) || null,
     shelf_location: (formData.get('shelf_location') as string) || null,
-    storage_location_id: (formData.get('storage_location_id') as string) || null,
+    storage_location_id,
     trip_id: tripId,
     photo_url,
     status: 'in_stock',

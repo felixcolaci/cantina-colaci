@@ -2,19 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-
-async function resolveStorageLocation(
-  admin: ReturnType<typeof createAdminClient>,
-  rawId: string | null,
-  cellarId: string,
-): Promise<string | null> {
-  if (!rawId) return null
-  const { data: loc } = await admin
-    .from('storage_locations').select('id')
-    .eq('id', rawId).eq('cellar_id', cellarId).maybeSingle()
-  if (!loc) throw new Error('Ungültiger Lagerort')
-  return loc.id
-}
+import { resolveStorageLocation } from './_utils'
 
 export async function updateSku(formData: FormData) {
   const supabase = await createClient()

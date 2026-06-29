@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      // New user — auto-seed demo cellar
-      if (!membership) {
+      // New user not joining via invite — auto-seed demo cellar
+      if (!membership && !safeNext.startsWith('/join')) {
         await seedDemoCellar(user.id)
       }
     }

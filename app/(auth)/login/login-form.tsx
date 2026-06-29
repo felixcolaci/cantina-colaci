@@ -14,9 +14,11 @@ export function LoginForm() {
 
   const { run, isPending, error } = useServerAction(async () => {
     const supabase = createClient()
+    const next = new URLSearchParams(window.location.search).get('next') ?? ''
+    const callbackUrl = `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: callbackUrl },
     })
     if (otpError) throw new Error(otpError.message)
     setSent(true)

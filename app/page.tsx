@@ -46,7 +46,7 @@ export default async function DashboardPage() {
       .select(`
         id, date, rating, notes,
         skus!inner(
-          vintage,
+          vintage, wine_id,
           wines!inner(name, producer, cellar_id)
         )
       `)
@@ -90,8 +90,8 @@ export default async function DashboardPage() {
       <WineHeroCard wine={latestWine} />
 
       <div className="grid grid-cols-2 gap-3">
-        <StatsCard title="Flaschen im Keller" value={totalBottles} />
-        <StatsCard title="Verschiedene Weine" value={wineCount} />
+        <StatsCard title="Flaschen im Keller" value={totalBottles} href="/cellar" />
+        <StatsCard title="Verschiedene Weine" value={wineCount} href="/cellar" />
       </div>
 
       {recentTastings.length > 0 && (
@@ -102,21 +102,23 @@ export default async function DashboardPage() {
               const sku = t.skus as any
               const wine = sku?.wines
               if (!wine) return null
+              const wineId = sku?.wine_id
               return (
-                <TastingCard
-                  key={t.id}
-                  tasting={{
-                    id: t.id,
-                    date: t.date,
-                    rating: t.rating,
-                    notes: t.notes,
-                  }}
-                  wine={{
-                    name: wine.name,
-                    producer: wine.producer ?? null,
-                    vintage: sku?.vintage ?? null,
-                  }}
-                />
+                <Link key={t.id} href={`/wine/${wineId}`} className="block">
+                  <TastingCard
+                    tasting={{
+                      id: t.id,
+                      date: t.date,
+                      rating: t.rating,
+                      notes: t.notes,
+                    }}
+                    wine={{
+                      name: wine.name,
+                      producer: wine.producer ?? null,
+                      vintage: sku?.vintage ?? null,
+                    }}
+                  />
+                </Link>
               )
             })}
           </div>

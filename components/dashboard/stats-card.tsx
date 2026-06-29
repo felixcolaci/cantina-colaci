@@ -1,19 +1,26 @@
+import Link from 'next/link'
+
 interface StatsCardProps {
   title: string
   value: string | number
+  href?: string
 }
 
-export function StatsCard({ title, value }: StatsCardProps) {
-  return (
-    <div
-      style={{
-        background: 'var(--card)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-sm)',
-        padding: 'var(--space-4) var(--space-5)',
-      }}
-    >
+const cardStyle = {
+  background: 'var(--card)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius-lg)',
+  boxShadow: 'var(--shadow-sm)',
+  padding: 'var(--space-4) var(--space-5)',
+  display: 'block',
+  textDecoration: 'none',
+  color: 'inherit',
+  transition: 'box-shadow var(--duration-fast) var(--ease-standard)',
+} as const
+
+export function StatsCard({ title, value, href }: StatsCardProps) {
+  const content = (
+    <>
       <p className="eyebrow mb-2">{title}</p>
       <p
         className="nums"
@@ -27,6 +34,16 @@ export function StatsCard({ title, value }: StatsCardProps) {
       >
         {value}
       </p>
-    </div>
+    </>
   )
+
+  if (href) {
+    return (
+      <Link href={href} className="wine-card-hover" style={cardStyle}>
+        {content}
+      </Link>
+    )
+  }
+
+  return <div style={cardStyle}>{content}</div>
 }

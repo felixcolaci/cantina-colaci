@@ -1,5 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { ChevronLeft } from 'lucide-react'
 import { GenerateKeyButton } from './generate-key-button'
 import { RevokeKeyForm } from './revoke-key-form'
 
@@ -24,6 +26,10 @@ export default async function ApiKeysPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-6">
+      <Link href="/" className="inline-flex items-center gap-0.5 text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
+        <ChevronLeft className="h-4 w-4 -ml-0.5" />
+        Home
+      </Link>
       <div>
         <h2 className="text-xl font-semibold">API-Schlüssel</h2>
         <p className="text-sm text-muted-foreground mt-1">

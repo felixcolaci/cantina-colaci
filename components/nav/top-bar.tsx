@@ -23,18 +23,20 @@ export async function TopBar() {
         boxShadow: '0 4px 16px rgba(61,38,22,0.06)',
       }}
     >
-      <h1
+      <Link
+        href="/"
         style={{
           fontFamily: 'var(--font-display)',
           fontSize: 'var(--text-xl)',
           fontWeight: 600,
           letterSpacing: 'var(--tracking-tight)',
-          margin: 0,
           lineHeight: 1,
+          color: 'var(--foreground)',
+          textDecoration: 'none',
         }}
       >
         Cantina Colaci
-      </h1>
+      </Link>
       <DropdownMenu>
         <DropdownMenuTrigger render={
           <button className="cursor-pointer rounded-full">

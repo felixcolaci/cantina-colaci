@@ -1,5 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { ChevronLeft } from 'lucide-react'
 import type { FamilyRole } from '@/lib/types'
 import { CopyInviteLink } from './copy-invite-link'
 import { StartOwnCellar } from './start-own-cellar'
@@ -76,6 +78,10 @@ export default async function FamilyPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
+      <Link href="/" className="inline-flex items-center gap-0.5 text-sm font-medium mb-4" style={{ color: 'var(--muted-foreground)' }}>
+        <ChevronLeft className="h-4 w-4 -ml-0.5" />
+        Home
+      </Link>
       <p className="eyebrow" style={{ marginBottom: 'var(--space-2)' }}>Familie</p>
       <h1
         style={{

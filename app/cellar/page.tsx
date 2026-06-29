@@ -1,6 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { WineCard } from '@/components/cellar/wine-card'
+import { SwipeableWineCard } from '@/components/cellar/swipeable-wine-card'
 import { QuickAddSheet } from './quick-add-sheet'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -184,7 +184,10 @@ export default async function CellarPage({
               </div>
               <div className="space-y-2">
                 {group.wines.map(wine => (
-                  <WineCard key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage} />
+                  <SwipeableWineCard
+                    key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage}
+                    firstSkuId={(wine.skus as any[])[0]?.id ?? null}
+                  />
                 ))}
               </div>
             </div>
@@ -193,7 +196,10 @@ export default async function CellarPage({
       ) : (
         <div className="space-y-2">
           {wines.map(wine => (
-            <WineCard key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage} />
+            <SwipeableWineCard
+              key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage}
+              firstSkuId={(wine.skus as any[])[0]?.id ?? null}
+            />
           ))}
         </div>
       )}

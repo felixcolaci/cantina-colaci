@@ -45,5 +45,7 @@ export async function openBottle(formData: FormData) {
     .update({ quantity: newQuantity, status: newQuantity <= 0 ? 'consumed' : 'in_stock' })
     .eq('id', cellarEntryId)
 
-  redirect(`/wine/${entry.wine_id}`)
+  const redirectTo = formData.get('redirect_to') as string | null
+  const SAFE = ['/cellar', '/history', '/trips', '/']
+  redirect(SAFE.includes(redirectTo ?? '') ? redirectTo! : `/wine/${entry.wine_id}`)
 }

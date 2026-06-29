@@ -44,19 +44,21 @@ export async function scanWineLabel(
   ) as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
 
   const client = new Anthropic()
-  const message = await client.messages.create({
-    model: MODEL,
-    max_tokens: 512,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: mediaType, data: base64 },
-        },
-        {
-          type: 'text',
-          text: `Analysiere dieses Weinetikett und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärungen):
+  let message
+  try {
+    message = await client.messages.create({
+      model: MODEL,
+      max_tokens: 512,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mediaType, data: base64 },
+          },
+          {
+            type: 'text',
+            text: `Analysiere dieses Weinetikett und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärungen):
 
 {
   "name": "Weinname (z.B. Barolo, Chianti Classico)",
@@ -69,16 +71,20 @@ export async function scanWineLabel(
 }
 
 Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stellige Jahreszahl sein.`,
-        },
-      ],
-    }],
-  })
+          },
+        ],
+      }],
+    })
+  } catch (err) {
+    console.error('[scan-label] Anthropic API error:', err)
+    return { error: 'Scan fehlgeschlagen, bitte erneut versuchen' }
+  }
 
   const inputTokens  = message.usage.input_tokens
   const outputTokens = message.usage.output_tokens
   const costUsd = inputTokens * INPUT_COST + outputTokens * OUTPUT_COST
 
-  await admin.from('api_usage_logs').insert({
+  const { error: logError } = await admin.from('api_usage_logs').insert({
     family_id:     membership.family_id,
     feature:       'label_scan',
     model:         MODEL,
@@ -86,6 +92,7 @@ Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stel
     output_tokens: outputTokens,
     cost_usd:      costUsd,
   })
+  if (logError) console.error('[scan-label] usage log failed:', logError.message)
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : ''
   try {

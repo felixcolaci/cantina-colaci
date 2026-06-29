@@ -15,6 +15,8 @@ import { Combobox } from '@/components/ui/combobox'
 import { DatePicker } from '@/components/ui/date-picker'
 import { WINE_COUNTRIES, WINE_REGIONS, GRAPE_VARIETIES } from '@/lib/wine-data'
 import type { Trip, WineHints, StorageLocation } from '@/lib/types'
+import { ScanLabelButton } from '@/components/cellar/scan-label-button'
+import type { ScanResult } from '@/lib/actions/scan-label'
 
 interface WineFormProps {
   trips: Pick<Trip, 'id' | 'name'>[]
@@ -58,11 +60,22 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
     setPreview(URL.createObjectURL(compressed))
   }
 
+  function handleScanResult(result: ScanResult) {
+    if (result.name)          setName(result.name)
+    if (result.producer)      setProducer(result.producer)
+    if (result.vintage)       setVintage(result.vintage)
+    if (result.country)       setCountry(result.country)
+    if (result.region)        setRegion(result.region)
+    if (result.grape_variety) setGrapeVariety(result.grape_variety)
+  }
+
   return (
     <form
       onSubmit={e => { e.preventDefault(); run(new FormData(e.currentTarget)) }}
       className="space-y-4 pb-8"
     >
+      <ScanLabelButton onResult={handleScanResult} />
+
       <div className="space-y-2">
         <Label>Foto der Flasche</Label>
         {preview && (

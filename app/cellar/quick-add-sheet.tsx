@@ -11,11 +11,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { ScanLabelButton } from '@/components/cellar/scan-label-button'
+import type { ScanResult } from '@/lib/actions/scan-label'
 
 const WINE_TYPES = [
-  { value: 'red',      label: 'Rot' },
-  { value: 'white',    label: 'Weiß' },
-  { value: 'rosé',     label: 'Rosé' },
+  { value: 'red',       label: 'Rot' },
+  { value: 'white',     label: 'Weiß' },
+  { value: 'rosé',      label: 'Rosé' },
   { value: 'sparkling', label: 'Schaum' },
 ] as const
 
@@ -35,6 +37,8 @@ export function QuickAddSheet({
   const [open, setOpen] = useState(false)
   const [wineType, setWineType] = useState<WineTypeValue>('red')
   const [vintage, setVintage] = useState<number | null>(null)
+  const [name, setName] = useState('')
+  const [producer, setProducer] = useState('')
   const { run, isPending, error, offlineSaved } = useServerAction(
     quickAddWine,
     (fd) => queueAction('quickAddWine', fd),
@@ -44,7 +48,16 @@ export function QuickAddSheet({
     if (offlineSaved) setOpen(false)
   }, [offlineSaved])
 
-  const listId = `names-${storageLocationId ?? 'none'}`
+  function handleScanResult(result: ScanResult) {
+    if (result.name)     setName(result.name)
+    if (result.producer) setProducer(result.producer)
+    if (result.vintage)  setVintage(result.vintage)
+    if (result.type && WINE_TYPES.some(t => t.value === result.type)) {
+      setWineType(result.type as WineTypeValue)
+    }
+  }
+
+  const listId         = `names-${storageLocationId ?? 'none'}`
   const producerListId = `producers-${storageLocationId ?? 'none'}`
 
   return (
@@ -81,23 +94,29 @@ export function QuickAddSheet({
             </datalist>
           )}
 
+          <ScanLabelButton onResult={handleScanResult} />
+
           <input type="hidden" name="storage_location_id" value={storageLocationId ?? ''} />
           <input type="hidden" name="type" value={wineType} />
 
           <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
+            <Label htmlFor="qs-name">Name *</Label>
             <Input
-              id="name" name="name" required autoFocus
+              id="qs-name" name="name" required
               placeholder="z.B. Barolo"
+              value={name}
+              onChange={e => setName(e.target.value)}
               list={nameHints.length > 0 ? listId : undefined}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="producer">Produzent</Label>
+            <Label htmlFor="qs-producer">Produzent</Label>
             <Input
-              id="producer" name="producer"
+              id="qs-producer" name="producer"
               placeholder="z.B. Gaja"
+              value={producer}
+              onChange={e => setProducer(e.target.value)}
               list={producerHints.length > 0 ? producerListId : undefined}
             />
           </div>
@@ -143,9 +162,9 @@ export function QuickAddSheet({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="quantity">Anzahl *</Label>
+              <Label htmlFor="qs-quantity">Anzahl *</Label>
               <Input
-                id="quantity" name="quantity" type="number"
+                id="qs-quantity" name="quantity" type="number"
                 min="1" max="999" defaultValue={1} required
               />
             </div>

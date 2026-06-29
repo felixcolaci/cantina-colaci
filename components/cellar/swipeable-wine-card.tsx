@@ -126,6 +126,7 @@ export function SwipeableWineCard({
             style={{
               position: 'absolute', inset: 0, left: 'auto',
               width: REVEAL_W,
+              zIndex: 0,
               background: 'var(--primary)',
               display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
@@ -147,8 +148,8 @@ export function SwipeableWineCard({
           </div>
         )}
 
-        {/* The card itself — slides left on swipe */}
-        <div ref={cardRef} style={{ borderRadius: 'var(--radius-lg)' }}>
+        {/* The card itself — slides left on swipe, sits above the action strip */}
+        <div ref={cardRef} style={{ borderRadius: 'var(--radius-lg)', position: 'relative', zIndex: 1 }}>
           <WineCard wine={wine} skus={skus} vintage={vintage} />
         </div>
       </div>

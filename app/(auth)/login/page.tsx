@@ -22,9 +22,9 @@ export default async function LoginPage() {
               marginBottom: '0.25rem',
             }}
           >
-            La Cantina Colaci
+            Vino Mio
           </h1>
-          <p className="text-muted-foreground mt-2">Eure Weinsammlung</p>
+          <p className="text-muted-foreground mt-2">Il tuo cellar di famiglia</p>
         </div>
         <LoginForm />
       </div>

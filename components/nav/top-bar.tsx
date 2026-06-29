@@ -35,7 +35,7 @@ export async function TopBar() {
           textDecoration: 'none',
         }}
       >
-        Cantina Colaci
+        Vino Mio
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger render={

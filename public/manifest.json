@@ -1,7 +1,7 @@
 {
-  "name": "La Cantina Colaci",
-  "short_name": "Cantina",
-  "description": "La vostra collezione di vini",
+  "name": "Vino Mio",
+  "short_name": "Vino Mio",
+  "description": "Il tuo cellar di famiglia",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#7c2d12",

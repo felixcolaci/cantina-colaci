@@ -32,8 +32,8 @@ const monoFont = DM_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'La Cantina Colaci',
-  description: 'Eure Weinsammlung',
+  title: 'Vino Mio',
+  description: 'Il tuo cellar di famiglia',
   manifest: '/manifest.json',
   icons: {
     apple: '/apple-touch-icon.png',
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Cantina',
+    title: 'Vino Mio',
   },
 }
 

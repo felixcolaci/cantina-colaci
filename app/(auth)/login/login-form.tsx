@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useServerAction } from '@/lib/hooks/use-server-action'
 import { SubmitButton } from '@/components/ui/submit-button'
@@ -8,31 +9,80 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-export function LoginForm() {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
+type View = 'login' | 'forgot' | 'forgot-sent'
 
-  const { run, isPending, error } = useServerAction(async () => {
+export function LoginForm() {
+  const router = useRouter()
+  const [view, setView] = useState<View>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState<string | null>(null)
+
+  const { run: handleLogin, isPending: loginPending } = useServerAction(async () => {
+    setLoginError(null)
     const supabase = createClient()
-    const next = new URLSearchParams(window.location.search).get('next') ?? ''
-    if (next) {
-      document.cookie = `auth_next=${encodeURIComponent(next)}; path=/; max-age=600; SameSite=Lax`
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      setLoginError('E-Mail oder Passwort falsch')
+      return
     }
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    })
-    if (otpError) throw new Error(otpError.message)
-    setSent(true)
+    const next = new URLSearchParams(window.location.search).get('next')
+    router.push(next && next.startsWith('/') ? next : '/')
   })
 
-  if (sent) {
+  const { run: handleForgot, isPending: forgotPending, error: forgotError } = useServerAction(async () => {
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/login/reset-password`,
+    })
+    if (error) throw new Error(error.message)
+    setView('forgot-sent')
+  })
+
+  if (view === 'forgot-sent') {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Schau in deine E-Mails</CardTitle>
-          <CardDescription>Ciao! Wir haben dir einen Anmeldelink an {email} geschickt.</CardDescription>
+          <CardTitle>Schau in deine Mails</CardTitle>
+          <CardDescription>
+            Wir haben dir einen Reset-Link an {email} geschickt.
+          </CardDescription>
         </CardHeader>
+      </Card>
+    )
+  }
+
+  if (view === 'forgot') {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Passwort vergessen</CardTitle>
+          <CardDescription>Gib deine E-Mail ein — wir schicken dir einen Reset-Link</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={e => { e.preventDefault(); handleForgot() }} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">E-Mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="deine@email.de"
+                required
+              />
+            </div>
+            {forgotError && <p className="text-sm text-destructive">{forgotError}</p>}
+            <SubmitButton isPending={forgotPending} className="w-full">Link senden</SubmitButton>
+          </form>
+          <button
+            type="button"
+            onClick={() => setView('login')}
+            className="mt-3 text-sm text-muted-foreground hover:text-foreground w-full text-center"
+          >
+            Zurück zum Login
+          </button>
+        </CardContent>
       </Card>
     )
   }
@@ -41,10 +91,10 @@ export function LoginForm() {
     <Card>
       <CardHeader>
         <CardTitle>Anmelden</CardTitle>
-        <CardDescription>E-Mail eingeben — wir schicken dir einen magischen Link</CardDescription>
+        <CardDescription>Mit E-Mail und Passwort anmelden</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={e => { e.preventDefault(); run() }} className="space-y-4">
+        <form onSubmit={e => { e.preventDefault(); handleLogin() }} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
             <Input
@@ -56,9 +106,26 @@ export function LoginForm() {
               required
             />
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <SubmitButton isPending={isPending} className="w-full">Link senden</SubmitButton>
+          <div className="space-y-2">
+            <Label htmlFor="password">Passwort</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          {loginError && <p className="text-sm text-destructive">{loginError}</p>}
+          <SubmitButton isPending={loginPending} className="w-full">Anmelden</SubmitButton>
         </form>
+        <button
+          type="button"
+          onClick={() => setView('forgot')}
+          className="mt-3 text-sm text-muted-foreground hover:text-foreground w-full text-center"
+        >
+          Passwort vergessen?
+        </button>
       </CardContent>
     </Card>
   )

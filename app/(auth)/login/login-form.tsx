@@ -27,7 +27,8 @@ export function LoginForm() {
       return
     }
     const next = new URLSearchParams(window.location.search).get('next')
-    router.push(next && next.startsWith('/') ? next : '/')
+    const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/'
+    router.push(safeNext)
   })
 
   const { run: handleForgot, isPending: forgotPending, error: forgotError } = useServerAction(async () => {

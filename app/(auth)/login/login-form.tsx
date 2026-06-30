@@ -52,7 +52,7 @@ export function LoginForm() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="felix@colaci.eu"
+              placeholder="deine@email.de"
               required
             />
           </div>

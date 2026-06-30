@@ -18,7 +18,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
 
-  const { run: handleLogin, isPending: loginPending } = useServerAction(async () => {
+  const { run: handleLogin, isPending: loginPending, error: loginNetworkError } = useServerAction(async () => {
     setLoginError(null)
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -118,6 +118,7 @@ export function LoginForm() {
             />
           </div>
           {loginError && <p className="text-sm text-destructive">{loginError}</p>}
+          {loginNetworkError && <p className="text-sm text-destructive">{loginNetworkError}</p>}
           <SubmitButton isPending={loginPending} className="w-full">Anmelden</SubmitButton>
         </form>
         <button

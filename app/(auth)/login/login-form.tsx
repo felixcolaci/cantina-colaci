@@ -15,10 +15,12 @@ export function LoginForm() {
   const { run, isPending, error } = useServerAction(async () => {
     const supabase = createClient()
     const next = new URLSearchParams(window.location.search).get('next') ?? ''
-    const callbackUrl = `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`
+    if (next) {
+      document.cookie = `auth_next=${encodeURIComponent(next)}; path=/; max-age=600; SameSite=Lax`
+    }
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: callbackUrl },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
     if (otpError) throw new Error(otpError.message)
     setSent(true)

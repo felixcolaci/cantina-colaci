@@ -33,8 +33,13 @@ export function LoginForm() {
 
   const { run: handleForgot, isPending: forgotPending, error: forgotError } = useServerAction(async () => {
     const supabase = createClient()
+    const next = new URLSearchParams(window.location.search).get('next')
+    const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null
+    const postResetPath = safeNext
+      ? `/login/reset-password?after=${safeNext}`
+      : '/login/reset-password'
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/login/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(postResetPath)}`,
     })
     if (error) throw new Error(error.message)
     setView('forgot-sent')

@@ -24,7 +24,9 @@ export default function ResetPasswordPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.updateUser({ password })
     if (error) throw new Error(error.message)
-    router.push('/')
+    const after = new URLSearchParams(window.location.search).get('after')
+    const dest = after && after.startsWith('/') && !after.startsWith('//') ? after : '/'
+    router.push(dest)
   })
 
   return (

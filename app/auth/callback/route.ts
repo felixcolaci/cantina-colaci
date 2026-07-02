@@ -17,6 +17,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=auth', origin))
     }
 
+    const type = searchParams.get('type')
+    if (type === 'recovery') {
+      const dest = safeNext.startsWith('/login/reset-password') ? safeNext : '/login/reset-password'
+      return NextResponse.redirect(new URL(dest, origin))
+    }
+    if (type === 'invite') {
+      const after = safeNext !== '/' ? `?after=${encodeURIComponent(safeNext)}` : ''
+      return NextResponse.redirect(new URL(`/login/reset-password${after}`, origin))
+    }
+
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {

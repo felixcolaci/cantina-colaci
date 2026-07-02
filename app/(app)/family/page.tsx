@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import type { FamilyRole } from '@/lib/types'
-import { CopyInviteLink } from './copy-invite-link'
+import { InviteForm } from './invite-form'
 import { StartOwnCellar } from './start-own-cellar'
 import { SetNamePrompt } from './set-name-prompt'
 import { EditNameSheet } from './edit-name-sheet'
@@ -213,9 +213,9 @@ export default async function FamilyPage() {
               marginBottom: 'var(--space-3)',
             }}
           >
-            Link teilen. Nach dem Anmelden wird das Mitglied automatisch zur Familie hinzugefügt.
+            E-Mail-Adresse eingeben — das Mitglied bekommt eine Einladung und wird nach dem Anmelden automatisch hinzugefügt.
           </p>
-          <CopyInviteLink familyId={membership.family_id} />
+          <InviteForm />
         </div>
       )}
     </div>

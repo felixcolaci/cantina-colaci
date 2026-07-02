@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
 export default async function JoinPage({
@@ -16,7 +16,9 @@ export default async function JoinPage({
     redirect(`/login?next=/join?family=${familyId}`)
   }
 
-  const { data: existing } = await supabase
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin
     .from('family_members')
     .select('family_id')
     .eq('family_id', familyId)
@@ -24,14 +26,14 @@ export default async function JoinPage({
     .maybeSingle()
 
   if (!existing) {
-    const { data: family } = await supabase
+    const { data: family } = await admin
       .from('families')
       .select('id')
       .eq('id', familyId)
       .maybeSingle()
 
     if (family) {
-      await supabase.from('family_members').insert({
+      await admin.from('family_members').insert({
         family_id: familyId,
         user_id: user.id,
         role: 'member',

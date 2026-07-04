@@ -1,4 +1,5 @@
-import { getQueuedScans, updateScan } from '@/lib/offline/db'
+import { getDb, getQueuedScans, updateScan, SCAN_STORE } from '@/lib/offline/db'
+import type { PendingScan } from '@/lib/offline/db'
 import { scanWineLabel } from '@/lib/actions/scan-label'
 
 export interface ScanSyncResult {
@@ -7,6 +8,13 @@ export interface ScanSyncResult {
 }
 
 export async function processPendingScans(): Promise<ScanSyncResult> {
+  // Reset scans stuck in processing from a previous interrupted sync
+  const db = await getDb()
+  const allScans: PendingScan[] = await db.getAll(SCAN_STORE)
+  for (const s of allScans.filter(s => s.status === 'processing')) {
+    await updateScan(s.id, { status: 'queued' })
+  }
+
   const scans = await getQueuedScans()
   if (scans.length === 0) return { processed: 0, failed: 0 }
 

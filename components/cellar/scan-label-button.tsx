@@ -10,6 +10,7 @@ import { scanWineLabel } from '@/lib/actions/scan-label'
 import type { ScanResult } from '@/lib/actions/scan-label'
 import { compressImage } from '@/lib/image-compress'
 import { queueScan } from '@/lib/offline/db'
+import { readLocationCache } from '@/lib/offline/location-cache'
 import type { CachedLocation } from '@/lib/offline/location-cache'
 
 interface Props {
@@ -17,7 +18,7 @@ interface Props {
   storageLocations?: CachedLocation[]
 }
 
-export function ScanLabelButton({ onResult, storageLocations = [] }: Props) {
+export function ScanLabelButton({ onResult, storageLocations = readLocationCache() }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)

@@ -46,7 +46,7 @@ export interface PendingScan {
 const DB_NAME = 'cantina-offline'
 const DB_VERSION = 2
 const STORE = 'pending-actions'
-const SCAN_STORE = 'pending-scans'
+export const SCAN_STORE = 'pending-scans'
 
 let _db: IDBPDatabase | null = null
 

@@ -7,6 +7,35 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+export function buildMcpConfigs(origin: string, key: string) {
+  const url = `${origin}/api/mcp`
+
+  const claudeDesktop = JSON.stringify({
+    mcpServers: {
+      'cantina-colaci': {
+        url,
+        headers: { Authorization: `Bearer ${key}` },
+      },
+    },
+  }, null, 2)
+
+  const claudeCli = `claude mcp add --transport http cantina-colaci ${url} --header "Authorization: Bearer ${key}"`
+
+  const copilot = JSON.stringify({
+    servers: {
+      'cantina-colaci': {
+        type: 'http',
+        url,
+        headers: { Authorization: `Bearer ${key}` },
+      },
+    },
+  }, null, 2)
+
+  const generic = claudeDesktop
+
+  return { claudeDesktop, claudeCli, copilot, generic }
+}
+
 export function GenerateKeyButton() {
   const [generated, setGenerated] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)

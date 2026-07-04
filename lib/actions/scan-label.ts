@@ -3,7 +3,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
-const MODEL = 'gemini-2.0-flash'
+const MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
 const INPUT_COST  = 0.10 / 1_000_000
 const OUTPUT_COST = 0.40 / 1_000_000
 

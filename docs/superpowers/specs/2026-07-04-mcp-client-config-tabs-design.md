@@ -65,5 +65,7 @@ Default active tab: Claude Desktop (current behavior, least surprising).
 
 ## Testing
 
-- Manual check in the browser: generate a key, switch through all four tabs, confirm each snippet's content and that its Copy button places the corresponding text on the clipboard.
-- No existing automated tests cover this component; none are being added given the purely presentational, low-risk nature of the change (consistent with "quick fix" scope).
+The project has an established convention of testing interactive UI components with Vitest + React Testing Library (see `lib/__tests__/submit-button.test.tsx`, `combobox.test.tsx`, etc.). This component follows that convention:
+
+- `lib/__tests__/generate-key-button.test.tsx` (new): renders the generated-key card and asserts, per tab, that the visible snippet contains the expected format (`mcpServers` vs `servers` vs the `claude mcp add` command) and that clicking that tab's Copy button calls `navigator.clipboard.writeText` with the exact expected string. `navigator.clipboard.writeText` is mocked with `vi.fn()` since jsdom doesn't implement the Clipboard API.
+- Manual check in the browser as a final sanity pass: generate a key, switch through all four tabs, confirm content and copy behavior.

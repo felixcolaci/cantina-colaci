@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useServerAction } from '@/lib/hooks/use-server-action'
@@ -133,6 +134,12 @@ export function LoginForm() {
         >
           Passwort vergessen?
         </button>
+        <Link
+          href="/register"
+          className="mt-2 text-sm text-muted-foreground hover:text-foreground w-full text-center block"
+        >
+          Noch kein Account? Registrieren →
+        </Link>
       </CardContent>
     </Card>
   )

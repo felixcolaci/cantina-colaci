@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 export function buildMcpConfigs(origin: string, key: string) {
   const url = `${origin}/api/mcp`
@@ -36,6 +37,13 @@ export function buildMcpConfigs(origin: string, key: string) {
   return { claudeDesktop, claudeCli, copilot, generic }
 }
 
+const CLIENT_TABS = [
+  { value: 'claudeDesktop', label: 'Claude Desktop' },
+  { value: 'claudeCli', label: 'Claude Code CLI' },
+  { value: 'copilot', label: 'GitHub Copilot' },
+  { value: 'generic', label: 'Generisch' },
+] as const
+
 export function GenerateKeyButton() {
   const [generated, setGenerated] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -51,14 +59,7 @@ export function GenerateKeyButton() {
   }
 
   if (generated) {
-    const config = JSON.stringify({
-      mcpServers: {
-        'cantina-colaci': {
-          url: `${window.location.origin}/api/mcp`,
-          headers: { Authorization: `Bearer ${generated}` },
-        },
-      },
-    }, null, 2)
+    const configs = buildMcpConfigs(window.location.origin, generated)
 
     return (
       <Card className="border-green-200 bg-green-50">
@@ -76,19 +77,32 @@ export function GenerateKeyButton() {
           </div>
           <div>
             <p className="text-sm font-medium text-green-800 mb-1">
-              Config für Claude Desktop (<code>~/.claude/mcp.json</code>):
+              Config für deinen MCP-Client:
             </p>
-            <pre className="p-3 bg-white rounded border text-xs overflow-x-auto select-all">
-              {config}
-            </pre>
+            <Tabs defaultValue="claudeDesktop">
+              <TabsList>
+                {CLIENT_TABS.map(tab => (
+                  <TabsTrigger key={tab.value} value={tab.value}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {CLIENT_TABS.map(tab => (
+                <TabsContent key={tab.value} value={tab.value} className="space-y-2 pt-2">
+                  <pre className="p-3 bg-white rounded border text-xs overflow-x-auto select-all">
+                    {configs[tab.value]}
+                  </pre>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigator.clipboard.writeText(configs[tab.value])}
+                  >
+                    Config kopieren
+                  </Button>
+                </TabsContent>
+              ))}
+            </Tabs>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigator.clipboard.writeText(config)}
-          >
-            Config kopieren
-          </Button>
         </CardContent>
       </Card>
     )

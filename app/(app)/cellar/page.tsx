@@ -8,6 +8,7 @@ import { Plus } from 'lucide-react'
 import type { WineType } from '@/lib/types'
 import { getFeatureFlags } from '@/lib/flags'
 import { DemoBanner } from './demo-banner'
+import { LocationCacheWriter } from '@/components/cellar/location-cache-writer'
 
 const wineTypes: { value: WineType; label: string }[] = [
   { value: 'red', label: 'Rotwein' },
@@ -115,6 +116,7 @@ export default async function CellarPage({
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
+      <LocationCacheWriter locations={locations} />
       {isDemo && <DemoBanner />}
 
       <div className="flex items-center justify-between mb-4">

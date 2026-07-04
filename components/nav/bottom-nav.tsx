@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { usePendingScansCount } from '@/lib/hooks/use-pending-scans-count'
 
 const NAV_ITEMS = [
   {
@@ -53,6 +54,7 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname()
+  const pendingScans = usePendingScansCount()
 
   return (
     <nav
@@ -67,11 +69,16 @@ export function BottomNav() {
       }}
     >
       {NAV_ITEMS.map(({ href, label, icon }) => {
-        const isActive = pathname === href
+        const isCellar = href === '/cellar'
+        const badge = isCellar ? pendingScans : 0
+        const resolvedHref = isCellar && pendingScans > 0 ? '/cellar/inbox' : href
+        const isActive = isCellar
+          ? pathname === '/cellar' || pathname.startsWith('/cellar/')
+          : pathname === href
         return (
           <Link
             key={href}
-            href={href}
+            href={resolvedHref}
             aria-label={label}
             className="flex flex-col items-center justify-center gap-1 flex-1 py-1"
             style={{
@@ -80,15 +87,38 @@ export function BottomNav() {
               WebkitTapHighlightColor: 'transparent',
             }}
           >
-            <svg
-              width="22" height="22" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor"
-              strokeWidth={isActive ? 2.3 : 1.9}
-              strokeLinecap="round" strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              {icon}
-            </svg>
+            <div style={{ position: 'relative', display: 'inline-flex' }}>
+              <svg
+                width="22" height="22" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor"
+                strokeWidth={isActive ? 2.3 : 1.9}
+                strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                {icon}
+              </svg>
+              {badge > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: -4,
+                  right: -6,
+                  background: 'var(--primary)',
+                  color: 'var(--primary-foreground)',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.5625rem',
+                  fontWeight: 800,
+                  minWidth: 16,
+                  height: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 3px',
+                  lineHeight: 1,
+                }}>
+                  {badge}
+                </span>
+              )}
+            </div>
             <span
               style={{
                 fontFamily: 'var(--font-body)',

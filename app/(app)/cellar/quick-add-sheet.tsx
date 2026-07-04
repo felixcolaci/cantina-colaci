@@ -13,6 +13,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { ScanLabelButton } from '@/components/cellar/scan-label-button'
 import type { ScanResult } from '@/lib/actions/scan-label'
+import type { CachedLocation } from '@/lib/offline/location-cache'
 
 const WINE_TYPES = [
   { value: 'red',       label: 'Rot' },
@@ -28,11 +29,13 @@ export function QuickAddSheet({
   storageLocationName,
   nameHints = [],
   producerHints = [],
+  storageLocations = [],
 }: {
   storageLocationId: string | null
   storageLocationName: string
   nameHints?: string[]
   producerHints?: string[]
+  storageLocations?: CachedLocation[]
 }) {
   const [open, setOpen] = useState(false)
   const [wineType, setWineType] = useState<WineTypeValue>('red')
@@ -94,7 +97,7 @@ export function QuickAddSheet({
             </datalist>
           )}
 
-          <ScanLabelButton onResult={handleScanResult} />
+          <ScanLabelButton onResult={handleScanResult} storageLocations={storageLocations} />
 
           <input type="hidden" name="storage_location_id" value={storageLocationId ?? ''} />
           <input type="hidden" name="type" value={wineType} />

@@ -17,6 +17,7 @@ import { WINE_COUNTRIES, WINE_REGIONS, GRAPE_VARIETIES } from '@/lib/wine-data'
 import type { Trip, WineHints, StorageLocation } from '@/lib/types'
 import { ScanLabelButton } from '@/components/cellar/scan-label-button'
 import type { ScanResult } from '@/lib/actions/scan-label'
+import type { CachedLocation } from '@/lib/offline/location-cache'
 
 interface WineFormProps {
   trips: Pick<Trip, 'id' | 'name'>[]
@@ -76,7 +77,10 @@ export function WineForm({ trips, hints, storageLocations }: WineFormProps) {
       onSubmit={e => { e.preventDefault(); run(new FormData(e.currentTarget)) }}
       className="space-y-4 pb-8"
     >
-      <ScanLabelButton onResult={handleScanResult} />
+      <ScanLabelButton
+        onResult={handleScanResult}
+        storageLocations={storageLocations.map((l): CachedLocation => ({ id: l.id, name: l.name }))}
+      />
 
       <div className="space-y-2">
         <Label>Foto der Flasche</Label>

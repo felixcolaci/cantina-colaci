@@ -182,6 +182,7 @@ export default async function CellarPage({
                   storageLocationName={group.name}
                   nameHints={nameHints}
                   producerHints={producerHints}
+                  storageLocations={locations}
                 />
               </div>
               <div className="space-y-2">

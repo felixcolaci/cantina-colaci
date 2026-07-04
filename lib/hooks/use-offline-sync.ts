@@ -23,6 +23,7 @@ export function useOfflineSync(): SyncState {
     setIsSyncing(true)
     try {
       const { processPendingQueue } = await import('@/lib/offline/sync')
+      const { processPendingScans } = await import('@/lib/offline/scan-sync')
       const result = await processPendingQueue()
       if (result.synced > 0 || result.failed > 0) {
         setLastSyncResult(result)
@@ -30,6 +31,10 @@ export function useOfflineSync(): SyncState {
           router.refresh()
           setTimeout(() => setLastSyncResult(null), 5000)
         }
+      }
+      const scanResult = await processPendingScans()
+      if (scanResult.processed > 0 || scanResult.failed > 0) {
+        window.dispatchEvent(new CustomEvent('cantina:scans-updated'))
       }
     } finally {
       setIsSyncing(false)

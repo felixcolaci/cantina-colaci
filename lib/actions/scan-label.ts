@@ -1,11 +1,11 @@
 'use server'
 
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
-const MODEL = 'claude-haiku-4-5-20251001'
-const INPUT_COST  = 1 / 1_000_000
-const OUTPUT_COST = 5 / 1_000_000
+const MODEL = 'gemini-2.0-flash'
+const INPUT_COST  = 0.10 / 1_000_000
+const OUTPUT_COST = 0.40 / 1_000_000
 
 export interface ScanResult {
   name?: string
@@ -35,30 +35,21 @@ export async function scanWineLabel(
   const image = formData.get('image') as File | null
   if (!image || image.size === 0) return { error: 'Kein Bild' }
 
-  const bytes   = await image.arrayBuffer()
-  const base64  = Buffer.from(bytes).toString('base64')
-  const mediaType = (
-    ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(image.type)
-      ? image.type
-      : 'image/jpeg'
-  ) as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+  const bytes = await image.arrayBuffer()
+  const base64 = Buffer.from(bytes).toString('base64')
+  const mimeType = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(image.type)
+    ? image.type
+    : 'image/jpeg'
 
-  const client = new Anthropic()
-  let message
+  const client = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
+  const model = client.getGenerativeModel({ model: MODEL })
+
+  let result
   try {
-    message = await client.messages.create({
-      model: MODEL,
-      max_tokens: 512,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType, data: base64 },
-          },
-          {
-            type: 'text',
-            text: `Analysiere dieses Weinetikett und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärungen):
+    result = await model.generateContent([
+      { inlineData: { mimeType, data: base64 } },
+      {
+        text: `Analysiere dieses Weinetikett und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärungen):
 
 {
   "name": "Weinname (z.B. Barolo, Chianti Classico)",
@@ -71,17 +62,15 @@ export async function scanWineLabel(
 }
 
 Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stellige Jahreszahl sein.`,
-          },
-        ],
-      }],
-    })
+      },
+    ])
   } catch (err) {
-    console.error('[scan-label] Anthropic API error:', err)
+    console.error('[scan-label] Gemini API error:', err)
     return { error: 'Scan fehlgeschlagen, bitte erneut versuchen' }
   }
 
-  const inputTokens  = message.usage.input_tokens
-  const outputTokens = message.usage.output_tokens
+  const inputTokens  = result.response.usageMetadata?.promptTokenCount ?? 0
+  const outputTokens = result.response.usageMetadata?.candidatesTokenCount ?? 0
   const costUsd = inputTokens * INPUT_COST + outputTokens * OUTPUT_COST
 
   const { error: logError } = await admin.from('api_usage_logs').insert({
@@ -94,20 +83,20 @@ Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stel
   })
   if (logError) console.error('[scan-label] usage log failed:', logError.message)
 
-  const raw = message.content[0].type === 'text' ? message.content[0].text : ''
+  const raw = result.response.text()
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return { error: 'Etikett konnte nicht gelesen werden' }
     const p = JSON.parse(jsonMatch[0])
     const currentYear = new Date().getFullYear()
     return {
-      name:         p.name     || undefined,
-      producer:     p.producer || undefined,
-      vintage:      typeof p.vintage === 'number' && p.vintage > 1900 && p.vintage <= currentYear + 1
-                      ? p.vintage : undefined,
-      type:         ['red', 'white', 'rosé', 'sparkling'].includes(p.type) ? p.type : undefined,
-      country:      p.country      || undefined,
-      region:       p.region       || undefined,
+      name:          p.name          || undefined,
+      producer:      p.producer      || undefined,
+      vintage:       typeof p.vintage === 'number' && p.vintage > 1900 && p.vintage <= currentYear + 1
+                       ? p.vintage : undefined,
+      type:          ['red', 'white', 'rosé', 'sparkling'].includes(p.type) ? p.type : undefined,
+      country:       p.country       || undefined,
+      region:        p.region        || undefined,
       grape_variety: p.grape_variety || undefined,
     }
   } catch {

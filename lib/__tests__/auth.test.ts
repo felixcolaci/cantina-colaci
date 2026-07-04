@@ -36,6 +36,12 @@ function mockUpdateQuery() {
 describe('registerWithCode', () => {
   beforeEach(() => vi.clearAllMocks())
 
+  it('returns error when password is shorter than 8 characters', async () => {
+    const result = await registerWithCode('a@b.com', 'short', 'ANY-CODE')
+    expect(result).toEqual({ error: 'Passwort muss mindestens 8 Zeichen lang sein' })
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+
   it('returns error when code is not found or already used', async () => {
     mockInviteQuery(false)
     const result = await registerWithCode('a@b.com', 'password123', 'BAD-CODE')

@@ -7,6 +7,10 @@ export async function registerWithCode(
   password: string,
   code: string,
 ): Promise<{ error: string | null }> {
+  if (password.length < 8) {
+    return { error: 'Passwort muss mindestens 8 Zeichen lang sein' }
+  }
+
   const admin = createAdminClient()
 
   const { data: invite } = await admin

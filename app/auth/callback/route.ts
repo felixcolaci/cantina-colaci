@@ -5,10 +5,28 @@ import { seedDemoCellar } from '@/lib/actions/demo'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const token_hash = searchParams.get('token_hash')
+  const type = searchParams.get('type')
   const next = searchParams.get('next') ?? '/'
 
   // Only allow relative redirects — strip any external URL to prevent open redirect
   const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/'
+
+  // token_hash flow: email links sent without PKCE (works cross-browser / cross-device)
+  if (token_hash && type) {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.verifyOtp({
+      type: type as Parameters<typeof supabase.auth.verifyOtp>[0]['type'],
+      token_hash,
+    })
+    if (error) {
+      return NextResponse.redirect(new URL('/login?error=auth', origin))
+    }
+    if (type === 'recovery') {
+      return NextResponse.redirect(new URL('/login/reset-password', origin))
+    }
+    return NextResponse.redirect(new URL(safeNext, origin))
+  }
 
   if (code) {
     const supabase = await createClient()

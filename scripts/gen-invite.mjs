@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { randomInt } from 'node:crypto'
 
 const [,, email, countArg] = process.argv
 const count = parseInt(countArg ?? '1', 10)
@@ -16,24 +17,28 @@ if (isNaN(count) || count < 1) {
 }
 
 function parseEnvFile(path) {
-  try {
-    const vars = {}
-    for (const line of readFileSync(path, 'utf8').split('\n')) {
-      const trimmed = line.trim()
-      if (!trimmed || trimmed.startsWith('#')) continue
-      const idx = trimmed.indexOf('=')
-      if (idx === -1) continue
-      const key = trimmed.slice(0, idx).trim()
-      const val = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '')
-      vars[key] = val
-    }
-    return vars
-  } catch {
-    return {}
+  const vars = {}
+  const content = readFileSync(path, 'utf8')
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const idx = trimmed.indexOf('=')
+    if (idx === -1) continue
+    const key = trimmed.slice(0, idx).trim()
+    const val = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '')
+    vars[key] = val
   }
+  return vars
 }
 
-const env = parseEnvFile(resolve(process.cwd(), '.env.local'))
+let env
+try {
+  env = parseEnvFile(resolve(process.cwd(), '.env.local'))
+} catch {
+  console.error('Error: .env.local not found. Create it with NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
+  process.exit(1)
+}
+
 const url = env.NEXT_PUBLIC_SUPABASE_URL
 const key = env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -46,7 +51,7 @@ const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
 function randomSegment(len) {
   let s = ''
-  for (let i = 0; i < len; i++) s += CHARS[Math.floor(Math.random() * CHARS.length)]
+  for (let i = 0; i < len; i++) s += CHARS[randomInt(CHARS.length)]
   return s
 }
 
@@ -71,8 +76,13 @@ async function insertCode(code, email) {
   }
 }
 
-for (let i = 0; i < count; i++) {
-  const code = generateCode()
-  await insertCode(code, email)
-  console.log(code)
+try {
+  for (let i = 0; i < count; i++) {
+    const code = generateCode()
+    await insertCode(code, email)
+    console.log(code)
+  }
+} catch (err) {
+  console.error(err.message)
+  process.exit(1)
 }

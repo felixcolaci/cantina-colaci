@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/supabase/server'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu, DropdownMenuContent,
@@ -8,8 +8,7 @@ import {
 import { LogoutButton } from './logout-button'
 
 export async function TopBar() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getAuthenticatedUser()
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? '?'
 
   return (

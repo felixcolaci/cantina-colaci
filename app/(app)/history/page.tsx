@@ -1,11 +1,10 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { TastingCard } from '@/components/dashboard/tasting-card'
 
 export default async function HistoryPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getAuthenticatedUser()
   if (!user) redirect('/login')
 
   const admin = createAdminClient()

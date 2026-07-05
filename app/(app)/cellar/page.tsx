@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SwipeableWineCard } from '@/components/cellar/swipeable-wine-card'
 import { QuickAddSheet } from './quick-add-sheet'
@@ -40,8 +40,7 @@ export default async function CellarPage({
   searchParams: Promise<{ type?: string }>
 }) {
   const { type } = await searchParams
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getAuthenticatedUser()
   if (!user) redirect('/login')
 
   const admin = createAdminClient()

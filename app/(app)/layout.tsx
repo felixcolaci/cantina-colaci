@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TopBar } from '@/components/nav/top-bar'
 import { BottomNav } from '@/components/nav/bottom-nav'
@@ -6,8 +6,7 @@ import { OfflineToast } from '@/components/ui/offline-toast'
 import { SwUpdateBanner } from '@/components/ui/sw-update-banner'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getAuthenticatedUser()
   if (!user) redirect('/login')
 
   return (

@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
 export default async function JoinPage({
@@ -9,8 +9,7 @@ export default async function JoinPage({
   const { family: familyId } = await searchParams
   if (!familyId) redirect('/')
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getAuthenticatedUser()
 
   if (!user) {
     redirect(`/login?next=/join?family=${familyId}`)

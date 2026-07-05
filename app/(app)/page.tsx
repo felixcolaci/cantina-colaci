@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { StatsCard } from '@/components/dashboard/stats-card'
 import { WineHeroCard } from '@/components/dashboard/wine-hero-card'
@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getAuthenticatedUser()
   if (!user) redirect('/login')
 
   const admin = createAdminClient()

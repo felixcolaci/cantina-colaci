@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { OpenBottleButton } from './open-bottle-button'
@@ -42,8 +42,7 @@ const TYPE_CONFIG: Record<WineType, { label: string; bg: string; fg: string; dot
 
 export default async function WineDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getAuthenticatedUser()
   if (!user) redirect('/login')
 
   const admin = createAdminClient()

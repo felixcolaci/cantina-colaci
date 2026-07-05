@@ -1,4 +1,5 @@
-import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { getCellarContext } from '@/lib/cellar-context'
 import { redirect } from 'next/navigation'
 import { WineForm } from './wine-form'
 import type { WineHints, StorageLocation } from '@/lib/types'
@@ -8,26 +9,11 @@ function distinct(values: (string | null)[]): string[] {
 }
 
 export default async function NewWinePage() {
+  const context = await getCellarContext()
+  if (!context) redirect('/login')
+
   const supabase = await createClient()
-  const { data: { user } } = await getAuthenticatedUser()
-  if (!user) redirect('/login')
-
-  const { data: membership } = await supabase
-    .from('family_members')
-    .select('family_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!membership) redirect('/login')
-
-  const { data: cellar } = await supabase
-    .from('cellars')
-    .select('id')
-    .eq('family_id', membership.family_id)
-    .order('created_at')
-    .limit(1)
-    .maybeSingle()
-
-  const cellarId = cellar?.id
+  const cellarId = context.cellarId
 
   const [tripsResult, winesResult, wineIdsResult, locationsResult] = await Promise.all([
     cellarId

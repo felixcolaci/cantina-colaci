@@ -1,4 +1,5 @@
-import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { getCellarContext } from '@/lib/cellar-context'
 import { redirect } from 'next/navigation'
 import { StatsCard } from '@/components/dashboard/stats-card'
 import { WineHeroCard } from '@/components/dashboard/wine-hero-card'
@@ -7,32 +8,17 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 export default async function DashboardPage() {
-  const { data: { user } } = await getAuthenticatedUser()
-  if (!user) redirect('/login')
+  const context = await getCellarContext()
+  if (!context || !context.cellarId) redirect('/login')
+  const { cellarId } = context
 
   const admin = createAdminClient()
-
-  const { data: membership } = await admin
-    .from('family_members')
-    .select('family_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!membership) redirect('/login')
-
-  const { data: cellar } = await admin
-    .from('cellars')
-    .select('id')
-    .eq('family_id', membership.family_id)
-    .order('created_at')
-    .limit(1)
-    .maybeSingle()
-  if (!cellar) redirect('/login')
 
   // wines first — needed for inStock count via .in()
   const { data: wines } = await admin
     .from('wines')
     .select('id')
-    .eq('cellar_id', cellar.id)
+    .eq('cellar_id', cellarId)
 
   const wineIds = (wines ?? []).map(w => w.id)
 
@@ -49,13 +35,13 @@ export default async function DashboardPage() {
           wines!inner(name, producer, cellar_id)
         )
       `)
-      .eq('skus.wines.cellar_id', cellar.id)
+      .eq('skus.wines.cellar_id', cellarId)
       .order('date', { ascending: false })
       .limit(3),
     admin
       .from('wines')
       .select('id, name, producer, type, skus(vintage)')
-      .eq('cellar_id', cellar.id)
+      .eq('cellar_id', cellarId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),

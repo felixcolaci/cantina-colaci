@@ -1,4 +1,5 @@
-import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { getCellarContext } from '@/lib/cellar-context'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
@@ -12,38 +13,23 @@ function formatDate(iso: string): string {
 
 export default async function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { data: { user } } = await getAuthenticatedUser()
-  if (!user) redirect('/login')
+  const context = await getCellarContext()
+  if (!context || !context.cellarId) redirect('/login')
+  const { cellarId } = context
 
   const admin = createAdminClient()
-
-  const { data: membership } = await admin
-    .from('family_members')
-    .select('family_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!membership) redirect('/login')
-
-  const { data: cellar } = await admin
-    .from('cellars')
-    .select('id')
-    .eq('family_id', membership.family_id)
-    .order('created_at')
-    .limit(1)
-    .maybeSingle()
-  if (!cellar) redirect('/login')
 
   const [tripResult, winesResult] = await Promise.all([
     admin
       .from('trips')
       .select('*')
       .eq('id', id)
-      .eq('cellar_id', cellar.id)
+      .eq('cellar_id', cellarId)
       .maybeSingle(),
     admin
       .from('wines')
       .select('*, skus(id, vintage, quantity, photo_url, status, storage_location_id, purchase_price, trip_id)')
-      .eq('cellar_id', cellar.id)
+      .eq('cellar_id', cellarId)
       .order('name'),
   ])
 

@@ -1,4 +1,5 @@
-import { createAdminClient, getAuthenticatedUser } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { getCellarContext } from '@/lib/cellar-context'
 import { redirect } from 'next/navigation'
 import { SwipeableWineCard } from '@/components/cellar/swipeable-wine-card'
 import { QuickAddSheet } from './quick-add-sheet'
@@ -40,34 +41,26 @@ export default async function CellarPage({
   searchParams: Promise<{ type?: string }>
 }) {
   const { type } = await searchParams
-  const { data: { user } } = await getAuthenticatedUser()
-  if (!user) redirect('/login')
+  const context = await getCellarContext()
+  if (!context || !context.cellarId) redirect('/login')
+  const { familyId, cellarId } = context
 
   const admin = createAdminClient()
 
-  const { data: membership } = await admin
-    .from('family_members').select('family_id').eq('user_id', user.id).maybeSingle()
-  if (!membership) redirect('/login')
-
-  const { data: cellar } = await admin
-    .from('cellars').select('id').eq('family_id', membership.family_id)
-    .order('created_at').limit(1).maybeSingle()
-  if (!cellar) redirect('/login')
-
   const [flags, locationsResult, familyResult, winesResult, hintsResult] = await Promise.all([
-    getFeatureFlags(membership.family_id),
-    admin.from('storage_locations').select('id, name').eq('cellar_id', cellar.id).order('name'),
-    admin.from('families').select('is_demo').eq('id', membership.family_id).maybeSingle(),
+    getFeatureFlags(familyId),
+    admin.from('storage_locations').select('id, name').eq('cellar_id', cellarId).order('name'),
+    admin.from('families').select('is_demo').eq('id', familyId).maybeSingle(),
     (async () => {
       let query = admin
         .from('wines')
         .select('*, skus(id, vintage, quantity, photo_url, status, storage_location_id)')
-        .eq('cellar_id', cellar.id)
+        .eq('cellar_id', cellarId)
         .order('name')
       if (type) query = (query as any).eq('type', type)
       return query
     })(),
-    admin.from('wines').select('name, producer').eq('cellar_id', cellar.id),
+    admin.from('wines').select('name, producer').eq('cellar_id', cellarId),
   ])
 
   const locations = locationsResult.data ?? []

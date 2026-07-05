@@ -17,6 +17,7 @@ export async function registerWithCode(
     .from('invitation_codes')
     .select('code')
     .eq('code', code)
+    .eq('email', email.toLowerCase())
     .is('used_at', null)
     .maybeSingle()
 

@@ -17,8 +17,10 @@ function mockInviteQuery(found: boolean) {
   mockFrom.mockReturnValueOnce({
     select: () => ({
       eq: () => ({
-        is: () => ({
-          maybeSingle: () => Promise.resolve({ data: found ? { code: 'VALID-CODE' } : null }),
+        eq: () => ({
+          is: () => ({
+            maybeSingle: () => Promise.resolve({ data: found ? { code: 'VALID-CODE' } : null }),
+          }),
         }),
       }),
     }),
@@ -45,6 +47,13 @@ describe('registerWithCode', () => {
   it('returns error when code is not found or already used', async () => {
     mockInviteQuery(false)
     const result = await registerWithCode('a@b.com', 'password123', 'BAD-CODE')
+    expect(result).toEqual({ error: 'Ungültiger Einladungscode' })
+    expect(mockAdminCreateUser).not.toHaveBeenCalled()
+  })
+
+  it('returns error when email does not match code', async () => {
+    mockInviteQuery(false)
+    const result = await registerWithCode('wrong@b.com', 'password123', 'VALID-CODE')
     expect(result).toEqual({ error: 'Ungültiger Einladungscode' })
     expect(mockAdminCreateUser).not.toHaveBeenCalled()
   })

@@ -83,6 +83,6 @@ try {
     console.log(code)
   }
 } catch (err) {
-  console.error(err.message)
+  console.error('Error:', err.message)
   process.exit(1)
 }

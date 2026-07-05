@@ -49,7 +49,7 @@ export async function addWinePhoto(formData: FormData) {
 
   const { error: uploadError } = await admin.storage
     .from('wine-photos')
-    .upload(path, file, { contentType: file.type })
+    .upload(path, file, { contentType: file.type, cacheControl: '31536000' })
   if (uploadError) throw new Error('Upload fehlgeschlagen')
 
   const { data: urlData } = admin.storage.from('wine-photos').getPublicUrl(path)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import Image from 'next/image'
 import { Camera, Trash2 } from 'lucide-react'
 import { addWinePhoto, deleteWinePhoto } from '@/lib/actions/wine-photos'
 import { clearSkuPhoto } from '@/lib/actions/skus'
@@ -83,13 +84,20 @@ export function PhotoGallery({
             setCurrentIndex(Math.round(el.scrollLeft / el.clientWidth))
           }}
         >
-          {slides.map(photo => (
+          {slides.map((photo, index) => (
             <div
               key={photo.id}
               className="relative flex-none w-full h-full"
               style={{ scrollSnapAlign: 'start' }}
             >
-              <img src={photo.url} alt="" className="w-full h-full object-cover" />
+              <Image
+                src={photo.url}
+                alt=""
+                fill
+                sizes="100vw"
+                className="object-cover"
+                preload={index === 0}
+              />
               <button
                 onClick={() => setPendingDelete({ id: photo.id, isLegacy: photo.id === '__legacy__' })}
                 disabled={deletePending || clearPending}

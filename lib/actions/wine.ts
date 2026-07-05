@@ -74,7 +74,7 @@ export async function addWine(formData: FormData) {
     const path = `families/${membership.family_id}/wines/${wine.id}.${ext}`
     const { error: uploadError } = await admin.storage
       .from('wine-photos')
-      .upload(path, photoFile, { contentType: photoFile.type })
+      .upload(path, photoFile, { contentType: photoFile.type, cacheControl: '31536000' })
 
     if (!uploadError) {
       const { data: urlData } = admin.storage.from('wine-photos').getPublicUrl(path)

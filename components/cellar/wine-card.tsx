@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Wine, Sku } from '@/lib/types'
 
 const TYPE_CONFIG = {
@@ -36,12 +37,13 @@ export function WineCard({ wine, skus, vintage }: WineCardProps) {
           style={{
             width: 64,
             minHeight: 92,
+            position: 'relative',
             borderRadius: 'var(--radius-md)',
             background: 'linear-gradient(160deg, var(--parchment), var(--parchment-2))',
           }}
         >
           {photo ? (
-            <img src={photo} alt={wine.name} className="w-full h-full object-cover" />
+            <Image src={photo} alt={wine.name} fill sizes="64px" className="object-cover" />
           ) : (
             <BottleGlyph />
           )}

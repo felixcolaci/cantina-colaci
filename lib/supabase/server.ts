@@ -24,12 +24,16 @@ export async function createClient() {
   )
 }
 
-// Deduplicates auth.getUser() within a single request — layout, top-bar,
-// and page Server Components all call this; React.cache() collapses
-// them into one network round trip instead of three.
+// Deduplicates auth resolution within a single request. Uses getSession()
+// (local cookie read, no network call) rather than getUser() because
+// proxy.ts already network-validated this request's session against the
+// Auth server before any Server Component ran — re-validating here would
+// just be a redundant round trip. Return shape matches getUser()'s so no
+// caller needs to change.
 export const getAuthenticatedUser = cache(async () => {
   const supabase = await createClient()
-  return supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  return { data: { user: session?.user ?? null } }
 })
 
 // Service-role client for database operations.

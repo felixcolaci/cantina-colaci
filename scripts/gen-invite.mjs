@@ -7,9 +7,10 @@ const [,, cmd, ...args] = process.argv
 
 const USAGE = `Usage:
   node scripts/gen-invite.mjs create <email> [count]
-  node scripts/gen-invite.mjs list [--open|--used]`
+  node scripts/gen-invite.mjs list [--open|--used]
+  node scripts/gen-invite.mjs revoke <code>`
 
-if (!cmd || !['create', 'list'].includes(cmd)) {
+if (!cmd || !['create', 'list', 'revoke'].includes(cmd)) {
   console.error(USAGE)
   process.exit(1)
 }
@@ -147,6 +148,40 @@ if (cmd === 'list') {
 
     console.log(fmt(H))
     for (const r of data) console.log(fmt(r))
+  } catch (err) {
+    console.error('Error:', err.message)
+    process.exit(1)
+  }
+}
+
+if (cmd === 'revoke') {
+  const [code] = args
+  if (!code) {
+    console.error(USAGE)
+    process.exit(1)
+  }
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/invitation_codes?code=eq.${encodeURIComponent(code)}`,
+      {
+        method: 'DELETE',
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          Prefer: 'return=representation',
+        },
+      },
+    )
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Failed to revoke code ${code}: ${text}`)
+    }
+    const deleted = await res.json()
+    if (deleted.length === 0) {
+      console.error('Error: Code not found')
+      process.exit(1)
+    }
+    console.log(`Revoked ${code}`)
   } catch (err) {
     console.error('Error:', err.message)
     process.exit(1)

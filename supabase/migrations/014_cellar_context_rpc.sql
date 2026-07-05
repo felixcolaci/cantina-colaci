@@ -16,4 +16,4 @@ as $$
 $$;
 
 revoke execute on function public.get_cellar_context(uuid) from public;
-grant execute on function public.get_cellar_context(uuid) to authenticated, service_role;
+grant execute on function public.get_cellar_context(uuid) to service_role;

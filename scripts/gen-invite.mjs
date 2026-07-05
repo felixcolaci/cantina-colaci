@@ -3,16 +3,14 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { randomInt } from 'node:crypto'
 
-const [,, email, countArg] = process.argv
-const count = parseInt(countArg ?? '1', 10)
+const [,, cmd, ...args] = process.argv
 
-if (!email || !email.includes('@')) {
-  console.error('Usage: node scripts/gen-invite.mjs <email> [count]')
-  process.exit(1)
-}
+const USAGE = `Usage:
+  node scripts/gen-invite.mjs create <email> [count]
+  node scripts/gen-invite.mjs list [--open|--used]`
 
-if (isNaN(count) || count < 1) {
-  console.error('Error: count must be a positive integer')
+if (!cmd || !['create', 'list'].includes(cmd)) {
+  console.error(USAGE)
   process.exit(1)
 }
 
@@ -47,42 +45,110 @@ if (!url || !key) {
   process.exit(1)
 }
 
-const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+if (cmd === 'create') {
+  const [email, countArg] = args
+  const count = parseInt(countArg ?? '1', 10)
 
-function randomSegment(len) {
-  let s = ''
-  for (let i = 0; i < len; i++) s += CHARS[randomInt(CHARS.length)]
-  return s
-}
+  if (!email || !email.includes('@')) {
+    console.error(USAGE)
+    process.exit(1)
+  }
 
-function generateCode() {
-  return `WEIN-${randomSegment(4)}-${randomSegment(4)}`
-}
+  if (isNaN(count) || count < 1) {
+    console.error('Error: count must be a positive integer')
+    process.exit(1)
+  }
 
-async function insertCode(code, email) {
-  const res = await fetch(`${url}/rest/v1/invitation_codes`, {
-    method: 'POST',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=minimal',
-    },
-    body: JSON.stringify({ code, email: email.toLowerCase() }),
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Failed to insert code ${code}: ${text}`)
+  const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+  function randomSegment(len) {
+    let s = ''
+    for (let i = 0; i < len; i++) s += CHARS[randomInt(CHARS.length)]
+    return s
+  }
+
+  function generateCode() {
+    return `WEIN-${randomSegment(4)}-${randomSegment(4)}`
+  }
+
+  async function insertCode(code, email) {
+    const res = await fetch(`${url}/rest/v1/invitation_codes`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ code, email: email.toLowerCase() }),
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Failed to insert code ${code}: ${text}`)
+    }
+  }
+
+  try {
+    for (let i = 0; i < count; i++) {
+      const code = generateCode()
+      await insertCode(code, email)
+      console.log(code)
+    }
+  } catch (err) {
+    console.error('Error:', err.message)
+    process.exit(1)
   }
 }
 
-try {
-  for (let i = 0; i < count; i++) {
-    const code = generateCode()
-    await insertCode(code, email)
-    console.log(code)
+if (cmd === 'list') {
+  const flag = args[0]
+
+  if (flag && flag !== '--open' && flag !== '--used') {
+    console.error(USAGE)
+    process.exit(1)
   }
-} catch (err) {
-  console.error('Error:', err.message)
-  process.exit(1)
+
+  let endpoint = `${url}/rest/v1/invitation_codes?select=*&order=created_at.desc`
+  if (flag === '--open') endpoint += '&used_at=is.null'
+  if (flag === '--used') endpoint += '&used_at=not.is.null'
+
+  try {
+    const res = await fetch(endpoint, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`Failed to fetch invitation codes: ${text}`)
+    }
+    const rows = await res.json()
+
+    if (rows.length === 0) {
+      console.log('No invitation codes found.')
+      process.exit(0)
+    }
+
+    const data = rows.map(r => ({
+      code: r.code,
+      email: r.email,
+      created: r.created_at.slice(0, 10),
+      status: r.used_at ? `used (${r.used_at.slice(0, 10)})` : 'open',
+    }))
+
+    const H = { code: 'CODE', email: 'EMAIL', created: 'CREATED', status: 'STATUS' }
+    const w = {
+      code: Math.max(H.code.length, ...data.map(r => r.code.length)),
+      email: Math.max(H.email.length, ...data.map(r => r.email.length)),
+      created: Math.max(H.created.length, ...data.map(r => r.created.length)),
+      status: Math.max(H.status.length, ...data.map(r => r.status.length)),
+    }
+
+    const fmt = r =>
+      `${r.code.padEnd(w.code)}   ${r.email.padEnd(w.email)}   ${r.created.padEnd(w.created)}   ${r.status}`
+
+    console.log(fmt(H))
+    for (const r of data) console.log(fmt(r))
+  } catch (err) {
+    console.error('Error:', err.message)
+    process.exit(1)
+  }
 }

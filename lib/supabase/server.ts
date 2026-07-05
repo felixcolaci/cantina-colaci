@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -22,6 +23,14 @@ export async function createClient() {
     }
   )
 }
+
+// Deduplicates auth.getUser() within a single request — layout, top-bar,
+// and page Server Components all call this; React.cache() collapses
+// them into one network round trip instead of three.
+export const getAuthenticatedUser = cache(async () => {
+  const supabase = await createClient()
+  return supabase.auth.getUser()
+})
 
 // Service-role client for database operations.
 // Supabase Auth v3 issues ES256 JWTs that PostgREST cannot verify with its HS256

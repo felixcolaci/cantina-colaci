@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthenticatedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { WineForm } from './wine-form'
 import type { WineHints, StorageLocation } from '@/lib/types'
@@ -9,7 +9,7 @@ function distinct(values: (string | null)[]): string[] {
 
 export default async function NewWinePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getAuthenticatedUser()
   if (!user) redirect('/login')
 
   const { data: membership } = await supabase

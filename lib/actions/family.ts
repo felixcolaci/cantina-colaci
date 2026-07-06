@@ -19,7 +19,7 @@ export async function setDisplayName(formData: FormData) {
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/login')
+  if (!membership) redirect('/onboarding')
 
   await admin
     .from('family_members')

@@ -42,7 +42,7 @@ export default async function FamilyPage() {
     .select('family_id, role, families(name, is_demo)')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/login')
+  if (!membership) redirect('/onboarding')
 
   const [membersResult, authResult] = await Promise.all([
     admin

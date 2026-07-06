@@ -25,7 +25,7 @@ export async function createTrip(formData: FormData) {
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/login')
+  if (!membership) redirect('/onboarding')
 
   const { data: cellar } = await admin
     .from('cellars')

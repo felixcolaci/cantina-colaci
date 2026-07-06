@@ -15,7 +15,7 @@ export default async function ApiKeysPage() {
     .select('family_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
-  if (!membership) redirect('/login')
+  if (!membership) redirect('/onboarding')
 
   const serviceClient = createAdminClient()
   const { data: keys } = await serviceClient

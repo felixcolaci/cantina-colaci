@@ -14,7 +14,7 @@ export async function quickAddWine(formData: FormData) {
 
   const { data: membership } = await admin
     .from('family_members').select('family_id').eq('user_id', user.id).maybeSingle()
-  if (!membership) redirect('/login')
+  if (!membership) redirect('/onboarding')
 
   const { data: cellar } = await admin
     .from('cellars').select('id').eq('family_id', membership.family_id)

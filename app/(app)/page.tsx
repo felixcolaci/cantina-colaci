@@ -58,26 +58,38 @@ export default async function DashboardPage() {
       }
     : null
 
-  if (!latestWine) {
-    return (
-      <div className="px-4 py-12 max-w-lg mx-auto text-center space-y-4">
-        <BottleGlyph />
-        <p style={{ color: 'var(--muted-foreground)' }}>Der Keller ist noch leer.</p>
-        <Button render={<Link href="/wine/new" />}>
-          Ersten Wein hinzufügen
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
-      <WineHeroCard wine={latestWine} />
+      {latestWine ? (
+        <WineHeroCard wine={latestWine} />
+      ) : (
+        <h2
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-3xl)',
+            fontWeight: 600,
+            letterSpacing: 'var(--tracking-tight)',
+            color: 'var(--foreground)',
+          }}
+        >
+          Willkommen!
+        </h2>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <StatsCard title="Flaschen im Keller" value={totalBottles} href="/cellar" />
         <StatsCard title="Verschiedene Weine" value={wineCount} href="/cellar" />
       </div>
+
+      {!latestWine && (
+        <div className="text-center py-8 space-y-4">
+          <BottleGlyph />
+          <p style={{ color: 'var(--muted-foreground)' }}>Der Keller ist noch leer.</p>
+          <Button render={<Link href="/wine/new" />}>
+            Ersten Wein hinzufügen
+          </Button>
+        </div>
+      )}
 
       {recentTastings.length > 0 && (
         <section>

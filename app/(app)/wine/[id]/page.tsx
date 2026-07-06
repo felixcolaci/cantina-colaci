@@ -44,7 +44,7 @@ const TYPE_CONFIG: Record<WineType, { label: string; bg: string; fg: string; dot
 export default async function WineDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const context = await getCellarContext()
-  if (!context || !context.cellarId) redirect('/login')
+  if (!context || !context.cellarId) redirect('/onboarding')
   const { cellarId } = context
 
   const admin = createAdminClient()

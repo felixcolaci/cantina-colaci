@@ -10,7 +10,7 @@ function distinct(values: (string | null)[]): string[] {
 
 export default async function NewWinePage() {
   const context = await getCellarContext()
-  if (!context) redirect('/login')
+  if (!context) redirect('/onboarding')
 
   const supabase = await createClient()
   const cellarId = context.cellarId

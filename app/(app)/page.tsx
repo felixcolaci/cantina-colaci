@@ -9,7 +9,7 @@ import Link from 'next/link'
 
 export default async function DashboardPage() {
   const context = await getCellarContext()
-  if (!context || !context.cellarId) redirect('/login')
+  if (!context || !context.cellarId) redirect('/onboarding')
   const { cellarId } = context
 
   const admin = createAdminClient()

@@ -6,7 +6,7 @@ import { TastingCard } from '@/components/dashboard/tasting-card'
 
 export default async function HistoryPage() {
   const context = await getCellarContext()
-  if (!context) redirect('/login')
+  if (!context) redirect('/onboarding')
 
   const admin = createAdminClient()
 

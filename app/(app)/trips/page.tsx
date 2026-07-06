@@ -6,7 +6,7 @@ import { NewTripForm } from './new-trip-form'
 
 export default async function TripsPage() {
   const context = await getCellarContext()
-  if (!context) redirect('/login')
+  if (!context) redirect('/onboarding')
 
   const admin = createAdminClient()
 

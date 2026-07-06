@@ -42,7 +42,7 @@ export default async function CellarPage({
 }) {
   const { type } = await searchParams
   const context = await getCellarContext()
-  if (!context || !context.cellarId) redirect('/login')
+  if (!context || !context.cellarId) redirect('/onboarding')
   const { familyId, cellarId } = context
 
   const admin = createAdminClient()

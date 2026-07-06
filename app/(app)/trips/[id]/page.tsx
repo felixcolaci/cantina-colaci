@@ -14,7 +14,7 @@ function formatDate(iso: string): string {
 export default async function TripDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const context = await getCellarContext()
-  if (!context || !context.cellarId) redirect('/login')
+  if (!context || !context.cellarId) redirect('/onboarding')
   const { cellarId } = context
 
   const admin = createAdminClient()

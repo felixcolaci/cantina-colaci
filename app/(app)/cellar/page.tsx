@@ -113,7 +113,7 @@ export default async function CellarPage({
 
       <div className="flex items-center justify-between mb-4">
         <h2 style={{ fontSize: 'var(--text-xl)' }}>Weinkeller</h2>
-        <Button size="sm" render={<Link href="/wine/new" />}>
+        <Button size="sm" render={<Link href="/wine/new" />} nativeButton={false}>
           <Plus className="h-4 w-4 mr-1" />Alle Felder
         </Button>
       </div>
@@ -154,7 +154,7 @@ export default async function CellarPage({
             <line x1="3.5" y1="34" x2="18.5" y2="34" />
           </svg>
           <p className="mt-3">Keine Weine im Keller.</p>
-          <Button className="mt-4" render={<Link href="/wine/new" />}>
+          <Button className="mt-4" render={<Link href="/wine/new" />} nativeButton={false}>
             Ersten Wein hinzufügen
           </Button>
         </div>

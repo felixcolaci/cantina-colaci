@@ -85,7 +85,7 @@ export default async function DashboardPage() {
         <div className="text-center py-8 space-y-4">
           <BottleGlyph />
           <p style={{ color: 'var(--muted-foreground)' }}>Der Keller ist noch leer.</p>
-          <Button render={<Link href="/wine/new" />}>
+          <Button render={<Link href="/wine/new" />} nativeButton={false}>
             Ersten Wein hinzufügen
           </Button>
         </div>

@@ -26,7 +26,7 @@ export function DemoBanner() {
         <p className="text-xs text-amber-700 mt-0.5">
           Erkunde deine Cantina mit Beispielweinen. Wenn du bereit bist, starte mit deinen echten Weinen.
         </p>
-        <Button size="sm" variant="outline" className="mt-2 h-7 text-xs border-amber-300" render={<Link href="/family#start" />}>
+        <Button size="sm" variant="outline" className="mt-2 h-7 text-xs border-amber-300" render={<Link href="/family#start" />} nativeButton={false}>
           Eigene Cantina starten
         </Button>
       </div>

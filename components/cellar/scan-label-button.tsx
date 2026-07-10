@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { Camera, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,7 @@ export function ScanLabelButton({ onResult, storageLocations = readLocationCache
   const inputRef = useRef<HTMLInputElement>(null)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [savedOffline, setSavedOffline] = useState(false)
   const [capturedFile, setCapturedFile] = useState<File | null>(null)
   const [offlineName, setOfflineName] = useState('')
@@ -29,10 +30,17 @@ export function ScanLabelButton({ onResult, storageLocations = readLocationCache
   const [offlineLocationId, setOfflineLocationId] = useState('')
   const [isSavingOffline, setIsSavingOffline] = useState(false)
 
+  useEffect(() => {
+    if (!success) return
+    const timer = setTimeout(() => setSuccess(false), 3000)
+    return () => clearTimeout(timer)
+  }, [success])
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setError(null)
+    setSuccess(false)
     setSavedOffline(false)
 
     if (!navigator.onLine) {
@@ -50,6 +58,7 @@ export function ScanLabelButton({ onResult, storageLocations = readLocationCache
       if (result.error) {
         setError(result.error)
       } else {
+        setSuccess(true)
         onResult(result)
       }
       if (inputRef.current) inputRef.current.value = ''
@@ -107,6 +116,11 @@ export function ScanLabelButton({ onResult, storageLocations = readLocationCache
       {error && (
         <p style={{ color: 'var(--destructive)', fontSize: 'var(--text-sm)', marginTop: 4 }}>
           {error}
+        </p>
+      )}
+      {success && (
+        <p style={{ color: 'var(--success)', fontSize: 'var(--text-sm)', marginTop: 4 }}>
+          Etikett erkannt ✓
         </p>
       )}
       {savedOffline && (

@@ -1,11 +1,19 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import {
+  GoogleGenerativeAI,
+  type GenerateContentResult,
+  type Part,
+} from '@google/generative-ai'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
-const MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
+const MODEL          = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
+const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL ?? 'gemini-1.5-flash'
 const INPUT_COST  = 0.10 / 1_000_000
 const OUTPUT_COST = 0.40 / 1_000_000
+
+const MAX_PRIMARY_ATTEMPTS = 3
+const RETRY_BACKOFF_MS = [500, 1000]
 
 export interface ScanResult {
   name?: string
@@ -15,6 +23,39 @@ export interface ScanResult {
   country?: string
   region?: string
   grape_variety?: string
+}
+
+function isRetryableError(err: unknown): boolean {
+  const status = (err as { status?: number } | null)?.status
+  return status === undefined || status === 503 || status === 429
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function generateLabelScan(
+  client: GoogleGenerativeAI,
+  parts: Part[],
+): Promise<{ result: GenerateContentResult; usedModel: string }> {
+  let lastError: unknown
+
+  for (let attempt = 0; attempt < MAX_PRIMARY_ATTEMPTS; attempt++) {
+    try {
+      const model = client.getGenerativeModel({ model: MODEL })
+      const result = await model.generateContent(parts)
+      return { result, usedModel: MODEL }
+    } catch (err) {
+      lastError = err
+      if (!isRetryableError(err)) throw err
+      if (attempt < MAX_PRIMARY_ATTEMPTS - 1) await sleep(RETRY_BACKOFF_MS[attempt])
+    }
+  }
+
+  console.error('[scan-label] primary model exhausted retries, trying fallback:', lastError)
+  const fallbackModel = client.getGenerativeModel({ model: FALLBACK_MODEL })
+  const result = await fallbackModel.generateContent(parts)
+  return { result, usedModel: FALLBACK_MODEL }
 }
 
 export async function scanWineLabel(
@@ -42,14 +83,11 @@ export async function scanWineLabel(
     : 'image/jpeg'
 
   const client = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
-  const model = client.getGenerativeModel({ model: MODEL })
 
-  let result
-  try {
-    result = await model.generateContent([
-      { inlineData: { mimeType, data: base64 } },
-      {
-        text: `Analysiere dieses Weinetikett und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärungen):
+  const parts: Part[] = [
+    { inlineData: { mimeType, data: base64 } },
+    {
+      text: `Analysiere dieses Weinetikett und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärungen):
 
 {
   "name": "Weinname (z.B. Barolo, Chianti Classico)",
@@ -62,8 +100,13 @@ export async function scanWineLabel(
 }
 
 Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stellige Jahreszahl sein.`,
-      },
-    ])
+    },
+  ]
+
+  let result: GenerateContentResult
+  let usedModel: string
+  try {
+    ({ result, usedModel } = await generateLabelScan(client, parts))
   } catch (err) {
     console.error('[scan-label] Gemini API error:', err)
     return { error: 'Scan fehlgeschlagen, bitte erneut versuchen' }
@@ -76,7 +119,7 @@ Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stel
   const { error: logError } = await admin.from('api_usage_logs').insert({
     family_id:     membership.family_id,
     feature:       'label_scan',
-    model:         MODEL,
+    model:         usedModel,
     input_tokens:  inputTokens,
     output_tokens: outputTokens,
     cost_usd:      costUsd,

@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { isPhotoPathOwnedByFamily } from '@/lib/storage/wine-photos'
 
 const ALLOWED_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -65,13 +66,20 @@ export async function deleteWinePhoto(formData: FormData) {
   const wineId = formData.get('wine_id') as string
   const photoId = formData.get('photo_id') as string
 
-  const { admin } = await verifyWineOwnership(user.id, wineId)
+  const { admin, familyId } = await verifyWineOwnership(user.id, wineId)
 
   const { data: photo } = await admin
     .from('wine_photos').select('id, path').eq('id', photoId).eq('wine_id', wineId).maybeSingle()
   if (!photo) throw new Error('Foto nicht gefunden')
 
-  await admin.storage.from('wine-photos').remove([photo.path])
+  // photo.path is a DB column a family member can reach via a direct
+  // PostgREST update to their own row -- only ever delete a storage
+  // object that's actually this family's; an out-of-scope value just
+  // skips the storage delete (the DB row still gets removed below, same
+  // as today).
+  if (isPhotoPathOwnedByFamily(photo.path, familyId)) {
+    await admin.storage.from('wine-photos').remove([photo.path])
+  }
 
   await admin.from('wine_photos').delete().eq('id', photoId)
 

@@ -10,6 +10,7 @@ import type { createAdminClient } from '@/lib/supabase/server'
 // of path, so a demo/* path signs exactly like a families/* path -- no
 // special-casing needed.
 const BUCKET = 'wine-photos'
+const DEMO_PREFIX = 'demo/'
 
 // How long a signed URL stays valid. Picked to comfortably outlive a single
 // page render (including any client-side revalidation) while still
@@ -18,16 +19,41 @@ export const SIGNED_URL_TTL_SECONDS = 60 * 60 // 1 hour
 
 type AdminClient = ReturnType<typeof createAdminClient>
 
+// skus.photo_path / wine_photos.path are DB columns a family member can
+// reach via a direct PostgREST update to their own row (RLS gates which
+// ROWS they can touch, not what VALUE they write into this column) -- so a
+// stored path is not trustworthy on its own. Every signing or deletion
+// call must re-verify the path actually falls under the caller's own
+// families/<familyId>/ prefix (or, for reads only, the shared demo/
+// prefix) before handing it to the admin/service-role client, which
+// bypasses RLS entirely and will happily sign or delete anything you give
+// it. Never delete a demo/ path -- it's shared across every demo cellar.
+export function isPhotoPathOwnedByFamily(path: string, familyId: string): boolean {
+  return path.startsWith(`families/${familyId}/`)
+}
+
+export function isDemoPhotoPath(path: string): boolean {
+  return path.startsWith(DEMO_PREFIX)
+}
+
 /**
  * Resolves a single bare storage object path to a short-lived signed URL.
- * Returns null (after logging) on any signing failure, so a transient
- * storage error degrades to "no photo shown" rather than crashing the page.
+ * Rejects (returns null, no signing call made) any path that isn't either
+ * the caller's own family's or a shared demo photo. Returns null (after
+ * logging) on any signing failure too, so a transient storage error
+ * degrades to "no photo shown" rather than crashing the page.
  */
 export async function signPhotoPath(
   admin: AdminClient,
   path: string,
+  familyId: string,
   ttlSeconds: number = SIGNED_URL_TTL_SECONDS
 ): Promise<string | null> {
+  if (!isPhotoPathOwnedByFamily(path, familyId) && !isDemoPhotoPath(path)) {
+    console.error(`[wine-photos] refusing to sign out-of-scope path "${path}" for family ${familyId}`)
+    return null
+  }
+
   const { data, error } = await admin.storage.from(BUCKET).createSignedUrl(path, ttlSeconds)
   if (error || !data) {
     console.error(`[wine-photos] failed to sign path "${path}":`, error)
@@ -40,17 +66,26 @@ export async function signPhotoPath(
  * Batch-resolves many bare storage object paths to signed URLs in a single
  * request -- use this instead of N sequential signPhotoPath calls when a
  * page renders many photos at once (e.g. a cellar/trip list). Duplicate
- * paths are de-duped before signing. Paths that fail to sign are simply
+ * paths are de-duped before signing. Any path that isn't the caller's own
+ * family's or a shared demo photo is silently dropped before signing (same
+ * ownership check as signPhotoPath). Paths that fail to sign are simply
  * omitted from the returned map (after logging), rather than throwing.
  */
 export async function signPhotoPaths(
   admin: AdminClient,
   paths: string[],
+  familyId: string,
   ttlSeconds: number = SIGNED_URL_TTL_SECONDS
 ): Promise<Map<string, string>> {
   const result = new Map<string, string>()
 
-  const uniquePaths = [...new Set(paths)]
+  const uniquePaths = [...new Set(paths)].filter(path => {
+    const allowed = isPhotoPathOwnedByFamily(path, familyId) || isDemoPhotoPath(path)
+    if (!allowed) {
+      console.error(`[wine-photos] refusing to sign out-of-scope path "${path}" for family ${familyId}`)
+    }
+    return allowed
+  })
   if (uniquePaths.length === 0) return result
 
   const { data, error } = await admin.storage.from(BUCKET).createSignedUrls(uniquePaths, ttlSeconds)

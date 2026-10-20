@@ -88,7 +88,7 @@ export default async function CellarPage({
   const photoPaths = winesWithSkus.flatMap(w =>
     (w.skus as SkuPhotoRow[]).map(s => s.photo_path).filter((p): p is string => Boolean(p))
   )
-  const signedPhotoUrls = await signPhotoPaths(admin, photoPaths)
+  const signedPhotoUrls = await signPhotoPaths(admin, photoPaths, familyId)
 
   const wines = winesWithSkus.map(w => {
     const photoPath = (w.skus as SkuPhotoRow[]).find(s => s.photo_path)?.photo_path ?? null

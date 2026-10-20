@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { resolveStorageLocation } from './_utils'
 import { claimIdempotencyKey } from '@/lib/idempotency'
+import { isPhotoPathOwnedByFamily } from '@/lib/storage/wine-photos'
 
 export async function updateSku(formData: FormData) {
   const supabase = await createClient()
@@ -73,7 +74,14 @@ export async function clearSkuPhoto(formData: FormData) {
   const { data: sku } = await admin
     .from('skus').select('photo_path').eq('id', skuId).eq('wine_id', wineId).maybeSingle()
 
-  if (sku?.photo_path) {
+  // sku.photo_path is a DB column a family member can reach via a direct
+  // PostgREST update to their own row -- RLS gates which row, not what
+  // path value ends up in it. Only ever delete a storage object that's
+  // actually this family's; never delete a demo/ path (shared across
+  // every demo cellar) and never trust an out-of-scope value enough to
+  // call .remove() on it -- just skip the storage delete and null the
+  // column either way.
+  if (sku?.photo_path && isPhotoPathOwnedByFamily(sku.photo_path, membership.family_id)) {
     await admin.storage.from('wine-photos').remove([sku.photo_path])
   }
 

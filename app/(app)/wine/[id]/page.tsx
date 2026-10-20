@@ -46,7 +46,7 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params
   const context = await getCellarContext()
   if (!context || !context.cellarId) redirect('/onboarding')
-  const { cellarId } = context
+  const { familyId, cellarId } = context
 
   const admin = createAdminClient()
 
@@ -86,7 +86,7 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
     ...winePhotoRows.map(p => p.path),
     ...(legacyPhotoPath ? [legacyPhotoPath] : []),
   ]
-  const signedPhotoUrls = await signPhotoPaths(admin, allPaths)
+  const signedPhotoUrls = await signPhotoPaths(admin, allPaths, familyId)
 
   const winePhotos = winePhotoRows
     .map(p => ({ id: p.id, url: signedPhotoUrls.get(p.path) ?? null }))

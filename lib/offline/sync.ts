@@ -1,18 +1,26 @@
-import { getPendingActions, removePendingAction, incrementAttempts, type PendingAction } from './db'
+import { getPendingActions, removePendingAction, incrementAttempts, type PendingAction, type PendingActionType } from './db'
 import { quickAddWine } from '@/lib/actions/quick-add'
 import { addSku } from '@/lib/actions/skus'
 import { openBottle } from '@/lib/actions/tasting'
 import { updateWine } from '@/lib/actions/wine'
 import { updateSku } from '@/lib/actions/skus'
 
+// 'addWine' and 'addWinePhoto' are intentionally NOT mapped here (finding
+// 4.2, MAJOR): no queueAction() call site in the codebase queues either key
+// today (confirmed by grep), and the previous fallback mappings
+// ('addWine' -> quickAddWine, which silently drops region/country/
+// grape_variety/notes/trip_id/photo; 'addWinePhoto' -> a no-op that drops
+// the photo) would misreport success while silently losing data the moment
+// offline support is wired up for the full add-wine form or photo uploads.
+// An unmapped action key below is treated as a failure, not a silent
+// success, specifically so that regression is caught loudly instead of
+// quietly shipping.
 const ACTION_MAP = {
   quickAddWine,
-  addWine: quickAddWine, // fallback to quick-add for offline-queued full adds
   addSku,
   openBottle,
   updateWine,
   updateSku,
-  addWinePhoto: async () => { /* photo uploads require server-side storage, skip */ },
 } as const
 
 function rebuildFormData(pending: PendingAction): FormData {
@@ -60,10 +68,17 @@ async function runPendingQueue(): Promise<SyncResult> {
   let synced = 0
   let failed = 0
 
+  const actionMap: Partial<Record<PendingActionType, (fd: FormData) => Promise<void>>> = ACTION_MAP
+
   for (const item of items) {
-    const actionFn = ACTION_MAP[item.action]
+    const actionFn = actionMap[item.action]
     if (!actionFn) {
-      await removePendingAction(item.id)
+      // Unrecognized/unmapped action key: leave it in the queue and count it
+      // as a failure (same as a real failure below) rather than silently
+      // discarding it, so a future regression like finding 4.2 fails
+      // visibly instead of quietly "succeeding" with dropped data.
+      await incrementAttempts(item.id)
+      failed++
       continue
     }
 

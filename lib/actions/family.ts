@@ -30,6 +30,43 @@ export async function setDisplayName(formData: FormData) {
   redirect('/family')
 }
 
+// Mints a single-use, 7-day invite token for familyId via the
+// create_family_invite RPC (supabase/migrations/20261020130000_family_invites.sql).
+// Called via the admin client (never the plain session client) because the
+// RPC takes the caller's user id as an explicit parameter rather than
+// relying on auth.uid() — see that migration's header comment for why.
+async function generateFamilyInviteToken(
+  admin: ReturnType<typeof createAdminClient>,
+  familyId: string,
+  userId: string
+): Promise<string> {
+  const { data: token, error } = await admin.rpc('create_family_invite', {
+    p_family_id: familyId,
+    p_user_id: userId,
+  })
+  if (error || !token) throw new Error('Einladungslink konnte nicht erstellt werden.')
+  return token as string
+}
+
+// Generates a fresh invite link for the caller's own family. Used by
+// CopyInviteLink (app/(app)/family/copy-invite-link.tsx).
+export async function createFamilyInvite(): Promise<{ token: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nicht eingeloggt')
+
+  const admin = createAdminClient()
+  const { data: membership } = await admin
+    .from('family_members')
+    .select('family_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!membership) throw new Error('Kein Familienmitglied')
+
+  const token = await generateFamilyInviteToken(admin, membership.family_id, user.id)
+  return { token }
+}
+
 export async function inviteFamilyMember(email: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -44,13 +81,15 @@ export async function inviteFamilyMember(email: string) {
   if (!membership) throw new Error('Kein Familienmitglied')
   if ((membership as any).role !== 'owner') throw new Error('Nur der Owner kann Mitglieder einladen')
 
+  const token = await generateFamilyInviteToken(admin, membership.family_id, user.id)
+
   const h = await headers()
   const host = h.get('host') ?? ''
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
   const origin = `${proto}://${host}`
 
   const { error } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(`/join?family=${membership.family_id}`)}`,
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(`/join?token=${token}`)}`,
   })
 
   if (error) {

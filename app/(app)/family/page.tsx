@@ -7,6 +7,7 @@ import { InviteForm } from './invite-form'
 import { StartOwnCellar } from './start-own-cellar'
 import { SetNamePrompt } from './set-name-prompt'
 import { EditNameSheet } from './edit-name-sheet'
+import { ResetFamilySheet } from './reset-family-sheet'
 
 type MemberWithName = {
   user_id: string
@@ -217,6 +218,33 @@ export default async function FamilyPage() {
             E-Mail-Adresse eingeben — das Mitglied bekommt eine Einladung und wird nach dem Anmelden automatisch hinzugefügt.
           </p>
           <InviteForm />
+        </div>
+      )}
+
+      {membership.role === 'owner' && !family?.is_demo && (
+        <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-6)', borderTop: '1px solid var(--border)' }}>
+          <h3
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 'var(--text-base)',
+              fontWeight: 500,
+              marginBottom: 'var(--space-2)',
+              color: 'var(--destructive)',
+            }}
+          >
+            Gefahrenzone
+          </h3>
+          <p
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--muted-foreground)',
+              marginBottom: 'var(--space-3)',
+            }}
+          >
+            Entfernt alle Weine, Flaschen, Fotos, Verkostungen, Reisen und
+            Lagerorte in jedem Keller dieser Familie.
+          </p>
+          <ResetFamilySheet familyName={family?.name ?? ''} />
         </div>
       )}
     </div>

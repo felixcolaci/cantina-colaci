@@ -1,0 +1,16 @@
+-- Revokes the dead `select` grant added in 011_api_usage_logs.sql
+-- (review-results.md finding 1.5, MINOR).
+--
+-- api_usage_logs has row level security enabled but defines zero
+-- policies, so with RLS enabled and no permissive policy Postgres denies
+-- all rows to `authenticated` regardless of the grant -- the grant is
+-- dead today. Nothing queries this table via the non-admin client; only
+-- lib/actions/scan-label.ts writes to it, via createAdminClient() (which
+-- uses the service_role key and so bypasses RLS/grants entirely).
+--
+-- Leaving the grant in place is a trap: a future "your API usage" page
+-- built with the normal client would compile, run, and silently return
+-- an empty list instead of erroring. Revoke it now; re-add select (with
+-- a real policy scoping rows to the caller's own family_id) if/when that
+-- page is built.
+REVOKE SELECT ON public.api_usage_logs FROM authenticated;

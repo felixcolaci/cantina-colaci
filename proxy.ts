@@ -45,5 +45,5 @@ export const config = {
   // network call. Any route this matcher excludes (like everything under /api) must not call
   // `getAuthenticatedUser()` without its own independent auth check — see
   // lib/supabase/server.ts#getAuthenticatedUser.
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js).*)'],
+  matcher: ['/((?!api(?:/|$)|_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js).*)'],
 }

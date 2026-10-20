@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCellarContext } from '@/lib/cellar-context'
 
 export type FlagName =
   | 'mcp_integration'
@@ -61,17 +62,8 @@ export function resolveFlagsFromPlan(
 }
 
 export async function getFamilyId(): Promise<string | null> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: membership } = await supabase
-    .from('family_members')
-    .select('family_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  return membership?.family_id ?? null
+  const context = await getCellarContext()
+  return context?.familyId ?? null
 }
 
 export async function getFeatureFlags(familyId: string): Promise<FeatureFlags> {

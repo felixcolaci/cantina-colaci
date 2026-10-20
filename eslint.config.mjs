@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Archived pre-rewrite code, not part of the active project.
+    "legacy/**",
   ]),
 ]);
 

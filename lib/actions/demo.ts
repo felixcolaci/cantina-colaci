@@ -1,54 +1,61 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DEMO_WINES, DEMO_STORAGE_LOCATIONS, DEMO_TRIP } from '@/lib/seed/demo-data'
 
 export async function seedDemoCellar(userId: string): Promise<void> {
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
   // Create family
-  const { data: family } = await supabase
+  const { data: family, error: familyError } = await admin
     .from('families')
     .insert({ name: 'Meine Familie', created_by: userId, is_demo: true })
     .select()
     .single()
 
+  if (familyError) throw familyError
   if (!family) return
 
   // Add owner membership
-  await supabase
+  const { error: memberError } = await admin
     .from('family_members')
     .insert({ family_id: family.id, user_id: userId, role: 'owner' })
 
+  if (memberError) throw memberError
+
   // Create cellar
-  const { data: cellar } = await supabase
+  const { data: cellar, error: cellarError } = await admin
     .from('cellars')
     .insert({ family_id: family.id, name: 'Meine Cantina' })
     .select()
     .single()
 
+  if (cellarError) throw cellarError
   if (!cellar) return
 
   // Create storage locations
-  const { data: locations } = await supabase
+  const { data: locations, error: locationsError } = await admin
     .from('storage_locations')
     .insert(DEMO_STORAGE_LOCATIONS.map(loc => ({ ...loc, cellar_id: cellar.id })))
     .select()
 
+  if (locationsError) throw locationsError
   if (!locations) return
 
   // Create trip
-  const { data: trips } = await supabase
+  const { data: trips, error: tripError } = await admin
     .from('trips')
     .insert([{ ...DEMO_TRIP, cellar_id: cellar.id }])
     .select()
+
+  if (tripError) throw tripError
 
   const demoTrip = trips?.[0] ?? null
 
   // Create wines + entries + tastings
   for (const demoWine of DEMO_WINES) {
-    const { data: wine } = await supabase
+    const { data: wine, error: wineError } = await admin
       .from('wines')
       .insert({
         cellar_id: cellar.id,
@@ -63,6 +70,7 @@ export async function seedDemoCellar(userId: string): Promise<void> {
       .select()
       .single()
 
+    if (wineError) throw wineError
     if (!wine) continue
 
     const location = locations[demoWine.storageLocationIndex]
@@ -70,11 +78,11 @@ export async function seedDemoCellar(userId: string): Promise<void> {
 
     // Demo photos live under demo/ in the wine-photos bucket and are shared across all
     // demo cellars — they are never deleted per user.
-    const { data: photoData } = supabase.storage
+    const { data: photoData } = admin.storage
       .from('wine-photos')
       .getPublicUrl(demoWine.demoPhotoPath)
 
-    const { data: entry } = await supabase
+    const { data: entry, error: entryError } = await admin
       .from('skus')
       .insert({
         wine_id: wine.id,
@@ -90,14 +98,18 @@ export async function seedDemoCellar(userId: string): Promise<void> {
       .select()
       .single()
 
+    if (entryError) throw entryError
+
     if (entry && demoWine.tasting) {
-      await supabase.from('tastings').insert({
+      const { error: tastingError } = await admin.from('tastings').insert({
         cellar_entry_id: entry.id,
         user_id: userId,
         date: '2026-06-01',
         rating: demoWine.tasting.rating,
         notes: demoWine.tasting.notes,
       })
+
+      if (tastingError) throw tastingError
     }
   }
 }
@@ -107,17 +119,19 @@ export async function clearDemoCellar(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const admin = createAdminClient()
   const cellarName = (formData.get('cellarName') as string) || 'Meine Cantina'
 
-  const { data: membership } = await supabase
+  const { data: membership, error: membershipError } = await admin
     .from('family_members')
     .select('family_id')
     .eq('user_id', user.id)
     .maybeSingle()
 
+  if (membershipError) throw membershipError
   if (!membership) redirect('/')
 
-  const { data: cellar } = await supabase
+  const { data: cellar, error: cellarError } = await admin
     .from('cellars')
     .select('id')
     .eq('family_id', membership.family_id)
@@ -125,36 +139,56 @@ export async function clearDemoCellar(formData: FormData) {
     .limit(1)
     .maybeSingle()
 
+  if (cellarError) throw cellarError
   if (!cellar) redirect('/')
 
-  const { data: wines } = await supabase
+  const { data: wines, error: winesError } = await admin
     .from('wines')
     .select('id')
     .eq('cellar_id', cellar.id)
 
+  if (winesError) throw winesError
+
   const wineIds = (wines ?? []).map(w => w.id)
 
   if (wineIds.length > 0) {
-    const { data: entries } = await supabase
+    const { data: entries, error: entriesError } = await admin
       .from('skus')
       .select('id')
       .in('wine_id', wineIds)
 
+    if (entriesError) throw entriesError
+
     const entryIds = (entries ?? []).map(e => e.id)
 
     if (entryIds.length > 0) {
-      await supabase.from('tastings').delete().in('cellar_entry_id', entryIds)
-      await supabase.from('skus').delete().in('id', entryIds)
+      const { error: tastingsDeleteError } = await admin
+        .from('tastings').delete().in('cellar_entry_id', entryIds)
+      if (tastingsDeleteError) throw tastingsDeleteError
+
+      const { error: skusDeleteError } = await admin
+        .from('skus').delete().in('id', entryIds)
+      if (skusDeleteError) throw skusDeleteError
     }
 
-    await supabase.from('wines').delete().in('id', wineIds)
+    const { error: winesDeleteError } = await admin.from('wines').delete().in('id', wineIds)
+    if (winesDeleteError) throw winesDeleteError
   }
 
-  await supabase.from('trips').delete().eq('cellar_id', cellar.id)
-  await supabase.from('storage_locations').delete().eq('cellar_id', cellar.id)
+  const { error: tripsDeleteError } = await admin.from('trips').delete().eq('cellar_id', cellar.id)
+  if (tripsDeleteError) throw tripsDeleteError
 
-  await supabase.from('cellars').update({ name: cellarName }).eq('id', cellar.id)
-  await supabase.from('families').update({ is_demo: false }).eq('id', membership.family_id)
+  const { error: locationsDeleteError } = await admin
+    .from('storage_locations').delete().eq('cellar_id', cellar.id)
+  if (locationsDeleteError) throw locationsDeleteError
+
+  const { error: cellarUpdateError } = await admin
+    .from('cellars').update({ name: cellarName }).eq('id', cellar.id)
+  if (cellarUpdateError) throw cellarUpdateError
+
+  const { error: familyUpdateError } = await admin
+    .from('families').update({ is_demo: false }).eq('id', membership.family_id)
+  if (familyUpdateError) throw familyUpdateError
 
   redirect('/cellar')
 }

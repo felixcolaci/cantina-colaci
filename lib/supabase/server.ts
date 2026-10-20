@@ -30,6 +30,13 @@ export async function createClient() {
 // Auth server before any Server Component ran — re-validating here would
 // just be a redundant round trip. Return shape matches getUser()'s so no
 // caller needs to change.
+//
+// This is only safe for requests proxy.ts's `config.matcher` actually covers
+// (currently everything except /api and the static/asset exclusions — see
+// proxy.ts#config). Do not call getAuthenticatedUser() from a route that
+// matcher excludes (e.g. anything under app/api/**) without its own
+// independent auth check — it would trust an unverified session cookie. See
+// proxy.ts#config for the cross-reference in the other direction.
 export const getAuthenticatedUser = cache(async () => {
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()

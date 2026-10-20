@@ -35,5 +35,15 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js).*)'],
+  // `api` MUST stay excluded here: MCP clients (and any other API route) authenticate via
+  // `Authorization: Bearer <api-key>` headers, never a Supabase session cookie, so running this
+  // proxy's cookie-based `getUser()` check in front of them 307-redirects every API request to
+  // /login instead of ever reaching the route handler (see app/api/mcp/route.ts).
+  //
+  // `lib/supabase/server.ts#getAuthenticatedUser()` trusts that every request this matcher
+  // *does* cover has already been network-validated here, and skips re-validating with its own
+  // network call. Any route this matcher excludes (like everything under /api) must not call
+  // `getAuthenticatedUser()` without its own independent auth check — see
+  // lib/supabase/server.ts#getAuthenticatedUser.
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js).*)'],
 }

@@ -44,16 +44,18 @@ export default async function FamilyPage() {
     .maybeSingle()
   if (!membership) redirect('/onboarding')
 
-  const [membersResult, authResult] = await Promise.all([
-    admin
-      .from('family_members')
-      .select('user_id, role, display_name')
-      .eq('family_id', membership.family_id),
-    admin.auth.admin.listUsers({ perPage: 200 }),
-  ])
+  const membersResult = await admin
+    .from('family_members')
+    .select('user_id, role, display_name')
+    .eq('family_id', membership.family_id)
+
+  const memberIds = (membersResult.data ?? []).map(m => m.user_id)
+  const userResults = await Promise.all(
+    memberIds.map(id => admin.auth.admin.getUserById(id))
+  )
 
   const emailMap = new Map(
-    (authResult.data?.users ?? []).map(u => [u.id, u.email ?? ''])
+    userResults.map((r, i) => [memberIds[i], r.data?.user?.email ?? ''])
   )
   const family = membership.families as any
 

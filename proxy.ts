@@ -25,7 +25,12 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const publicPaths = ['/login', '/register', '/auth/callback', '/join']
-  const isPublic = publicPaths.some(p => path === p || path.startsWith(p + '/'))
+  // '/app' is the new SPA shell (strangler-fig migration target): it owns its
+  // own auth state client-side via onAuthStateChange, independently of this
+  // cookie-gate redirect. Not "public" in the no-auth-required sense --
+  // unauthenticated visitors still see a login form, just the SPA's own.
+  const unguardedPaths = [...publicPaths, '/app']
+  const isPublic = unguardedPaths.some(p => path === p || path.startsWith(p + '/'))
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))

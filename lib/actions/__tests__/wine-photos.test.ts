@@ -11,11 +11,9 @@ const mockPhotoSelectMaybeSingle = vi.fn()
 const mockPhotoDeleteEq = vi.fn()
 
 const mockUpload = vi.fn()
-const mockGetPublicUrl = vi.fn()
 const mockRemove = vi.fn()
 const mockStorageFrom = vi.fn(() => ({
   upload: mockUpload,
-  getPublicUrl: mockGetPublicUrl,
   remove: mockRemove,
 }))
 
@@ -82,18 +80,15 @@ describe('wine-photos actions', () => {
     mockCellarMaybeSingle.mockResolvedValue({ data: { id: 'cellar-1' } })
     mockWineMaybeSingle.mockResolvedValue({ data: { id: 'wine-1' } })
     mockUpload.mockResolvedValue({ error: null })
-    mockGetPublicUrl.mockReturnValue({
-      data: { publicUrl: 'https://proj.supabase.co/storage/v1/object/public/wine-photos/families/fam-1/wines/wine-1/fixed.jpg' },
-    })
     mockPhotoInsert.mockResolvedValue({ error: null })
     mockPhotoSelectMaybeSingle.mockResolvedValue({
-      data: { id: 'photo-1', url: 'https://proj.supabase.co/storage/v1/object/public/wine-photos/families/fam-1/wines/wine-1/photo-1.jpg' },
+      data: { id: 'photo-1', path: 'families/fam-1/wines/wine-1/photo-1.jpg' },
     })
     mockPhotoDeleteEq.mockResolvedValue({ error: null })
   })
 
   describe('addWinePhoto', () => {
-    it('on a normal upload: uploads under the caller family path, inserts the row, and redirects', async () => {
+    it('on a normal upload: uploads under the caller family path, inserts the bare storage path (not a URL), and redirects', async () => {
       await addWinePhoto(makePhotoFormData())
 
       expect(mockStorageFrom).toHaveBeenCalledWith('wine-photos')
@@ -104,7 +99,7 @@ describe('wine-photos actions', () => {
       )
       expect(mockPhotoInsert).toHaveBeenCalledWith({
         wine_id: 'wine-1',
-        url: 'https://proj.supabase.co/storage/v1/object/public/wine-photos/families/fam-1/wines/wine-1/fixed.jpg',
+        path: expect.stringMatching(/^families\/fam-1\/wines\/wine-1\/.+\.jpg$/),
       })
       expect(mockRedirect).toHaveBeenCalledWith('/wine/wine-1')
     })
@@ -177,7 +172,7 @@ describe('wine-photos actions', () => {
   })
 
   describe('deleteWinePhoto', () => {
-    it('on a normal delete: removes the storage object, deletes the row, and redirects', async () => {
+    it('on a normal delete: removes the storage object at the stored bare path, deletes the row, and redirects', async () => {
       await deleteWinePhoto(makeDeleteFormData())
 
       expect(mockRemove).toHaveBeenCalledWith(['families/fam-1/wines/wine-1/photo-1.jpg'])

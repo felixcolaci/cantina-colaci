@@ -70,8 +70,15 @@ export async function clearSkuPhoto(formData: FormData) {
     .from('wines').select('id').eq('id', wineId).eq('cellar_id', cellar.id).maybeSingle()
   if (!wine) throw new Error('Wein nicht gefunden')
 
+  const { data: sku } = await admin
+    .from('skus').select('photo_path').eq('id', skuId).eq('wine_id', wineId).maybeSingle()
+
+  if (sku?.photo_path) {
+    await admin.storage.from('wine-photos').remove([sku.photo_path])
+  }
+
   await admin.from('skus')
-    .update({ photo_url: null })
+    .update({ photo_path: null })
     .eq('id', skuId)
     .eq('wine_id', wineId)
 

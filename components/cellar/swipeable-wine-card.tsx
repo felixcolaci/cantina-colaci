@@ -17,12 +17,13 @@ const SNAP_AT   = 52    // minimum swipe distance to snap open
 const FULL_AT   = 190   // full-swipe distance → auto-open sheet
 
 export function SwipeableWineCard({
-  wine, skus, vintage, firstSkuId,
+  wine, entries, vintage, firstSkuId, photoUrl = null,
 }: {
   wine: Wine
-  skus: Pick<Sku, 'quantity' | 'photo_url'>[]
+  entries: Pick<Sku, 'quantity'>[]
   vintage: number | null
   firstSkuId: string | null
+  photoUrl?: string | null
 }) {
   const [tastingOpen, setTastingOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -150,7 +151,7 @@ export function SwipeableWineCard({
 
         {/* The card itself — slides left on swipe, sits above the action strip */}
         <div ref={cardRef} style={{ borderRadius: 'var(--radius-lg)', position: 'relative', zIndex: 1 }}>
-          <WineCard wine={wine} skus={skus} vintage={vintage} />
+          <WineCard wine={wine} entries={entries} vintage={vintage} photoUrl={photoUrl} />
         </div>
       </div>
 

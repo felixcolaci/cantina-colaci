@@ -9,6 +9,7 @@ import { SkuCard } from './sku-card'
 import { AddSkuSheet } from './add-sku-sheet'
 import { PhotoGallery } from './photo-gallery'
 import type { WineType } from '@/lib/types'
+import { signPhotoPaths } from '@/lib/storage/wine-photos'
 
 const TYPE_CONFIG: Record<WineType, { label: string; bg: string; fg: string; dot: string; hero: string }> = {
   red: {
@@ -52,14 +53,14 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
   const [wineResult, storageLocResult, photosResult] = await Promise.all([
     admin.from('wines').select('*').eq('id', id).eq('cellar_id', cellarId).maybeSingle(),
     admin.from('storage_locations').select('id, name').eq('cellar_id', cellarId).order('name'),
-    admin.from('wine_photos').select('id, url').eq('wine_id', id).order('sort_order').order('created_at'),
+    admin.from('wine_photos').select('id, path').eq('wine_id', id).order('sort_order').order('created_at'),
   ])
 
   const wine = wineResult.data
   if (!wine) notFound()
 
   const storageLocations = storageLocResult.data ?? []
-  const winePhotos = (photosResult.data ?? []) as { id: string; url: string }[]
+  const winePhotoRows = (photosResult.data ?? []) as { id: string; path: string }[]
 
   const { data: entries } = await admin
     .from('skus')
@@ -74,9 +75,23 @@ export default async function WineDetailPage({ params }: { params: Promise<{ id:
 
   const inStockEntries = (entries ?? []).filter(e => e.status === 'in_stock')
   const totalBottles = inStockEntries.reduce((sum, e) => sum + e.quantity, 0)
-  const legacyEntry = (entries ?? []).find(e => e.photo_url) ?? null
-  const legacyPhoto = legacyEntry?.photo_url ?? null
+  const legacyEntry = (entries ?? []).find(e => e.photo_path) ?? null
+  const legacyPhotoPath = legacyEntry?.photo_path ?? null
   const legacyEntryId = legacyEntry?.id ?? null
+
+  // Resolve every wine_photos.path (plus the legacy skus.photo_path fallback)
+  // to a short-lived signed URL in one batch, server-side, before handing
+  // anything to the (client) PhotoGallery component.
+  const allPaths = [
+    ...winePhotoRows.map(p => p.path),
+    ...(legacyPhotoPath ? [legacyPhotoPath] : []),
+  ]
+  const signedPhotoUrls = await signPhotoPaths(admin, allPaths)
+
+  const winePhotos = winePhotoRows
+    .map(p => ({ id: p.id, url: signedPhotoUrls.get(p.path) ?? null }))
+    .filter((p): p is { id: string; url: string } => p.url !== null)
+  const legacyPhoto = legacyPhotoPath ? signedPhotoUrls.get(legacyPhotoPath) ?? null : null
 
   const typeConf = TYPE_CONFIG[wine.type as WineType] ?? TYPE_CONFIG.red
 

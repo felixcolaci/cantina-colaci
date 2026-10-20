@@ -76,7 +76,7 @@ export async function addWine(formData: FormData) {
   }
   const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
-  let photo_url: string | null = null
+  let photo_path: string | null = null
   const photoFile = formData.get('photo') as File | null
   if (photoFile && photoFile.size > 0) {
     const ext = ALLOWED_IMAGE_TYPES[photoFile.type]
@@ -88,8 +88,7 @@ export async function addWine(formData: FormData) {
       .upload(path, photoFile, { contentType: photoFile.type, cacheControl: '31536000' })
 
     if (!uploadError) {
-      const { data: urlData } = admin.storage.from('wine-photos').getPublicUrl(path)
-      photo_url = urlData.publicUrl
+      photo_path = path
     }
   }
 
@@ -118,7 +117,7 @@ export async function addWine(formData: FormData) {
     shelf_location: (formData.get('shelf_location') as string) || null,
     storage_location_id,
     trip_id: tripId,
-    photo_url,
+    photo_path,
     status: 'in_stock',
   })
 

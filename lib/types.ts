@@ -45,7 +45,7 @@ export interface Sku {
   purchase_date: string | null
   purchase_location: string | null
   shelf_location: string | null
-  photo_url: string | null
+  photo_path: string | null
   trip_id: string | null
   status: EntryStatus
   created_at: string

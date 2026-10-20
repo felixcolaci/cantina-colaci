@@ -64,11 +64,17 @@ const mockFrom = vi.fn((table: string) => {
   throw new Error(`unexpected table: ${table}`)
 })
 
+const mockUpload = vi.fn()
+const mockStorageFrom = vi.fn((bucket: string) => {
+  if (bucket !== 'wine-photos') throw new Error(`unexpected bucket: ${bucket}`)
+  return { upload: mockUpload }
+})
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser }, from: mockClientFrom })),
   createAdminClient: vi.fn(() => ({
     from: mockFrom,
-    storage: { from: vi.fn(() => { throw new Error('unexpected storage.from call') }) },
+    storage: { from: mockStorageFrom },
   })),
 }))
 
@@ -193,6 +199,35 @@ describe('addWine', () => {
 
     await expect(addWine(fd)).rejects.toThrow('Unsupported image type')
     expect(mockSkuInsert).not.toHaveBeenCalled()
+  })
+
+  it('on a photo upload: stores the bare storage path on the sku, not a resolved URL', async () => {
+    mockUpload.mockResolvedValue({ error: null })
+    const fd = makeAddFormData()
+    fd.set('photo', new File(['bytes'], 'label.jpg', { type: 'image/jpeg' }))
+
+    await addWine(fd)
+
+    expect(mockUpload).toHaveBeenCalledWith(
+      'families/fam-1/wines/wine-1.jpg',
+      expect.any(File),
+      expect.objectContaining({ contentType: 'image/jpeg' })
+    )
+    expect(mockSkuInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ photo_path: 'families/fam-1/wines/wine-1.jpg' })
+    )
+  })
+
+  it('when the photo upload fails: still creates the wine/sku, with a null photo_path', async () => {
+    mockUpload.mockResolvedValue({ error: { message: 'network error' } })
+    const fd = makeAddFormData()
+    fd.set('photo', new File(['bytes'], 'label.jpg', { type: 'image/jpeg' }))
+
+    await addWine(fd)
+
+    expect(mockSkuInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ photo_path: null })
+    )
   })
 })
 

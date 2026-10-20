@@ -52,9 +52,7 @@ export async function addWinePhoto(formData: FormData) {
     .upload(path, file, { contentType: file.type, cacheControl: '31536000' })
   if (uploadError) throw new Error('Upload fehlgeschlagen')
 
-  const { data: urlData } = admin.storage.from('wine-photos').getPublicUrl(path)
-
-  await admin.from('wine_photos').insert({ wine_id: wineId, url: urlData.publicUrl })
+  await admin.from('wine_photos').insert({ wine_id: wineId, path })
 
   redirect(`/wine/${wineId}`)
 }
@@ -70,11 +68,10 @@ export async function deleteWinePhoto(formData: FormData) {
   const { admin } = await verifyWineOwnership(user.id, wineId)
 
   const { data: photo } = await admin
-    .from('wine_photos').select('id, url').eq('id', photoId).eq('wine_id', wineId).maybeSingle()
+    .from('wine_photos').select('id, path').eq('id', photoId).eq('wine_id', wineId).maybeSingle()
   if (!photo) throw new Error('Foto nicht gefunden')
 
-  const storagePath = new URL(photo.url).pathname.split('/wine-photos/')[1]
-  if (storagePath) await admin.storage.from('wine-photos').remove([storagePath])
+  await admin.storage.from('wine-photos').remove([photo.path])
 
   await admin.from('wine_photos').delete().eq('id', photoId)
 

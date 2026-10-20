@@ -10,6 +10,7 @@ import type { WineType } from '@/lib/types'
 import { getFeatureFlags } from '@/lib/flags'
 import { DemoBanner } from './demo-banner'
 import { LocationCacheWriter } from '@/components/cellar/location-cache-writer'
+import { signPhotoPaths } from '@/lib/storage/wine-photos'
 
 const wineTypes: { value: WineType; label: string }[] = [
   { value: 'red', label: 'Rotwein' },
@@ -54,7 +55,7 @@ export default async function CellarPage({
     (async () => {
       let query = admin
         .from('wines')
-        .select('*, skus(id, vintage, quantity, photo_url, status, storage_location_id)')
+        .select('*, skus(id, vintage, quantity, photo_path, status, storage_location_id)')
         .eq('cellar_id', cellarId)
         .order('name')
       if (type) query = (query as any).eq('type', type)
@@ -69,7 +70,7 @@ export default async function CellarPage({
   const producerHints = distinct((hintsResult.data ?? []).map(w => w.producer))
 
   const { data: rawWines } = await winesResult
-  const wines = rawWines
+  const winesWithSkus = rawWines
     ?.map(w => {
       const filteredSkus = (w.skus as any[]).filter(
         s => s.status === 'in_stock' && s.quantity > 0
@@ -80,6 +81,20 @@ export default async function CellarPage({
       return { ...w, skus: filteredSkus, vintage: latestVintage }
     })
     .filter(w => w.skus.length > 0) ?? []
+
+  // Batch-resolve every distinct photo path across all wines on this page in
+  // one signing request, rather than one per wine.
+  type SkuPhotoRow = { photo_path: string | null }
+  const photoPaths = winesWithSkus.flatMap(w =>
+    (w.skus as SkuPhotoRow[]).map(s => s.photo_path).filter((p): p is string => Boolean(p))
+  )
+  const signedPhotoUrls = await signPhotoPaths(admin, photoPaths)
+
+  const wines = winesWithSkus.map(w => {
+    const photoPath = (w.skus as SkuPhotoRow[]).find(s => s.photo_path)?.photo_path ?? null
+    const photoUrl = photoPath ? signedPhotoUrls.get(photoPath) ?? null : null
+    return { ...w, photoUrl }
+  })
 
   const atLimit = !flags.unlimited_cellar && wines.length >= 50
   const useGrouped = locations.length > 0
@@ -180,8 +195,9 @@ export default async function CellarPage({
               <div className="space-y-2">
                 {group.wines.map(wine => (
                   <SwipeableWineCard
-                    key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage}
+                    key={wine.id} wine={wine} entries={wine.skus} vintage={wine.vintage}
                     firstSkuId={(wine.skus as any[])[0]?.id ?? null}
+                    photoUrl={wine.photoUrl}
                   />
                 ))}
               </div>
@@ -192,8 +208,9 @@ export default async function CellarPage({
         <div className="space-y-2">
           {wines.map(wine => (
             <SwipeableWineCard
-              key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage}
+              key={wine.id} wine={wine} entries={wine.skus} vintage={wine.vintage}
               firstSkuId={(wine.skus as any[])[0]?.id ?? null}
+              photoUrl={wine.photoUrl}
             />
           ))}
         </div>

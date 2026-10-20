@@ -13,6 +13,13 @@ const mockSkuInsert = vi.fn()
 const mockSkuUpdateEq2 = vi.fn()
 const mockSkuUpdateEq1 = vi.fn(() => ({ eq: mockSkuUpdateEq2 }))
 const mockSkuUpdate = vi.fn(() => ({ eq: mockSkuUpdateEq1 }))
+const mockSkuPhotoMaybeSingle = vi.fn()
+
+const mockRemove = vi.fn()
+const mockStorageFrom = vi.fn((bucket: string) => {
+  if (bucket !== 'wine-photos') throw new Error(`unexpected bucket: ${bucket}`)
+  return { remove: mockRemove }
+})
 
 const mockFrom = vi.fn((table: string) => {
   if (table === 'family_members') {
@@ -30,7 +37,11 @@ const mockFrom = vi.fn((table: string) => {
     return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: mockStorageLocMaybeSingle }) }) }) }
   }
   if (table === 'skus') {
-    return { update: mockSkuUpdate, insert: mockSkuInsert }
+    return {
+      update: mockSkuUpdate,
+      insert: mockSkuInsert,
+      select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: mockSkuPhotoMaybeSingle }) }) }),
+    }
   }
   if (table === 'idempotency_keys') {
     return { insert: mockIdempotencyInsert }
@@ -40,7 +51,7 @@ const mockFrom = vi.fn((table: string) => {
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })),
-  createAdminClient: vi.fn(() => ({ from: mockFrom })),
+  createAdminClient: vi.fn(() => ({ from: mockFrom, storage: { from: mockStorageFrom } })),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -135,7 +146,9 @@ describe('clearSkuPhoto', () => {
     mockMembershipMaybeSingle.mockResolvedValue({ data: { family_id: 'fam-1' } })
     mockCellarMaybeSingle.mockResolvedValue({ data: { id: 'cellar-1' } })
     mockWineMaybeSingle.mockResolvedValue({ data: { id: 'wine-1' } })
+    mockSkuPhotoMaybeSingle.mockResolvedValue({ data: { photo_path: 'families/fam-1/wines/wine-1/sku-1.jpg' } })
     mockSkuUpdateEq2.mockResolvedValue({ error: null })
+    mockRemove.mockResolvedValue({ error: null })
   })
 
   function makeClearFormData(overrides: Record<string, string> = {}): FormData {
@@ -146,13 +159,23 @@ describe('clearSkuPhoto', () => {
     return fd
   }
 
-  it('on a normal call: clears photo_url scoped to entry_id and wine_id, then redirects', async () => {
+  it('on a normal call: removes the orphaned storage object, clears photo_path scoped to entry_id and wine_id, then redirects', async () => {
     await clearSkuPhoto(makeClearFormData())
 
-    expect(mockSkuUpdate).toHaveBeenCalledWith({ photo_url: null })
+    expect(mockRemove).toHaveBeenCalledWith(['families/fam-1/wines/wine-1/sku-1.jpg'])
+    expect(mockSkuUpdate).toHaveBeenCalledWith({ photo_path: null })
     expect(mockSkuUpdateEq1).toHaveBeenCalledWith('id', 'sku-1')
     expect(mockSkuUpdateEq2).toHaveBeenCalledWith('wine_id', 'wine-1')
     expect(mockRedirect).toHaveBeenCalledWith('/wine/wine-1')
+  })
+
+  it('when the sku has no photo: skips the storage removal but still clears the column', async () => {
+    mockSkuPhotoMaybeSingle.mockResolvedValueOnce({ data: { photo_path: null } })
+
+    await clearSkuPhoto(makeClearFormData())
+
+    expect(mockRemove).not.toHaveBeenCalled()
+    expect(mockSkuUpdate).toHaveBeenCalledWith({ photo_path: null })
   })
 
   it('without an authenticated user: redirects to /login and never touches the database', async () => {
@@ -171,6 +194,7 @@ describe('clearSkuPhoto', () => {
       clearSkuPhoto(makeClearFormData({ wine_id: 'wine-from-another-family' }))
     ).rejects.toThrow('Wein nicht gefunden')
     expect(mockSkuUpdate).not.toHaveBeenCalled()
+    expect(mockRemove).not.toHaveBeenCalled()
   })
 })
 

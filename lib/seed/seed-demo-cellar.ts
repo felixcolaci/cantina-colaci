@@ -83,12 +83,6 @@ export async function seedDemoCellar(userId: string): Promise<void> {
       const location = locations[demoWine.storageLocationIndex]
       const trip = demoWine.tripIndex !== null ? demoTrip : null
 
-      // Demo photos live under demo/ in the wine-photos bucket and are shared across all
-      // demo cellars — they are never deleted per user.
-      const { data: photoData } = admin.storage
-        .from('wine-photos')
-        .getPublicUrl(demoWine.demoPhotoPath)
-
       return {
         wine_id: wine.id,
         vintage: demoWine.vintage,
@@ -97,7 +91,12 @@ export async function seedDemoCellar(userId: string): Promise<void> {
         purchase_location: demoWine.purchase_location,
         storage_location_id: location?.id ?? null,
         trip_id: trip?.id ?? null,
-        photo_url: photoData.publicUrl,
+        // Demo photos live under demo/ in the wine-photos bucket and are shared
+        // across all demo cellars (never deleted per user). Only the bare
+        // object path is ever stored -- it's resolved to a short-lived signed
+        // URL at render time (see lib/storage/wine-photos.ts), same as a real
+        // user photo.
+        photo_path: demoWine.demoPhotoPath,
         status: 'in_stock',
       }
     }))

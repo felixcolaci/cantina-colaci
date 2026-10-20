@@ -11,13 +11,15 @@ const TYPE_CONFIG = {
 
 interface WineCardProps {
   wine: Wine
-  skus: Pick<Sku, 'quantity' | 'photo_url'>[]
+  entries: Pick<Sku, 'quantity'>[]
   vintage: number | null
+  // Already resolved (signed, or null) by the server component that fetched
+  // the photo path -- this component never touches storage itself.
+  photoUrl?: string | null
 }
 
-export function WineCard({ wine, skus, vintage }: WineCardProps) {
-  const totalBottles = skus.reduce((sum, s) => sum + s.quantity, 0)
-  const photo = skus.find(s => s.photo_url)?.photo_url
+export function WineCard({ wine, entries, vintage, photoUrl = null }: WineCardProps) {
+  const totalBottles = entries.reduce((sum, s) => sum + s.quantity, 0)
   const type = TYPE_CONFIG[wine.type as keyof typeof TYPE_CONFIG] ?? TYPE_CONFIG.red
 
   return (
@@ -42,8 +44,8 @@ export function WineCard({ wine, skus, vintage }: WineCardProps) {
             background: 'linear-gradient(160deg, var(--parchment), var(--parchment-2))',
           }}
         >
-          {photo ? (
-            <Image src={photo} alt={wine.name} fill sizes="64px" className="object-cover" />
+          {photoUrl ? (
+            <Image src={photoUrl} alt={wine.name} fill sizes="64px" className="object-cover" />
           ) : (
             <BottleGlyph />
           )}

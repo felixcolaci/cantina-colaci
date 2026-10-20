@@ -73,7 +73,7 @@ export async function quickAddWine(formData: FormData) {
     purchase_location: null,
     shelf_location: null,
     trip_id: null,
-    photo_url: null,
+    photo_path: null,
   })
 
   redirect('/cellar')

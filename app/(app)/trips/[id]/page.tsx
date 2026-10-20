@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { WineCard } from '@/components/cellar/wine-card'
 import { StatsCard } from '@/components/dashboard/stats-card'
+import { signPhotoPaths } from '@/lib/storage/wine-photos'
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-')
@@ -28,7 +29,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
       .maybeSingle(),
     admin
       .from('wines')
-      .select('*, skus(id, vintage, quantity, photo_url, status, storage_location_id, purchase_price, trip_id)')
+      .select('*, skus(id, vintage, quantity, photo_path, status, storage_location_id, purchase_price, trip_id)')
       .eq('cellar_id', cellarId)
       .order('name'),
   ])
@@ -60,7 +61,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
     .filter((p: unknown): p is number => typeof p === 'number')
   const totalSpend = prices.length ? prices.reduce((s, p) => s + p, 0) : null
 
-  const winesForCard = wines.map(w => {
+  const winesWithSkus = wines.map(w => {
     const filteredSkus = (w.skus as any[]).filter(
       s => s.status === 'in_stock' && s.quantity > 0
     )
@@ -69,6 +70,20 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
       .filter(Boolean)
       .sort((a: number, b: number) => b - a)[0] ?? null
     return { ...w, skus: filteredSkus, vintage: latestVintage }
+  })
+
+  // Batch-resolve every distinct photo path across all wines on this page in
+  // one signing request, rather than one per wine.
+  type SkuPhotoRow = { photo_path: string | null }
+  const photoPaths = winesWithSkus.flatMap(w =>
+    (w.skus as SkuPhotoRow[]).map(s => s.photo_path).filter((p): p is string => Boolean(p))
+  )
+  const signedPhotoUrls = await signPhotoPaths(admin, photoPaths)
+
+  const winesForCard = winesWithSkus.map(w => {
+    const photoPath = (w.skus as SkuPhotoRow[]).find(s => s.photo_path)?.photo_path ?? null
+    const photoUrl = photoPath ? signedPhotoUrls.get(photoPath) ?? null : null
+    return { ...w, photoUrl }
   })
 
   const dateLabel = trip.date_start
@@ -126,7 +141,7 @@ export default async function TripDetailPage({ params }: { params: Promise<{ id:
         {wines.length > 0 ? (
           <div className="space-y-2">
             {winesForCard.map(wine => (
-              <WineCard key={wine.id} wine={wine} skus={wine.skus} vintage={wine.vintage} />
+              <WineCard key={wine.id} wine={wine} entries={wine.skus} vintage={wine.vintage} photoUrl={wine.photoUrl} />
             ))}
           </div>
         ) : (

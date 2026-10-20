@@ -11,6 +11,10 @@ const MODEL          = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
 const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL ?? 'gemini-1.5-flash'
 const INPUT_COST  = 0.10 / 1_000_000
 const OUTPUT_COST = 0.40 / 1_000_000
+// gemini-1.5-flash pricing (<=128k-token prompts, which every label scan is):
+// $0.075 / 1M input tokens, $0.30 / 1M output tokens.
+const FALLBACK_INPUT_COST  = 0.075 / 1_000_000
+const FALLBACK_OUTPUT_COST = 0.30 / 1_000_000
 
 const MAX_PRIMARY_ATTEMPTS = 3
 const RETRY_BACKOFF_MS = [500, 1000]
@@ -114,7 +118,10 @@ Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stel
 
   const inputTokens  = result.response.usageMetadata?.promptTokenCount ?? 0
   const outputTokens = result.response.usageMetadata?.candidatesTokenCount ?? 0
-  const costUsd = inputTokens * INPUT_COST + outputTokens * OUTPUT_COST
+  const usedFallback = usedModel === FALLBACK_MODEL
+  const inputCost  = usedFallback ? FALLBACK_INPUT_COST  : INPUT_COST
+  const outputCost = usedFallback ? FALLBACK_OUTPUT_COST : OUTPUT_COST
+  const costUsd = inputTokens * inputCost + outputTokens * outputCost
 
   const { error: logError } = await admin.from('api_usage_logs').insert({
     family_id:     membership.family_id,

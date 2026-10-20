@@ -31,6 +31,7 @@ export function useOfflineSync(): SyncState {
           router.refresh()
           setTimeout(() => setLastSyncResult(null), 5000)
         }
+        window.dispatchEvent(new CustomEvent('cantina:actions-updated'))
       }
       const scanResult = await processPendingScans()
       if (scanResult.processed > 0 || scanResult.failed > 0) {

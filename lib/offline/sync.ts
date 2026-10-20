@@ -1,9 +1,17 @@
-import { getPendingActions, removePendingAction, incrementAttempts, type PendingAction, type PendingActionType } from './db'
+import { getPendingActions, removePendingAction, incrementAttempts, markStuck, type PendingAction, type PendingActionType } from './db'
 import { quickAddWine } from '@/lib/actions/quick-add'
 import { addSku } from '@/lib/actions/skus'
 import { openBottle } from '@/lib/actions/tasting'
 import { updateWine } from '@/lib/actions/wine'
 import { updateSku } from '@/lib/actions/skus'
+
+// Past this many failed attempts, an item is flagged stuck (finding 4.3,
+// MINOR) instead of being retried forever: nothing previously read
+// `attempts` to cap retries, back off, or surface a stuck item, so a
+// persistently-failing item (e.g. a non-network error like hitting the
+// free-plan cap) retried silently on every reconnect/mount with no visible
+// indication to the user.
+const MAX_ATTEMPTS = 5
 
 // 'addWine' and 'addWinePhoto' are intentionally NOT mapped here (finding
 // 4.2, MAJOR): no queueAction() call site in the codebase queues either key
@@ -62,11 +70,19 @@ export async function processPendingQueue(): Promise<SyncResult> {
 }
 
 async function runPendingQueue(): Promise<SyncResult> {
-  const items = await getPendingActions()
+  // Stuck items (past MAX_ATTEMPTS) are left in the queue for visibility
+  // (pendingCount()/the badge still counts them) but are no longer retried.
+  const items = (await getPendingActions()).filter(item => !item.stuck)
   if (items.length === 0) return { synced: 0, failed: 0 }
 
   let synced = 0
   let failed = 0
+
+  async function recordFailure(id: string) {
+    const attempts = await incrementAttempts(id)
+    if (attempts >= MAX_ATTEMPTS) await markStuck(id)
+    failed++
+  }
 
   const actionMap: Partial<Record<PendingActionType, (fd: FormData) => Promise<void>>> = ACTION_MAP
 
@@ -77,8 +93,7 @@ async function runPendingQueue(): Promise<SyncResult> {
       // as a failure (same as a real failure below) rather than silently
       // discarding it, so a future regression like finding 4.2 fails
       // visibly instead of quietly "succeeding" with dropped data.
-      await incrementAttempts(item.id)
-      failed++
+      await recordFailure(item.id)
       continue
     }
 
@@ -97,8 +112,7 @@ async function runPendingQueue(): Promise<SyncResult> {
         await removePendingAction(item.id)
         synced++
       } else {
-        await incrementAttempts(item.id)
-        failed++
+        await recordFailure(item.id)
       }
     }
   }

@@ -24,6 +24,13 @@ export interface PendingAction {
   files: PendingFile[]
   createdAt: number
   attempts: number
+  /**
+   * Set once `attempts` passes processPendingQueue's retry cap (finding 4.3).
+   * Defaults to falsy/undefined for existing records and new ones. A stuck
+   * item stays in the queue (so pendingCount()/the badge still reflect it)
+   * but processPendingQueue skips it instead of retrying it forever.
+   */
+  stuck?: boolean
 }
 
 export type ScanStatus = 'queued' | 'processing' | 'ready'
@@ -97,10 +104,21 @@ export async function removePendingAction(id: string): Promise<void> {
   await db.delete(STORE, id)
 }
 
-export async function incrementAttempts(id: string): Promise<void> {
+/** Increments the item's attempt counter and returns the new count (0 if the item is gone). */
+export async function incrementAttempts(id: string): Promise<number> {
   const db = await getDb()
   const item = await db.get(STORE, id)
-  if (item) await db.put(STORE, { ...item, attempts: item.attempts + 1 })
+  if (!item) return 0
+  const attempts = item.attempts + 1
+  await db.put(STORE, { ...item, attempts })
+  return attempts
+}
+
+/** Flags an item as permanently stuck so processPendingQueue stops retrying it. */
+export async function markStuck(id: string): Promise<void> {
+  const db = await getDb()
+  const item = await db.get(STORE, id)
+  if (item) await db.put(STORE, { ...item, stuck: true })
 }
 
 export async function pendingCount(): Promise<number> {

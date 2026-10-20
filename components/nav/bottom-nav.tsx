@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { usePendingScansCount } from '@/lib/hooks/use-pending-scans-count'
+import { usePendingActionsCount } from '@/lib/hooks/use-pending-actions-count'
 
 const NAV_ITEMS = [
   {
@@ -55,6 +56,7 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname = usePathname()
   const pendingScans = usePendingScansCount()
+  const pendingActions = usePendingActionsCount()
 
   return (
     <nav
@@ -70,7 +72,10 @@ export function BottomNav() {
     >
       {NAV_ITEMS.map(({ href, label, icon }) => {
         const isCellar = href === '/cellar'
-        const badge = isCellar ? pendingScans : 0
+        // Same badge slot the ready-scan count already uses on the Keller
+        // tab; a cellar with both ready scans and offline-queued actions
+        // shows their combined count rather than two separate indicators.
+        const badge = isCellar ? pendingScans + pendingActions : 0
         const resolvedHref = isCellar && pendingScans > 0 ? '/cellar/inbox' : href
         const isActive = isCellar
           ? pathname === '/cellar' || pathname.startsWith('/cellar/')

@@ -30,10 +30,10 @@ describe('demo seed data', () => {
     expect(tastings).toHaveLength(2)
   })
 
-  it('all ratings are between 1 and 10', () => {
+  it('all ratings are between 1 and 5', () => {
     DEMO_WINES.filter(w => w.tasting).forEach(w => {
       expect(w.tasting!.rating).toBeGreaterThanOrEqual(1)
-      expect(w.tasting!.rating).toBeLessThanOrEqual(10)
+      expect(w.tasting!.rating).toBeLessThanOrEqual(5)
     })
   })
 

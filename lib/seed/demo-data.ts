@@ -81,7 +81,7 @@ export const DEMO_WINES: DemoWine[] = [
     tripIndex: null,
     notes: null,
     demoPhotoPath: 'demo/pinot-grigio.jpg',
-    tasting: { rating: 7, notes: 'Leicht und mineralisch — gut zum Fisch.' },
+    tasting: { rating: 4, notes: 'Leicht und mineralisch — gut zum Fisch.' },
   },
   {
     name: 'Prosecco Superiore DOCG',
@@ -98,7 +98,7 @@ export const DEMO_WINES: DemoWine[] = [
     tripIndex: null,
     notes: null,
     demoPhotoPath: 'demo/prosecco.jpg',
-    tasting: { rating: 8, notes: 'Frisch und lebendig — perfekt als Aperitivo.' },
+    tasting: { rating: 5, notes: 'Frisch und lebendig — perfekt als Aperitivo.' },
   },
   {
     name: 'Chianti Classico Riserva',

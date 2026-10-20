@@ -24,16 +24,18 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
-  const publicPaths = ['/login', '/register', '/auth/callback', '/join']
-  // '/app' is the new SPA shell (strangler-fig migration target): it owns its
-  // own auth state client-side via onAuthStateChange, independently of this
-  // cookie-gate redirect. Not "public" in the no-auth-required sense --
-  // unauthenticated visitors still see a login form, just the SPA's own.
-  const unguardedPaths = [...publicPaths, '/app']
+  // '/app' is the new SPA shell and the only page left in the active app/
+  // tree (everything else moved to legacy/) -- it owns its own auth state
+  // client-side via onAuthStateChange, independently of this cookie-gate
+  // redirect. Not "public" in the no-auth-required sense: unauthenticated
+  // visitors still see a login form, just the SPA's own.
+  const unguardedPaths = ['/app']
   const isPublic = unguardedPaths.some(p => path === p || path.startsWith(p + '/'))
 
+  // Everything else -- including bare '/', and any stale link to a since-
+  // moved-to-legacy page like '/login' -- redirects to the SPA entry point.
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL('/app', request.url))
   }
 
   return supabaseResponse

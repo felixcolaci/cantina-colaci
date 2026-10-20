@@ -1,23 +1,19 @@
 'use server'
 
-import {
-  GoogleGenerativeAI,
-  type GenerateContentResult,
-  type Part,
-} from '@google/generative-ai'
+import { generateText, Output, NoObjectGeneratedError, gateway } from 'ai'
+import type { GatewayLanguageModelEntry } from '@ai-sdk/gateway'
+import { z } from 'zod'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
-const MODEL          = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash'
-const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL ?? 'gemini-1.5-flash'
-const INPUT_COST  = 0.10 / 1_000_000
-const OUTPUT_COST = 0.40 / 1_000_000
-// gemini-1.5-flash pricing (<=128k-token prompts, which every label scan is):
-// $0.075 / 1M input tokens, $0.30 / 1M output tokens.
-const FALLBACK_INPUT_COST  = 0.075 / 1_000_000
-const FALLBACK_OUTPUT_COST = 0.30 / 1_000_000
+// Gateway model IDs ("provider/model"), not raw Google model names -- see
+// https://ai-gateway.vercel.sh/v1/models for the live catalog. The fallback
+// is tried only if every provider for the primary model fails.
+const MODEL          = process.env.AI_GATEWAY_MODEL ?? 'google/gemini-2.5-flash'
+const FALLBACK_MODEL = process.env.AI_GATEWAY_FALLBACK_MODEL ?? 'google/gemini-2.5-flash-lite'
 
-const MAX_PRIMARY_ATTEMPTS = 3
-const RETRY_BACKOFF_MS = [500, 1000]
+// How long to reuse a fetched model-pricing snapshot before refetching.
+// Pricing doesn't change often enough to justify a lookup per scan.
+const PRICING_TTL_MS = 60 * 60 * 1000
 
 export interface ScanResult {
   name?: string
@@ -29,37 +25,43 @@ export interface ScanResult {
   grape_variety?: string
 }
 
-function isRetryableError(err: unknown): boolean {
-  const status = (err as { status?: number } | null)?.status
-  return status === undefined || status === 503 || status === 429
-}
+const ScanResultSchema = z.object({
+  name: z.string().describe('Weinname, z.B. Barolo, Chianti Classico').optional(),
+  producer: z.string().describe('Produzent / Weingut').optional(),
+  vintage: z.number().describe('Jahrgang als 4-stellige Zahl').optional(),
+  type: z.enum(['red', 'white', 'rosé', 'sparkling']).optional(),
+  country: z.string().describe('Land auf Englisch, z.B. Italy, France, Germany').optional(),
+  region: z.string().describe('Region, z.B. Toscana, Bordeaux, Rheingau').optional(),
+  grape_variety: z.string().describe('Rebsorte(n), z.B. Sangiovese, Cabernet Sauvignon').optional(),
+})
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+type ModelPricing = { input: number; output: number }
 
-async function generateLabelScan(
-  client: GoogleGenerativeAI,
-  parts: Part[],
-): Promise<{ result: GenerateContentResult; usedModel: string }> {
-  let lastError: unknown
+let pricingCache: { expiresAt: number; byModelId: Map<string, GatewayLanguageModelEntry['pricing']> } | null = null
 
-  for (let attempt = 0; attempt < MAX_PRIMARY_ATTEMPTS; attempt++) {
+async function getModelPricing(modelId: string): Promise<ModelPricing | null> {
+  const now = Date.now()
+  if (!pricingCache || pricingCache.expiresAt < now) {
     try {
-      const model = client.getGenerativeModel({ model: MODEL })
-      const result = await model.generateContent(parts)
-      return { result, usedModel: MODEL }
+      const { models } = await gateway.getAvailableModels()
+      pricingCache = {
+        expiresAt: now + PRICING_TTL_MS,
+        byModelId: new Map(models.map(m => [m.id, m.pricing])),
+      }
     } catch (err) {
-      lastError = err
-      if (!isRetryableError(err)) throw err
-      if (attempt < MAX_PRIMARY_ATTEMPTS - 1) await sleep(RETRY_BACKOFF_MS[attempt])
+      console.error('[scan-label] failed to fetch gateway model pricing:', err)
+      return null
     }
   }
+  const pricing = pricingCache.byModelId.get(modelId)
+  if (!pricing) return null
+  return { input: Number(pricing.input), output: Number(pricing.output) }
+}
 
-  console.error('[scan-label] primary model exhausted retries, trying fallback:', lastError)
-  const fallbackModel = client.getGenerativeModel({ model: FALLBACK_MODEL })
-  const result = await fallbackModel.generateContent(parts)
-  return { result, usedModel: FALLBACK_MODEL }
+async function estimateCostUsd(modelId: string, inputTokens: number, outputTokens: number): Promise<number> {
+  const pricing = await getModelPricing(modelId)
+  if (!pricing) return 0
+  return inputTokens * pricing.input + outputTokens * pricing.output
 }
 
 export async function scanWineLabel(
@@ -86,42 +88,45 @@ export async function scanWineLabel(
     ? image.type
     : 'image/jpeg'
 
-  const client = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
+  const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  const gatewayOptions: { models: string[]; byok?: Record<string, Array<{ apiKey: string }>> } = {
+    models: [FALLBACK_MODEL],
+  }
+  // BYOK keeps us on our own Google AI Studio quota/free tier instead of
+  // metered AI Gateway credits, while still getting gateway fallback/logs.
+  if (googleApiKey) {
+    gatewayOptions.byok = { google: [{ apiKey: googleApiKey }] }
+  }
 
-  const parts: Part[] = [
-    { inlineData: { mimeType, data: base64 } },
-    {
-      text: `Analysiere dieses Weinetikett und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärungen):
-
-{
-  "name": "Weinname (z.B. Barolo, Chianti Classico)",
-  "producer": "Produzent / Weingut",
-  "vintage": 2018,
-  "type": "red" | "white" | "rosé" | "sparkling",
-  "country": "Land auf Englisch (z.B. Italy, France, Germany)",
-  "region": "Region (z.B. Toscana, Bordeaux, Rheingau)",
-  "grape_variety": "Rebsorte(n) (z.B. Sangiovese, Cabernet Sauvignon)"
-}
-
-Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stellige Jahreszahl sein.`,
-    },
-  ]
-
-  let result: GenerateContentResult
-  let usedModel: string
+  let result
   try {
-    ({ result, usedModel } = await generateLabelScan(client, parts))
+    result = await generateText({
+      model: MODEL,
+      providerOptions: { gateway: gatewayOptions },
+      output: Output.object({ schema: ScanResultSchema }),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', image: base64, mediaType: mimeType },
+            {
+              type: 'text',
+              text: 'Analysiere dieses Weinetikett und extrahiere Name, Produzent, Jahrgang, Weintyp, Land, Region und Rebsorte. Lasse Felder weg, die du auf dem Etikett nicht eindeutig erkennen kannst.',
+            },
+          ],
+        },
+      ],
+    })
   } catch (err) {
-    console.error('[scan-label] Gemini API error:', err)
+    console.error('[scan-label] AI Gateway error:', err)
+    if (NoObjectGeneratedError.isInstance(err)) return { error: 'Etikett konnte nicht gelesen werden' }
     return { error: 'Scan fehlgeschlagen, bitte erneut versuchen' }
   }
 
-  const inputTokens  = result.response.usageMetadata?.promptTokenCount ?? 0
-  const outputTokens = result.response.usageMetadata?.candidatesTokenCount ?? 0
-  const usedFallback = usedModel === FALLBACK_MODEL
-  const inputCost  = usedFallback ? FALLBACK_INPUT_COST  : INPUT_COST
-  const outputCost = usedFallback ? FALLBACK_OUTPUT_COST : OUTPUT_COST
-  const costUsd = inputTokens * inputCost + outputTokens * outputCost
+  const usedModel = result.response.modelId
+  const inputTokens = result.usage.inputTokens ?? 0
+  const outputTokens = result.usage.outputTokens ?? 0
+  const costUsd = await estimateCostUsd(usedModel, inputTokens, outputTokens)
 
   const { error: logError } = await admin.from('api_usage_logs').insert({
     family_id:     membership.family_id,
@@ -133,23 +138,16 @@ Felder die du nicht erkennst, lasse vollständig weg. "vintage" muss eine 4-stel
   })
   if (logError) console.error('[scan-label] usage log failed:', logError.message)
 
-  const raw = result.response.text()
-  try {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return { error: 'Etikett konnte nicht gelesen werden' }
-    const p = JSON.parse(jsonMatch[0])
-    const currentYear = new Date().getFullYear()
-    return {
-      name:          p.name          || undefined,
-      producer:      p.producer      || undefined,
-      vintage:       typeof p.vintage === 'number' && p.vintage > 1900 && p.vintage <= currentYear + 1
-                       ? p.vintage : undefined,
-      type:          ['red', 'white', 'rosé', 'sparkling'].includes(p.type) ? p.type : undefined,
-      country:       p.country       || undefined,
-      region:        p.region        || undefined,
-      grape_variety: p.grape_variety || undefined,
-    }
-  } catch {
-    return { error: 'Etikett konnte nicht gelesen werden' }
+  const p = result.output
+  const currentYear = new Date().getFullYear()
+  return {
+    name:          p.name     || undefined,
+    producer:      p.producer || undefined,
+    vintage:       typeof p.vintage === 'number' && p.vintage > 1900 && p.vintage <= currentYear + 1
+                     ? p.vintage : undefined,
+    type:          p.type,
+    country:       p.country       || undefined,
+    region:        p.region        || undefined,
+    grape_variety: p.grape_variety || undefined,
   }
 }

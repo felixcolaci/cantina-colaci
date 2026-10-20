@@ -31,8 +31,8 @@ begin
     return;
   end if;
 
-  insert into public.families (name, created_by)
-  values (p_family_name, p_user_id)
+  insert into public.families (name, created_by, is_demo)
+  values (p_family_name, p_user_id, false)
   returning id into v_family_id;
 
   insert into public.family_members (family_id, user_id, role)

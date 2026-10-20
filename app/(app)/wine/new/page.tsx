@@ -34,7 +34,7 @@ export default async function NewWinePage() {
   const wineIds = (wineIdsResult.data ?? []).map((w: { id: string }) => w.id)
 
   const entriesResult = wineIds.length > 0
-    ? await supabase.from('cellar_entries').select('purchase_location').in('wine_id', wineIds)
+    ? await supabase.from('skus').select('purchase_location').in('wine_id', wineIds)
     : { data: [] }
 
   // Build a map of country → regions from user's own wines

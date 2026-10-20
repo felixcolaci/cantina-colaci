@@ -21,7 +21,7 @@ alter table families enable row level security;
 alter table family_members enable row level security;
 alter table cellars enable row level security;
 alter table wines enable row level security;
-alter table cellar_entries enable row level security;
+alter table skus enable row level security;
 alter table tastings enable row level security;
 alter table trips enable row level security;
 
@@ -94,50 +94,50 @@ create policy "family members can delete wines" on wines
     )
   );
 
--- Cellar entries
-create policy "family members can read entries" on cellar_entries
+-- SKUs
+create policy "family members can read entries" on skus
   for select using (
     exists (
       select 1 from public.wines
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.wines.id = cellar_entries.wine_id
+      where public.wines.id = skus.wine_id
       and public.is_family_member(public.cellars.family_id)
     )
   );
 
-create policy "family members can insert entries" on cellar_entries
+create policy "family members can insert entries" on skus
   for insert with check (
     exists (
       select 1 from public.wines
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.wines.id = cellar_entries.wine_id
+      where public.wines.id = skus.wine_id
       and public.is_family_member(public.cellars.family_id)
     )
   );
 
-create policy "family members can update entries" on cellar_entries
+create policy "family members can update entries" on skus
   for update using (
     exists (
       select 1 from public.wines
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.wines.id = cellar_entries.wine_id
+      where public.wines.id = skus.wine_id
       and public.is_family_member(public.cellars.family_id)
     )
   ) with check (
     exists (
       select 1 from public.wines
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.wines.id = cellar_entries.wine_id
+      where public.wines.id = skus.wine_id
       and public.is_family_member(public.cellars.family_id)
     )
   );
 
-create policy "family members can delete entries" on cellar_entries
+create policy "family members can delete entries" on skus
   for delete using (
     exists (
       select 1 from public.wines
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.wines.id = cellar_entries.wine_id
+      where public.wines.id = skus.wine_id
       and public.is_family_member(public.cellars.family_id)
     )
   );
@@ -146,10 +146,10 @@ create policy "family members can delete entries" on cellar_entries
 create policy "family members can read tastings" on tastings
   for select using (
     exists (
-      select 1 from public.cellar_entries
-      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      select 1 from public.skus
+      join public.wines on public.wines.id = public.skus.wine_id
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.cellar_entries.id = tastings.cellar_entry_id
+      where public.skus.id = tastings.cellar_entry_id
       and public.is_family_member(public.cellars.family_id)
     )
   );
@@ -157,10 +157,10 @@ create policy "family members can read tastings" on tastings
 create policy "family members can insert tastings" on tastings
   for insert with check (
     exists (
-      select 1 from public.cellar_entries
-      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      select 1 from public.skus
+      join public.wines on public.wines.id = public.skus.wine_id
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.cellar_entries.id = tastings.cellar_entry_id
+      where public.skus.id = tastings.cellar_entry_id
       and public.is_family_member(public.cellars.family_id)
     )
   );
@@ -168,18 +168,18 @@ create policy "family members can insert tastings" on tastings
 create policy "family members can update tastings" on tastings
   for update using (
     exists (
-      select 1 from public.cellar_entries
-      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      select 1 from public.skus
+      join public.wines on public.wines.id = public.skus.wine_id
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.cellar_entries.id = tastings.cellar_entry_id
+      where public.skus.id = tastings.cellar_entry_id
       and public.is_family_member(public.cellars.family_id)
     )
   ) with check (
     exists (
-      select 1 from public.cellar_entries
-      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      select 1 from public.skus
+      join public.wines on public.wines.id = public.skus.wine_id
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.cellar_entries.id = tastings.cellar_entry_id
+      where public.skus.id = tastings.cellar_entry_id
       and public.is_family_member(public.cellars.family_id)
     )
   );
@@ -187,10 +187,10 @@ create policy "family members can update tastings" on tastings
 create policy "family members can delete tastings" on tastings
   for delete using (
     exists (
-      select 1 from public.cellar_entries
-      join public.wines on public.wines.id = public.cellar_entries.wine_id
+      select 1 from public.skus
+      join public.wines on public.wines.id = public.skus.wine_id
       join public.cellars on public.cellars.id = public.wines.cellar_id
-      where public.cellar_entries.id = tastings.cellar_entry_id
+      where public.skus.id = tastings.cellar_entry_id
       and public.is_family_member(public.cellars.family_id)
     )
   );

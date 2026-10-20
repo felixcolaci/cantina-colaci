@@ -21,7 +21,7 @@ export async function cleanTestUserData() {
   const testUser = users?.users.find(u => u.email === TEST_EMAIL)
   if (!testUser) return
 
-  // Cascade: family_members → families → cellars → wines → cellar_entries → tastings / trips
+  // Cascade: family_members → families → cellars → wines → skus → tastings / trips
   const { data: memberships } = await admin
     .from('family_members')
     .select('family_id')

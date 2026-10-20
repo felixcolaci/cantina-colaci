@@ -3,7 +3,7 @@ grant select, insert, update, delete on public.families         to authenticated
 grant select, insert, update, delete on public.family_members   to authenticated;
 grant select, insert, update, delete on public.cellars          to authenticated;
 grant select, insert, update, delete on public.wines            to authenticated;
-grant select, insert, update, delete on public.cellar_entries   to authenticated;
+grant select, insert, update, delete on public.skus             to authenticated;
 grant select, insert, update, delete on public.tastings         to authenticated;
 grant select, insert, update, delete on public.trips            to authenticated;
 
@@ -12,7 +12,7 @@ grant select, insert, update, delete on public.families         to service_role;
 grant select, insert, update, delete on public.family_members   to service_role;
 grant select, insert, update, delete on public.cellars          to service_role;
 grant select, insert, update, delete on public.wines            to service_role;
-grant select, insert, update, delete on public.cellar_entries   to service_role;
+grant select, insert, update, delete on public.skus             to service_role;
 grant select, insert, update, delete on public.tastings         to service_role;
 grant select, insert, update, delete on public.trips            to service_role;
 

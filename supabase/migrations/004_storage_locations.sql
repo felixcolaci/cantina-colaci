@@ -7,8 +7,8 @@ create table storage_locations (
   created_at timestamptz not null default now()
 );
 
--- Add FK from cellar_entries to storage_locations
-alter table cellar_entries
+-- Add FK from skus to storage_locations
+alter table skus
   add column storage_location_id uuid references storage_locations(id) on delete set null;
 
 -- RLS

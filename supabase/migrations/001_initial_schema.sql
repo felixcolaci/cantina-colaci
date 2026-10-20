@@ -23,7 +23,7 @@ create table cellars (
   created_at timestamptz not null default now()
 );
 
--- Trips: shopping trips (must be before cellar_entries for FK)
+-- Trips: shopping trips (must be before skus for FK)
 create table trips (
   id uuid primary key default gen_random_uuid(),
   cellar_id uuid not null references cellars(id) on delete cascade,
@@ -49,8 +49,8 @@ create table wines (
   created_at timestamptz not null default now()
 );
 
--- Cellar entries: physical bottles (one entry = one batch of bottles)
-create table cellar_entries (
+-- SKUs: physical bottles (one entry = one batch of bottles)
+create table skus (
   id uuid primary key default gen_random_uuid(),
   wine_id uuid not null references wines(id) on delete cascade,
   quantity int not null default 1 check (quantity >= 0),
@@ -67,7 +67,7 @@ create table cellar_entries (
 -- Tastings: recorded when a bottle is opened
 create table tastings (
   id uuid primary key default gen_random_uuid(),
-  cellar_entry_id uuid not null references cellar_entries(id) on delete cascade,
+  cellar_entry_id uuid not null references skus(id) on delete cascade,
   user_id uuid not null references auth.users(id),
   date date not null default current_date,
   rating int not null check (rating >= 1 and rating <= 10),

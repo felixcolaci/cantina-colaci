@@ -30,15 +30,15 @@ export function createMcpServer(familyId: string): McpServer {
         .from('wines')
         .select(`
           name, producer, vintage, type, region, country, grape_variety, notes,
-          cellar_entries!inner(quantity, status, storage_locations(name))
+          skus!inner(quantity, status, storage_locations(name))
         `)
         .eq('cellar_id', cellar.id)
-        .eq('cellar_entries.status', 'in_stock')
-        .gt('cellar_entries.quantity', 0)
+        .eq('skus.status', 'in_stock')
+        .gt('skus.quantity', 0)
         .order('name')
 
       const result = (wines ?? []).map(wine => {
-        const entries = wine.cellar_entries as any[]
+        const entries = wine.skus as any[]
         const totalQuantity = entries.reduce((sum: number, e: any) => sum + e.quantity, 0)
         const location = entries[0]?.storage_locations?.name ?? null
 

@@ -32,7 +32,28 @@ export interface SyncResult {
   failed: number
 }
 
+// Module-level in-flight guard (finding 4.1, MAJOR): useOfflineSync calls
+// sync() -> processPendingQueue() from two independent, unsynchronized
+// triggers (the 'online' event handler and an on-mount effect), and this
+// function only removes an item from IndexedDB *after* it resolves -- so two
+// overlapping passes would both read and both execute the same still-present
+// item. Living here (not just in the React hook) makes the guard robust
+// regardless of caller. This is defense-in-depth layered under the
+// idempotency-key dedup guard (finding 2.1) on the individual actions, not a
+// replacement for it -- keep both.
+let inFlight: Promise<SyncResult> | null = null
+
 export async function processPendingQueue(): Promise<SyncResult> {
+  if (inFlight) return inFlight
+  inFlight = runPendingQueue()
+  try {
+    return await inFlight
+  } finally {
+    inFlight = null
+  }
+}
+
+async function runPendingQueue(): Promise<SyncResult> {
   const items = await getPendingActions()
   if (items.length === 0) return { synced: 0, failed: 0 }
 

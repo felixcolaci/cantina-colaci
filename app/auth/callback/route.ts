@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
-import { seedDemoCellar } from '@/lib/actions/demo'
+import { seedDemoCellar } from '@/lib/seed/seed-demo-cellar'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)

@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { claimIdempotencyKey } from '@/lib/idempotency'
 
 function parseDate(input: FormDataEntryValue | null): string | null {
   if (!input || typeof input !== 'string' || !input.trim()) return null
@@ -36,15 +37,21 @@ export async function createTrip(formData: FormData) {
     .maybeSingle()
   if (!cellar) redirect('/login')
 
-  const { error } = await admin.from('trips').insert({
-    cellar_id: cellar.id,
-    name: formData.get('name') as string,
-    location: (formData.get('location') as string) || null,
-    date_start: parseDate(formData.get('date_start')),
-    date_end: parseDate(formData.get('date_end')),
-  })
+  // createTrip always redirects to the same fixed '/trips' path on success,
+  // so a deduped retry reaches the exact same success path with no extra
+  // lookup needed.
+  const claimed = await claimIdempotencyKey(admin, formData.get('__idempotency_key') as string | null)
+  if (claimed) {
+    const { error } = await admin.from('trips').insert({
+      cellar_id: cellar.id,
+      name: formData.get('name') as string,
+      location: (formData.get('location') as string) || null,
+      date_start: parseDate(formData.get('date_start')),
+      date_end: parseDate(formData.get('date_end')),
+    })
 
-  if (error) throw new Error(error.message)
+    if (error) throw new Error(error.message)
+  }
 
   revalidatePath('/trips')
   redirect('/trips')

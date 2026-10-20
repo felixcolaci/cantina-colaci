@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { WineType } from '@/lib/types'
 import { getFeatureFlags } from '@/lib/flags'
+import { claimIdempotencyKey } from '@/lib/idempotency'
 
 export async function quickAddWine(formData: FormData) {
   const supabase = await createClient()
@@ -20,6 +21,12 @@ export async function quickAddWine(formData: FormData) {
     .from('cellars').select('id').eq('family_id', membership.family_id)
     .order('created_at').limit(1).maybeSingle()
   if (!cellar) redirect('/login')
+
+  // quickAddWine always redirects to the same fixed '/cellar' path on
+  // success, so a deduped retry can reach the exact same success path with
+  // no extra lookup needed.
+  const claimed = await claimIdempotencyKey(admin, formData.get('__idempotency_key') as string | null)
+  if (!claimed) redirect('/cellar')
 
   const flags = await getFeatureFlags(membership.family_id)
   if (!flags.unlimited_cellar) {

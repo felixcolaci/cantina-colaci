@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { claimIdempotencyKey } from '@/lib/idempotency'
 
 export async function openBottle(formData: FormData) {
   const supabase = await createClient()
@@ -29,21 +30,24 @@ export async function openBottle(formData: FormData) {
   const entryFamilyId = (entry.wines as any)?.cellars?.family_id
   if (entryFamilyId !== membership.family_id) throw new Error('Unauthorized')
 
-  const { error: tastingError } = await admin.from('tastings').insert({
-    cellar_entry_id: cellarEntryId,
-    user_id: user.id,
-    date: formData.get('date') as string,
-    rating: parseInt(formData.get('rating') as string),
-    notes: (formData.get('notes') as string) || null,
-  })
+  const claimed = await claimIdempotencyKey(admin, formData.get('__idempotency_key') as string | null)
+  if (claimed) {
+    const { error: tastingError } = await admin.from('tastings').insert({
+      cellar_entry_id: cellarEntryId,
+      user_id: user.id,
+      date: formData.get('date') as string,
+      rating: parseInt(formData.get('rating') as string),
+      notes: (formData.get('notes') as string) || null,
+    })
 
-  if (tastingError) throw new Error(tastingError.message)
+    if (tastingError) throw new Error(tastingError.message)
 
-  const newQuantity = entry.quantity - 1
-  await admin
-    .from('skus')
-    .update({ quantity: newQuantity, status: newQuantity <= 0 ? 'consumed' : 'in_stock' })
-    .eq('id', cellarEntryId)
+    const newQuantity = entry.quantity - 1
+    await admin
+      .from('skus')
+      .update({ quantity: newQuantity, status: newQuantity <= 0 ? 'consumed' : 'in_stock' })
+      .eq('id', cellarEntryId)
+  }
 
   const redirectTo = formData.get('redirect_to') as string | null
   const SAFE = ['/cellar', '/history', '/trips', '/']

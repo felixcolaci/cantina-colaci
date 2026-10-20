@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import type { WineType } from '@/lib/types'
 import { getFeatureFlags } from '@/lib/flags'
 import { resolveStorageLocation } from './_utils'
+import { claimIdempotencyKey } from '@/lib/idempotency'
 
 export async function addWine(formData: FormData) {
   const supabase = await createClient()
@@ -28,6 +29,16 @@ export async function addWine(formData: FormData) {
     .limit(1)
     .maybeSingle()
   if (!cellar) redirect('/login')
+
+  // A deduped retry must look identical to success, not re-run the mutation
+  // (which would double-insert) or re-evaluate the cap below (which could
+  // wrongly throw on a retry of an attempt that already succeeded). We can't
+  // recover the originally-created wine's id without a result-mapping
+  // column the migration deliberately doesn't add, so a dedup here lands on
+  // /cellar rather than the specific wine's page -- still a success
+  // destination, just not the exact deep link.
+  const claimed = await claimIdempotencyKey(admin, formData.get('__idempotency_key') as string | null)
+  if (!claimed) redirect('/cellar')
 
   const flags = await getFeatureFlags(membership.family_id)
   if (!flags.unlimited_cellar) {

@@ -140,9 +140,22 @@ describe('resetCellar', () => {
     expect(mockWinesDeleteIn).not.toHaveBeenCalled()
   })
 
+  it('rejects resetting a demo family\'s cellar, before even looking up the cellar', async () => {
+    mockMembershipMaybeSingle.mockResolvedValueOnce({
+      data: { family_id: 'fam-1', role: 'owner', families: { name: 'Demo', is_demo: true } },
+      error: null,
+    })
+
+    await expect(resetCellar(makeFormData())).rejects.toThrow(
+      'Die Demo-Cantina kann nicht zurückgesetzt werden'
+    )
+
+    expect(mockCellarsEq).not.toHaveBeenCalled()
+  })
+
   it('rejects a confirm text that does not match the cellar name', async () => {
     mockMembershipMaybeSingle.mockResolvedValueOnce({
-      data: { family_id: 'fam-1', role: 'owner' }, error: null,
+      data: { family_id: 'fam-1', role: 'owner', families: { name: 'x', is_demo: false } }, error: null,
     })
     cellarsEqForSingle({ data: { id: 'cellar-1', name: 'Meine Cantina' }, error: null })
 
@@ -155,19 +168,21 @@ describe('resetCellar', () => {
 
   it('on the happy path: purges family-owned photos from storage, cascades the delete, and redirects', async () => {
     mockMembershipMaybeSingle.mockResolvedValueOnce({
-      data: { family_id: 'fam-1', role: 'owner' }, error: null,
+      data: { family_id: 'fam-1', role: 'owner', families: { name: 'x', is_demo: false } }, error: null,
     })
     cellarsEqForSingle({ data: { id: 'cellar-1', name: 'Meine Cantina' }, error: null })
     mockWinesEq.mockResolvedValueOnce({ data: [{ id: 'wine-1' }, { id: 'wine-2' }], error: null })
     mockSkusSelectIn.mockResolvedValueOnce({
       data: [
-        { id: 'sku-1', photo_path: 'families/fam-1/wines/wine-1/a.jpg' },
-        { id: 'sku-2', photo_path: 'demo/shared.jpg' },
+        // Real shape for skus.photo_path (addWine in wine.ts): families/<fam>/wines/<wine>.<ext>, no subfolder.
+        { id: 'sku-1', wine_id: 'wine-1', photo_path: 'families/fam-1/wines/wine-1.jpg' },
+        { id: 'sku-2', wine_id: 'wine-2', photo_path: 'demo/shared.jpg' },
       ],
       error: null,
     })
     mockWinePhotosSelectIn.mockResolvedValueOnce({
-      data: [{ path: 'families/fam-1/wines/wine-2/b.jpg' }],
+      // Real shape for wine_photos.path (addWinePhoto in wine-photos.ts): families/<fam>/wines/<wine>/<photoId>.<ext>.
+      data: [{ wine_id: 'wine-2', path: 'families/fam-1/wines/wine-2/b.jpg' }],
       error: null,
     })
     mockStorageRemove.mockResolvedValueOnce({ error: null })
@@ -187,7 +202,7 @@ describe('resetCellar', () => {
     // The demo/ path is excluded -- never deleted since it's shared across cellars.
     expect(mockStorageFrom).toHaveBeenCalledWith('wine-photos')
     expect(mockStorageRemove).toHaveBeenCalledWith([
-      'families/fam-1/wines/wine-1/a.jpg',
+      'families/fam-1/wines/wine-1.jpg',
       'families/fam-1/wines/wine-2/b.jpg',
     ])
     expect(mockTastingsDeleteIn).toHaveBeenCalledWith('cellar_entry_id', ['sku-1', 'sku-2'])
@@ -198,9 +213,40 @@ describe('resetCellar', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/cellar')
   })
 
+  it("excludes a photo_path whose embedded wine id doesn't match the row it actually belongs to (tampered via direct PostgREST write)", async () => {
+    mockMembershipMaybeSingle.mockResolvedValueOnce({
+      data: { family_id: 'fam-1', role: 'owner', families: { name: 'x', is_demo: false } }, error: null,
+    })
+    cellarsEqForSingle({ data: { id: 'cellar-1', name: 'Meine Cantina' }, error: null })
+    mockWinesEq.mockResolvedValueOnce({ data: [{ id: 'wine-1' }], error: null })
+    mockSkusSelectIn.mockResolvedValueOnce({
+      // sku-1 actually belongs to wine-1 (that's how it was selected, via
+      // .in('wine_id', wineIds)), but its photo_path value claims wine-999 --
+      // still starts with "families/fam-1/" so the old looser ownership
+      // check would have let it through. The embedded-wine-id match now
+      // rejects it.
+      data: [{ id: 'sku-1', wine_id: 'wine-1', photo_path: 'families/fam-1/wines/wine-999.jpg' }],
+      error: null,
+    })
+    mockWinePhotosSelectIn.mockResolvedValueOnce({ data: [], error: null })
+    mockTastingsDeleteIn.mockResolvedValueOnce({ error: null })
+    mockSkusDeleteIn.mockResolvedValueOnce({ error: null })
+    mockWinesDeleteIn.mockResolvedValueOnce({ error: null })
+    mockTripsDeleteEq.mockResolvedValueOnce({ error: null })
+    mockLocationsDeleteEq.mockResolvedValueOnce({ error: null })
+
+    await expect(
+      resetCellar(makeFormData({ confirm: 'Meine Cantina' }))
+    ).rejects.toThrow('NEXT_REDIRECT')
+
+    expect(mockStorageRemove).not.toHaveBeenCalled()
+    // The DB rows are still cleaned up regardless of the excluded photo.
+    expect(mockSkusDeleteIn).toHaveBeenCalledWith('id', ['sku-1'])
+  })
+
   it('on an empty cellar: skips wine/sku/photo cleanup but still clears trips and locations', async () => {
     mockMembershipMaybeSingle.mockResolvedValueOnce({
-      data: { family_id: 'fam-1', role: 'owner' }, error: null,
+      data: { family_id: 'fam-1', role: 'owner', families: { name: 'x', is_demo: false } }, error: null,
     })
     cellarsEqForSingle({ data: { id: 'cellar-1', name: 'Meine Cantina' }, error: null })
     mockWinesEq.mockResolvedValueOnce({ data: [], error: null })
@@ -246,9 +292,22 @@ describe('resetFamily', () => {
     expect(mockWinesDeleteIn).not.toHaveBeenCalled()
   })
 
+  it("rejects resetting a demo family, before even looking up its cellars", async () => {
+    mockMembershipMaybeSingle.mockResolvedValueOnce({
+      data: { family_id: 'fam-1', role: 'owner', families: { name: 'Demo', is_demo: true } },
+      error: null,
+    })
+
+    await expect(resetFamily(makeFormData())).rejects.toThrow(
+      'Die Demo-Cantina kann nicht zurückgesetzt werden'
+    )
+
+    expect(mockCellarsEq).not.toHaveBeenCalled()
+  })
+
   it('rejects a confirm text that does not match the family name', async () => {
     mockMembershipMaybeSingle.mockResolvedValueOnce({
-      data: { family_id: 'fam-1', role: 'owner', families: { name: 'Colaci' } }, error: null,
+      data: { family_id: 'fam-1', role: 'owner', families: { name: 'Colaci', is_demo: false } }, error: null,
     })
 
     await expect(
@@ -260,14 +319,14 @@ describe('resetFamily', () => {
 
   it('on the happy path: wipes every cellar belonging to the family and redirects', async () => {
     mockMembershipMaybeSingle.mockResolvedValueOnce({
-      data: { family_id: 'fam-1', role: 'owner', families: { name: 'Colaci' } }, error: null,
+      data: { family_id: 'fam-1', role: 'owner', families: { name: 'Colaci', is_demo: false } }, error: null,
     })
     cellarsEqForList({ data: [{ id: 'cellar-1' }, { id: 'cellar-2' }], error: null })
     mockWinesEq
       .mockResolvedValueOnce({ data: [{ id: 'wine-1' }], error: null })
       .mockResolvedValueOnce({ data: [], error: null })
     mockSkusSelectIn.mockResolvedValueOnce({
-      data: [{ id: 'sku-1', photo_path: 'families/fam-1/wines/wine-1/a.jpg' }], error: null,
+      data: [{ id: 'sku-1', wine_id: 'wine-1', photo_path: 'families/fam-1/wines/wine-1.jpg' }], error: null,
     })
     mockWinePhotosSelectIn.mockResolvedValueOnce({ data: [], error: null })
     mockStorageRemove.mockResolvedValueOnce({ error: null })
@@ -287,7 +346,7 @@ describe('resetFamily', () => {
 
     expect(mockWinesEq).toHaveBeenNthCalledWith(1, 'cellar_id', 'cellar-1')
     expect(mockWinesEq).toHaveBeenNthCalledWith(2, 'cellar_id', 'cellar-2')
-    expect(mockStorageRemove).toHaveBeenCalledWith(['families/fam-1/wines/wine-1/a.jpg'])
+    expect(mockStorageRemove).toHaveBeenCalledWith(['families/fam-1/wines/wine-1.jpg'])
     expect(mockWinesDeleteIn).toHaveBeenCalledWith('id', ['wine-1'])
     expect(mockTripsDeleteEq).toHaveBeenNthCalledWith(1, 'cellar_id', 'cellar-1')
     expect(mockTripsDeleteEq).toHaveBeenNthCalledWith(2, 'cellar_id', 'cellar-2')

@@ -11,7 +11,7 @@ export default async function CellarSettingsPage() {
 
   const supabase = await createClient()
 
-  const [{ data: cellar }, { data: membership }] = await Promise.all([
+  const [{ data: cellar }, { data: membership }, { data: family }] = await Promise.all([
     supabase.from('cellars').select('name').eq('id', context.cellarId).maybeSingle(),
     supabase
       .from('family_members')
@@ -19,6 +19,7 @@ export default async function CellarSettingsPage() {
       .eq('user_id', context.userId)
       .eq('family_id', context.familyId)
       .maybeSingle(),
+    supabase.from('families').select('is_demo').eq('id', context.familyId).maybeSingle(),
   ])
 
   if (!cellar) redirect('/cellar')
@@ -32,7 +33,7 @@ export default async function CellarSettingsPage() {
       <h2 className="text-xl font-semibold">Keller</h2>
       <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>{cellar.name}</p>
 
-      {membership?.role === 'owner' && (
+      {membership?.role === 'owner' && !family?.is_demo && (
         <div className="space-y-3 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
           <h3 className="text-base font-medium" style={{ color: 'var(--destructive)' }}>
             Gefahrenzone

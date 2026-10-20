@@ -53,38 +53,41 @@ export async function seedDemoCellar(userId: string): Promise<void> {
 
   const demoTrip = trips?.[0] ?? null
 
-  // Create wines + entries + tastings
-  for (const demoWine of DEMO_WINES) {
-    const { data: wine, error: wineError } = await admin
-      .from('wines')
-      .insert({
-        cellar_id: cellar.id,
-        name: demoWine.name,
-        producer: demoWine.producer,
-        type: demoWine.type,
-        region: demoWine.region,
-        country: demoWine.country,
-        grape_variety: demoWine.grape_variety,
-        notes: demoWine.notes,
-      })
-      .select()
-      .single()
+  // Create all wines in one batch insert.
+  const { data: wines, error: winesError } = await admin
+    .from('wines')
+    .insert(DEMO_WINES.map(demoWine => ({
+      cellar_id: cellar.id,
+      name: demoWine.name,
+      producer: demoWine.producer,
+      type: demoWine.type,
+      region: demoWine.region,
+      country: demoWine.country,
+      grape_variety: demoWine.grape_variety,
+      notes: demoWine.notes,
+    })))
+    .select()
 
-    if (wineError) throw wineError
-    if (!wine) continue
+  if (winesError) throw winesError
+  if (!wines) return
 
-    const location = locations[demoWine.storageLocationIndex]
-    const trip = demoWine.tripIndex !== null ? demoTrip : null
+  // Build the skus batch from the wines just inserted — relies on a single
+  // multi-row INSERT ... RETURNING preserving the input order, which both
+  // Postgres and PostgREST do.
+  const { data: entries, error: entriesError } = await admin
+    .from('skus')
+    .insert(DEMO_WINES.map((demoWine, i) => {
+      const wine = wines[i]
+      const location = locations[demoWine.storageLocationIndex]
+      const trip = demoWine.tripIndex !== null ? demoTrip : null
 
-    // Demo photos live under demo/ in the wine-photos bucket and are shared across all
-    // demo cellars — they are never deleted per user.
-    const { data: photoData } = admin.storage
-      .from('wine-photos')
-      .getPublicUrl(demoWine.demoPhotoPath)
+      // Demo photos live under demo/ in the wine-photos bucket and are shared across all
+      // demo cellars — they are never deleted per user.
+      const { data: photoData } = admin.storage
+        .from('wine-photos')
+        .getPublicUrl(demoWine.demoPhotoPath)
 
-    const { data: entry, error: entryError } = await admin
-      .from('skus')
-      .insert({
+      return {
         wine_id: wine.id,
         vintage: demoWine.vintage,
         quantity: demoWine.quantity,
@@ -94,23 +97,28 @@ export async function seedDemoCellar(userId: string): Promise<void> {
         trip_id: trip?.id ?? null,
         photo_url: photoData.publicUrl,
         status: 'in_stock',
-      })
-      .select()
-      .single()
+      }
+    }))
+    .select()
 
-    if (entryError) throw entryError
+  if (entriesError) throw entriesError
+  if (!entries) return
 
-    if (entry && demoWine.tasting) {
-      const { error: tastingError } = await admin.from('tastings').insert({
-        cellar_entry_id: entry.id,
-        user_id: userId,
-        date: '2026-06-01',
-        rating: demoWine.tasting.rating,
-        notes: demoWine.tasting.notes,
-      })
+  // Build the tastings batch from the skus just inserted, for wines that have one.
+  const tastingRows = DEMO_WINES
+    .map((demoWine, i) => ({ demoWine, entry: entries[i] }))
+    .filter(({ demoWine }) => demoWine.tasting !== null)
+    .map(({ demoWine, entry }) => ({
+      cellar_entry_id: entry.id,
+      user_id: userId,
+      date: '2026-06-01',
+      rating: demoWine.tasting!.rating,
+      notes: demoWine.tasting!.notes,
+    }))
 
-      if (tastingError) throw tastingError
-    }
+  if (tastingRows.length > 0) {
+    const { error: tastingsError } = await admin.from('tastings').insert(tastingRows)
+    if (tastingsError) throw tastingsError
   }
 }
 

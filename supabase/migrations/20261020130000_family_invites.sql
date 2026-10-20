@@ -84,8 +84,9 @@ begin
     select 1 from public.family_members
     where family_id = p_family_id
     and user_id = p_user_id
+    and role = 'owner'
   ) then
-    raise exception 'not_family_member';
+    raise exception 'not_family_owner';
   end if;
 
   -- Two concatenated v4 UUIDs (dashes stripped), ~244 bits of randomness —

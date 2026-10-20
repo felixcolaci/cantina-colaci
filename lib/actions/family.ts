@@ -58,10 +58,11 @@ export async function createFamilyInvite(): Promise<{ token: string }> {
   const admin = createAdminClient()
   const { data: membership } = await admin
     .from('family_members')
-    .select('family_id')
+    .select('family_id, role')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!membership) throw new Error('Kein Familienmitglied')
+  if ((membership as any).role !== 'owner') throw new Error('Nur der Owner kann Mitglieder einladen')
 
   const token = await generateFamilyInviteToken(admin, membership.family_id, user.id)
   return { token }

@@ -36,16 +36,23 @@ describe('createFamilyInvite', () => {
     expect(mockRpc).not.toHaveBeenCalled()
   })
 
+  it('throws when the caller is a member but not the owner', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } } })
+    mockMembershipMaybeSingle.mockResolvedValueOnce({ data: { family_id: 'fam-1', role: 'member' } })
+    await expect(createFamilyInvite()).rejects.toThrow('Nur der Owner kann Mitglieder einladen')
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
   it('throws a user-facing error when the RPC fails', async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } } })
-    mockMembershipMaybeSingle.mockResolvedValueOnce({ data: { family_id: 'fam-1' } })
-    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'not_family_member' } })
+    mockMembershipMaybeSingle.mockResolvedValueOnce({ data: { family_id: 'fam-1', role: 'owner' } })
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'not_family_owner' } })
     await expect(createFamilyInvite()).rejects.toThrow('Einladungslink konnte nicht erstellt werden.')
   })
 
   it('calls create_family_invite with the caller id and family id, returning the token', async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } } })
-    mockMembershipMaybeSingle.mockResolvedValueOnce({ data: { family_id: 'fam-1' } })
+    mockMembershipMaybeSingle.mockResolvedValueOnce({ data: { family_id: 'fam-1', role: 'owner' } })
     mockRpc.mockResolvedValueOnce({ data: 'generated-token-abc', error: null })
 
     const result = await createFamilyInvite()

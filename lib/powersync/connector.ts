@@ -25,7 +25,11 @@ export class ApiBackendConnector implements PowerSyncBackendConnector {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return null
 
-    const endpoint = process.env.NEXT_PUBLIC_POWERSYNC_URL
+    // .trim() guards against a stray trailing space in the env var (e.g. a
+    // pasted Vercel value) -- Safari parses the resulting URL as containing
+    // credentials instead of just failing the request, which is a much
+    // harder error to trace back to its cause.
+    const endpoint = process.env.NEXT_PUBLIC_POWERSYNC_URL?.trim()
     if (!endpoint) throw new Error('NEXT_PUBLIC_POWERSYNC_URL is not set')
 
     return { endpoint, token: session.access_token }

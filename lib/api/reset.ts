@@ -71,12 +71,15 @@ export async function requireDemoOwner(admin: AdminClient, user: User): Promise<
  */
 const SKU_PHOTO_PATH = /^families\/([^/]+)\/wines\/([^/.]+)\.[A-Za-z0-9]+$/
 const WINE_PHOTO_PATH = /^families\/([^/]+)\/wines\/([^/]+)\/[A-Za-z0-9._-]+$/
+const DISCOVERY_PHOTO_PATH = /^families\/([^/]+)\/discoveries\/([^/]+)\/[A-Za-z0-9._-]+$/
 
-function isExpectedPhotoPath(path: string, familyId: string, wineId: string): boolean {
+function isExpectedPhotoPath(path: string, familyId: string, ownerId: string): boolean {
   const sku = path.match(SKU_PHOTO_PATH)
-  if (sku) return sku[1] === familyId && sku[2] === wineId
+  if (sku) return sku[1] === familyId && sku[2] === ownerId
   const photo = path.match(WINE_PHOTO_PATH)
-  if (photo) return photo[1] === familyId && photo[2] === wineId
+  if (photo) return photo[1] === familyId && photo[2] === ownerId
+  const discoveryPhoto = path.match(DISCOVERY_PHOTO_PATH)
+  if (discoveryPhoto) return discoveryPhoto[1] === familyId && discoveryPhoto[2] === ownerId
   return false
 }
 
@@ -138,6 +141,31 @@ export async function wipeCellarData(admin: AdminClient, cellarId: string, famil
 
   const { error: locationsDeleteError } = await admin.from('storage_locations').delete().eq('cellar_id', cellarId)
   if (locationsDeleteError) throw locationsDeleteError
+
+  const { data: discoveries, error: discoveriesError } = await admin
+    .from('discoveries').select('id').eq('cellar_id', cellarId)
+  if (discoveriesError) throw discoveriesError
+
+  const discoveryIds = (discoveries ?? []).map(d => d.id)
+  if (discoveryIds.length > 0) {
+    const { data: discoveryPhotos, error: discoveryPhotosError } = await admin
+      .from('discovery_photos').select('discovery_id, path').in('discovery_id', discoveryIds)
+    if (discoveryPhotosError) throw discoveryPhotosError
+
+    const discoveryPhotoPaths = (discoveryPhotos ?? [])
+      .filter(p => isExpectedPhotoPath(p.path as string, familyId, p.discovery_id as string))
+      .map(p => p.path as string)
+
+    if (discoveryPhotoPaths.length > 0) {
+      const { error: removeError } = await admin.storage.from(BUCKET).remove(discoveryPhotoPaths)
+      if (removeError) throw removeError
+    }
+
+    // discovery_photos rows cascade from this delete (discovery_photos.discovery_id
+    // references discoveries(id) on delete cascade).
+    const { error: discoveriesDeleteError } = await admin.from('discoveries').delete().in('id', discoveryIds)
+    if (discoveriesDeleteError) throw discoveriesDeleteError
+  }
 }
 
 /** Validates the {confirm} body every reset/clear route takes: the caller

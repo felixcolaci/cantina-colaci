@@ -27,9 +27,17 @@ export async function POST(request: Request) {
     const email = typeof body?.email === 'string' ? body.email.trim() : null
 
     if (email) {
-      const origin = request.headers.get('x-forwarded-proto')
-        ? `${request.headers.get('x-forwarded-proto')}://${request.headers.get('host')}`
-        : new URL(request.url).origin
+      // Prefer a server-configured canonical origin over request headers --
+      // host/x-forwarded-* are caller-controlled and would otherwise let a
+      // forged request poison the emailed invite link's redirect target.
+      // Supabase's own redirectTo allowlist is a second backstop, but this
+      // route shouldn't rely on that alone. Falls back to header-derived
+      // origin only when SITE_URL isn't set (local/dev convenience).
+      const origin =
+        process.env.SITE_URL ??
+        (request.headers.get('x-forwarded-proto')
+          ? `${request.headers.get('x-forwarded-proto')}://${request.headers.get('host')}`
+          : new URL(request.url).origin)
 
       const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
         redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(`/join?token=${token}`)}`,

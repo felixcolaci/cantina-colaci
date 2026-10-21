@@ -26,6 +26,11 @@ export function buildWinePhotoPath(familyId: string, wineId: string, photoId: st
   return `families/${familyId}/wines/${wineId}/${photoId}.${ext}`
 }
 
+/** Storage object path for a discovery's (at most one) photo upload. */
+export function buildDiscoveryPhotoPath(familyId: string, discoveryId: string, photoId: string, ext: string): string {
+  return `families/${familyId}/discoveries/${discoveryId}/${photoId}.${ext}`
+}
+
 // How long a signed URL stays valid. Picked to comfortably outlive a single
 // page render (including any client-side revalidation) while still
 // expiring promptly if a photo is deleted/replaced.

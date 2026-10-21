@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import type { Wine } from '@/lib/types'
 
 const TYPE_CONFIG = {
@@ -17,7 +18,9 @@ export function WineCard({ wine, totalBottles, vintage }: WineCardProps) {
   const type = TYPE_CONFIG[wine.type as keyof typeof TYPE_CONFIG] ?? TYPE_CONFIG.red
 
   return (
-    <div
+    <Link
+      to="/wine/$id"
+      params={{ id: wine.id }}
       className="flex gap-4 p-4 wine-card-hover"
       style={{
         background: 'var(--card)',
@@ -107,7 +110,7 @@ export function WineCard({ wine, totalBottles, vintage }: WineCardProps) {
         </span>
         <span className="eyebrow">{totalBottles === 1 ? 'Flasche' : 'Flaschen'}</span>
       </div>
-    </div>
+    </Link>
   )
 }
 

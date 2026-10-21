@@ -50,6 +50,7 @@ const wines = new Table(
 const skus = new Table(
   {
     wine_id: column.text,
+    vintage: column.integer,
     quantity: column.integer,
     purchase_price: column.real,
     purchase_date: column.text,

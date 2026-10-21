@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { createContext, useContext, useEffect, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router'
 import type { Session } from '@supabase/supabase-js'
 import { usePowerSync, useStatus } from '@powersync/react'
 import type { AbstractPowerSyncDatabase, SyncStatus } from '@powersync/web'
@@ -11,7 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SubmitButton } from '@/components/ui/submit-button'
-import { CellarScreen } from './cellar-screen'
+import { CellarScreen } from '@/app/app/cellar-screen'
+import { WineDetailScreen } from '@/app/app/wine-detail-screen'
 
 type Me = {
   userId: string
@@ -30,7 +32,17 @@ async function logout(db: AbstractPowerSyncDatabase) {
   await createClient().auth.signOut()
 }
 
-export default function SpaRoot() {
+// Every route below the root needs to know which cellar it's reading from.
+// RootShell resolves it once (gated behind session + sync + onboarding) and
+// hands it down via context instead of threading it through route params.
+const CellarIdContext = createContext<string | null>(null)
+export function useCellarId() {
+  const cellarId = useContext(CellarIdContext)
+  if (!cellarId) throw new Error('useCellarId() called outside a route with a resolved cellar')
+  return cellarId
+}
+
+function RootShell() {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionLoaded, setSessionLoaded] = useState(false)
   // Hook must run unconditionally regardless of which branch below renders.
@@ -53,9 +65,9 @@ export default function SpaRoot() {
   // hasSynced is undefined while the local DB is still opening, false until
   // the first full sync checkpoint lands, then stays true for good (it
   // persists locally -- a returning, already-synced user skips this screen
-  // entirely and goes straight to MeCard, even offline).
+  // entirely and goes straight to MeShell, even offline).
   if (!status.hasSynced) return <SyncScreen status={status} />
-  return <MeCard />
+  return <MeShell />
 }
 
 // Continuous background-sync indicator for screens past the initial sync
@@ -175,7 +187,7 @@ function LoginCard() {
   )
 }
 
-function MeCard() {
+function MeShell() {
   const { data, isLoading, error } = useQuery<Me>({
     queryKey: ['me'],
     queryFn: () => apiGet<Me>('/me'),
@@ -198,7 +210,11 @@ function MeCard() {
       </div>
       {isLoading && <p className="px-4 text-sm text-muted-foreground">Lade…</p>}
       {error && <p className="px-4 text-sm text-destructive">{(error as Error).message}</p>}
-      {data?.cellarId && <CellarScreen cellarId={data.cellarId} />}
+      {data?.cellarId && (
+        <CellarIdContext.Provider value={data.cellarId}>
+          <Outlet />
+        </CellarIdContext.Provider>
+      )}
     </div>
   )
 }
@@ -206,7 +222,7 @@ function MeCard() {
 // Shown once a brand-new user's first PowerSync checkpoint lands empty
 // (no family_members row yet) -- mirrors the legacy /onboarding page, but as
 // a card within the SPA shell instead of a separate route. On success,
-// invalidating ['me'] re-fetches and MeCard swaps itself to the connected
+// invalidating ['me'] re-fetches and MeShell swaps itself to the connected
 // view; no PowerSync reconnect needed since the self-hosted sync rules
 // recompute bucket membership from the family_members write itself.
 function OnboardingCard() {
@@ -270,4 +286,42 @@ function OnboardingCard() {
       </CardContent>
     </Card>
   )
+}
+
+function CellarScreenRoute() {
+  const cellarId = useCellarId()
+  return <CellarScreen cellarId={cellarId} />
+}
+
+function WineDetailRoute() {
+  const { id } = wineDetailRoute.useParams()
+  return <WineDetailScreen wineId={id} />
+}
+
+const rootRoute = createRootRoute({ component: RootShell })
+
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: CellarScreenRoute,
+})
+
+const wineDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/wine/$id',
+  component: WineDetailRoute,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, wineDetailRoute])
+
+const router = createRouter({ routeTree, basepath: '/app' })
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}
+
+export function SpaRouter() {
+  return <RouterProvider router={router} />
 }

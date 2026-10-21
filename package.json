@@ -5,7 +5,7 @@
   "scripts": {
     "postinstall": "powersync-web copy-assets -o public",
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",

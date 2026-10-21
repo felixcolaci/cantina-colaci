@@ -25,7 +25,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     // producer is NOT NULL in Postgres -- defaults to '' rather than null for
     // a blank field.
-    const { error } = await admin.from('wines').upsert({
+    //
+    // insert(), not upsert(): requireOwnCellar only validates the cellarId
+    // the caller supplied, not whatever cellar `id` might already belong to
+    // -- an upsert would let a guessed/known id silently overwrite another
+    // family's existing row. A 23505 (unique_violation) means this exact id
+    // already landed (e.g. a retried upload), which is fine to treat as a
+    // no-op rather than an error.
+    const { error } = await admin.from('wines').insert({
       id,
       cellar_id: cellarId,
       name,
@@ -36,7 +43,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       grape_variety: null,
       notes: null,
     })
-    if (error) return Response.json({ error: error.message }, { status: 500 })
+    if (error && error.code !== '23505') return Response.json({ error: error.message }, { status: 500 })
 
     return new Response(null, { status: 204 })
   } catch (err) {

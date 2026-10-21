@@ -27,7 +27,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!wine) return Response.json({ error: 'Wein nicht gefunden' }, { status: 404 })
     await requireOwnCellar(admin, user, wine.cellar_id)
 
-    const { error } = await admin.from('skus').upsert({
+    // insert(), not upsert() -- see the same note in
+    // app/api/v1/wines/[id]/route.ts. A 23505 means this id already landed.
+    const { error } = await admin.from('skus').insert({
       id,
       wine_id: wineId,
       vintage: vintage ?? null,
@@ -41,7 +43,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       trip_id: null,
       photo_path: null,
     })
-    if (error) return Response.json({ error: error.message }, { status: 500 })
+    if (error && error.code !== '23505') return Response.json({ error: error.message }, { status: 500 })
 
     return new Response(null, { status: 204 })
   } catch (err) {

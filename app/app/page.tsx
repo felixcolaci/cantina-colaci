@@ -3,6 +3,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { Session } from '@supabase/supabase-js'
+import { usePowerSync, useStatus } from '@powersync/react'
+import type { AbstractPowerSyncDatabase, SyncStatus } from '@powersync/web'
 import { createClient } from '@/lib/supabase/client'
 import { apiGet } from '@/lib/spa/api-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,9 +19,21 @@ type Me = {
   cellarId: string | null
 }
 
+// Local SQLite persists per browser profile (IndexedDB), independent of the
+// Supabase session. On a shared device, the next person to log in must never
+// see this user's rows -- disconnectAndClear() wipes every synced table;
+// PowerSync repopulates it from scratch, scoped to whichever user logs in
+// next (via a fresh JWT -> auth.user_id() -> fresh sync-config.yaml query).
+async function logout(db: AbstractPowerSyncDatabase) {
+  await db.disconnectAndClear()
+  await createClient().auth.signOut()
+}
+
 export default function SpaRoot() {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionLoaded, setSessionLoaded] = useState(false)
+  // Hook must run unconditionally regardless of which branch below renders.
+  const status = useStatus()
 
   useEffect(() => {
     const supabase = createClient()
@@ -34,8 +48,78 @@ export default function SpaRoot() {
   }, [])
 
   if (!sessionLoaded) return null
+  if (!session) return <LoginCard />
+  // hasSynced is undefined while the local DB is still opening, false until
+  // the first full sync checkpoint lands, then stays true for good (it
+  // persists locally -- a returning, already-synced user skips this screen
+  // entirely and goes straight to MeCard, even offline).
+  if (!status.hasSynced) return <SyncScreen status={status} />
+  return <MeCard />
+}
 
-  return session ? <MeCard /> : <LoginCard />
+// Continuous background-sync indicator for screens past the initial sync
+// gate (SyncScreen). hasSynced is already true here, so this only ever
+// reflects ongoing activity -- not whether the app is usable yet.
+function SyncIndicator({ status }: { status: SyncStatus }) {
+  const label = !status.connected
+    ? 'Offline'
+    : status.downloading || status.uploading
+      ? 'Synchronisiert…'
+      : 'Synchron'
+  const dotClass = !status.connected
+    ? 'bg-muted-foreground'
+    : status.downloading || status.uploading
+      ? 'bg-amber-500 animate-pulse'
+      : 'bg-emerald-500'
+
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-muted-foreground" title={status.getMessage()}>
+      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+      {label}
+    </span>
+  )
+}
+
+function SyncScreen({ status }: { status: SyncStatus }) {
+  const db = usePowerSync()
+  const progress = status.downloadProgress
+  const error = status.downloadError ?? status.uploadError
+
+  return (
+    <Card className="max-w-sm mx-auto mt-16">
+      <CardHeader>
+        <CardTitle>{error ? 'Synchronisierung fehlgeschlagen' : 'Erstmalige Synchronisierung…'}</CardTitle>
+        <CardDescription>
+          {error ? 'Bitte Internetverbindung prüfen' : 'Daten werden für die Offline-Nutzung geladen'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {error ? (
+          <p className="text-destructive">{error.message}</p>
+        ) : progress ? (
+          <div className="space-y-1">
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary transition-[width]"
+                style={{ width: `${Math.round(progress.downloadedFraction * 100)}%` }}
+              />
+            </div>
+            <p className="text-muted-foreground">
+              {progress.downloadedOperations} / {progress.totalOperations}
+            </p>
+          </div>
+        ) : (
+          <p className="text-muted-foreground">Verbinde…</p>
+        )}
+        <button
+          onClick={() => logout(db)}
+          className="text-sm text-muted-foreground hover:text-foreground underline"
+        >
+          Abmelden
+        </button>
+      </CardContent>
+    </Card>
+  )
 }
 
 function LoginCard() {
@@ -95,16 +179,16 @@ function MeCard() {
     queryKey: ['me'],
     queryFn: () => apiGet<Me>('/me'),
   })
-
-  async function handleLogout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-  }
+  const status = useStatus()
+  const db = usePowerSync()
 
   return (
     <Card className="max-w-sm mx-auto mt-16">
       <CardHeader>
-        <CardTitle>Verbunden ✓</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle>Verbunden ✓</CardTitle>
+          <SyncIndicator status={status} />
+        </div>
         <CardDescription>SPA → /api/v1/me → Supabase</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
@@ -118,7 +202,7 @@ function MeCard() {
           </>
         )}
         <button
-          onClick={handleLogout}
+          onClick={() => logout(db)}
           className="mt-4 text-sm text-muted-foreground hover:text-foreground underline"
         >
           Abmelden

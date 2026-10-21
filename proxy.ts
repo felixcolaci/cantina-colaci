@@ -52,5 +52,10 @@ export const config = {
   // network call. Any route this matcher excludes (like everything under /api) must not call
   // `getAuthenticatedUser()` without its own independent auth check — see
   // lib/supabase/server.ts#getAuthenticatedUser.
-  matcher: ['/((?!api(?:/|$)|_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js).*)'],
+  // `@powersync` MUST stay excluded too: it's the public/ dir PowerSync's
+  // local SQLite worker script is served from (see lib/powersync/PowerSyncProvider.tsx).
+  // It's fetched by the browser before any auth state exists, so redirecting
+  // it to /app serves HTML where the browser expects a worker script,
+  // silently breaking PowerSync's local-first sync.
+  matcher: ['/((?!api(?:/|$)|_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|@powersync).*)'],
 }

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "powersync-web copy-assets -o public",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -17,6 +18,9 @@
     "@base-ui/react": "^1.6.0",
     "@hookform/resolvers": "^5.4.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@powersync/react": "^2.1.0",
+    "@powersync/tanstack-react-query": "^0.3.6",
+    "@powersync/web": "^2.5.0",
     "@serwist/next": "^9.5.11",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",

@@ -23,3 +23,28 @@ export async function apiGet<T>(path: string): Promise<T> {
   }
   return res.json()
 }
+
+/**
+ * Generic write, used by the PowerSync upload connector (lib/powersync/connector.ts)
+ * to drain the local CRUD queue -- not just plain CRUD UI actions. Every /api/v1/*
+ * write route it targets must do its own requireApiUser() + ownership check, same
+ * as every existing Server Action (see lib/api/auth.ts).
+ */
+export async function apiMutate<T>(
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  path: string,
+  body?: unknown
+): Promise<T | undefined> {
+  const headers = await authHeaders()
+  const res = await fetch(`/api/v1${path}`, {
+    method,
+    headers: body === undefined ? headers : { ...headers, 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const responseBody = await res.json().catch(() => null)
+    throw new ApiError(responseBody?.error ?? res.statusText, res.status)
+  }
+  if (res.status === 204) return undefined
+  return res.json()
+}

@@ -20,6 +20,7 @@ import { TripDetailScreen } from '@/app/app/trip-detail-screen'
 import { HistoryScreen } from '@/app/app/history-screen'
 import { FamilyScreen } from '@/app/app/family-screen'
 import { CellarSettingsScreen } from '@/app/app/cellar-settings-screen'
+import { ApiKeysScreen } from '@/app/app/api-keys-screen'
 
 type Me = {
   userId: string
@@ -334,6 +335,10 @@ function CellarSettingsRoute() {
   return <CellarSettingsScreen cellarId={cellarId} />
 }
 
+function ApiKeysRoute() {
+  return <ApiKeysScreen />
+}
+
 const rootRoute = createRootRoute({ component: RootShell })
 
 const indexRoute = createRoute({
@@ -384,6 +389,12 @@ const cellarSettingsRoute = createRoute({
   component: CellarSettingsRoute,
 })
 
+const apiKeysRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/api-keys',
+  component: ApiKeysRoute,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   wineDetailRoute,
@@ -393,6 +404,7 @@ const routeTree = rootRoute.addChildren([
   historyRoute,
   familyRoute,
   cellarSettingsRoute,
+  apiKeysRoute,
 ])
 
 const router = createRouter({ routeTree, basepath: '/app' })

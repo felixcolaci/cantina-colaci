@@ -36,9 +36,14 @@ export function CellarSettingsScreen({ cellarId }: { cellarId: string }) {
         </h1>
       </div>
 
-      <Link to="/settings/locations" className="text-sm underline" style={{ color: 'var(--primary)' }}>
-        Lagerorte verwalten →
-      </Link>
+      <div className="flex flex-col gap-1">
+        <Link to="/settings/locations" className="text-sm underline" style={{ color: 'var(--primary)' }}>
+          Lagerorte verwalten →
+        </Link>
+        <Link to="/settings/api-keys" className="text-sm underline" style={{ color: 'var(--primary)' }}>
+          API-Schlüssel / MCP →
+        </Link>
+      </div>
 
       {isLoading ? (
         <Skeleton className="h-24 w-full" />

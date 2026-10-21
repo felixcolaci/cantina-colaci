@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState, type FormEvent } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Session } from '@supabase/supabase-js'
 import { usePowerSync, useStatus } from '@powersync/react'
 import type { AbstractPowerSyncDatabase, SyncStatus } from '@powersync/web'
 import { createClient } from '@/lib/supabase/client'
-import { apiGet } from '@/lib/spa/api-client'
+import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -182,6 +182,8 @@ function MeCard() {
   const status = useStatus()
   const db = usePowerSync()
 
+  if (data && !data.familyId) return <OnboardingCard />
+
   return (
     <Card className="max-w-sm mx-auto mt-16">
       <CardHeader>
@@ -207,6 +209,75 @@ function MeCard() {
         >
           Abmelden
         </button>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Shown once a brand-new user's first PowerSync checkpoint lands empty
+// (no family_members row yet) -- mirrors the legacy /onboarding page, but as
+// a card within the SPA shell instead of a separate route. On success,
+// invalidating ['me'] re-fetches and MeCard swaps itself to the connected
+// view; no PowerSync reconnect needed since the self-hosted sync rules
+// recompute bucket membership from the family_members write itself.
+function OnboardingCard() {
+  const queryClient = useQueryClient()
+  const [familyName, setFamilyName] = useState('')
+  const [cellarName, setCellarName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setPending(true)
+    setError(null)
+    try {
+      await apiMutate('POST', '/onboarding', { familyName, cellarName })
+      await queryClient.invalidateQueries({ queryKey: ['me'] })
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Anlegen fehlgeschlagen')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <Card className="max-w-sm mx-auto mt-16">
+      <CardHeader>
+        <CardTitle>Willkommen bei Vino Mio</CardTitle>
+        <CardDescription>
+          Leg deine Familie und deinen ersten Weinkeller an, um loszulegen.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="familyName">Familienname</Label>
+            <Input
+              id="familyName"
+              value={familyName}
+              onChange={e => setFamilyName(e.target.value)}
+              placeholder="Colaci"
+              maxLength={60}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cellarName">Name deines Kellers</Label>
+            <Input
+              id="cellarName"
+              value={cellarName}
+              onChange={e => setCellarName(e.target.value)}
+              placeholder="Weinkeller"
+              maxLength={60}
+              required
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <SubmitButton isPending={pending} className="w-full">
+            {pending ? 'Wird angelegt…' : 'Keller anlegen'}
+          </SubmitButton>
+        </form>
       </CardContent>
     </Card>
   )

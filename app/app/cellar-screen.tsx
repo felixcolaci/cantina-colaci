@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from 'react'
 import { useCellarWines } from '@/lib/powersync/queries'
 import { WineCard, BottleGlyph } from '@/components/cellar/wine-card'
+import { QuickAddSheet } from '@/app/app/quick-add-sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { WineType } from '@/lib/types'
 
@@ -34,9 +35,12 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
 
   return (
     <div className="px-4 pb-6">
-      <h2 style={{ fontSize: 'var(--text-xl)', fontFamily: 'var(--font-display)' }} className="mb-4">
-        Weinkeller
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 style={{ fontSize: 'var(--text-xl)', fontFamily: 'var(--font-display)' }}>
+          Weinkeller
+        </h2>
+        <QuickAddSheet cellarId={cellarId} />
+      </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
         <button type="button" style={chipStyle(!type)} onClick={() => setType(null)}>

@@ -18,6 +18,7 @@ import { StorageLocationsScreen } from '@/app/app/storage-locations-screen'
 import { TripsScreen } from '@/app/app/trips-screen'
 import { TripDetailScreen } from '@/app/app/trip-detail-screen'
 import { HistoryScreen } from '@/app/app/history-screen'
+import { FamilyScreen } from '@/app/app/family-screen'
 
 type Me = {
   userId: string
@@ -323,6 +324,10 @@ function HistoryRoute() {
   return <HistoryScreen cellarId={cellarId} />
 }
 
+function FamilyRoute() {
+  return <FamilyScreen />
+}
+
 const rootRoute = createRootRoute({ component: RootShell })
 
 const indexRoute = createRoute({
@@ -361,6 +366,12 @@ const historyRoute = createRoute({
   component: HistoryRoute,
 })
 
+const familyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/family',
+  component: FamilyRoute,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   wineDetailRoute,
@@ -368,6 +379,7 @@ const routeTree = rootRoute.addChildren([
   tripsRoute,
   tripDetailRoute,
   historyRoute,
+  familyRoute,
 ])
 
 const router = createRouter({ routeTree, basepath: '/app' })

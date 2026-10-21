@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from 'react'
 import { Link } from '@tanstack/react-router'
-import { MapPin, Plane, History } from 'lucide-react'
+import { MapPin, Plane, History, Users } from 'lucide-react'
 import { useCellarWines } from '@/lib/powersync/queries'
 import { WineCard, BottleGlyph } from '@/components/cellar/wine-card'
 import { QuickAddSheet } from '@/app/app/quick-add-sheet'
@@ -43,6 +43,11 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
           Weinkeller
         </h2>
         <div className="flex items-center gap-2">
+          <Link to="/family">
+            <Button size="icon-sm" variant="outline" aria-label="Familie">
+              <Users className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
           <Link to="/history">
             <Button size="icon-sm" variant="outline" aria-label="Kellerchronik">
               <History className="h-3.5 w-3.5" />

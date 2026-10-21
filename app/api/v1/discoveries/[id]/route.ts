@@ -1,7 +1,7 @@
 import { requireApiUser, requireOwnCellar, apiAuthErrorResponse } from '@/lib/api/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { parseDiscoveryInsert } from '@/lib/api/discovery'
-import { BUCKET } from '@/lib/storage/wine-photos'
+import { BUCKET, isPhotoPathOwnedByFamily } from '@/lib/storage/wine-photos'
 
 // Insert-only PUT, selbes Muster wie app/api/v1/trips/[id]/route.ts: Ziel
 // des PowerSync-Upload-Connectors für den ersten (und, da es kein PATCH
@@ -54,10 +54,15 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     // Foto-Storage-Objekt explizit entfernen -- discovery_photos selbst
     // cascaded über die FK beim discoveries-Delete unten, aber das Storage-
-    // Objekt muss Postgres dafür separat anstoßen.
+    // Objekt muss Postgres dafür separat anstoßen. discovery_photos hat
+    // keinen update-Grant, aber ein Familienmitglied könnte trotzdem per
+    // direktem PostgREST-Insert eine Zeile mit beliebigem path unterschieben
+    // (die insert-Policy prüft nur die Cellar-Zugehörigkeit, nicht die Pfad-
+    // Form) -- also vor dem remove() wie bei wine_photos validieren.
+    const { data: cellar } = await admin.from('cellars').select('family_id').eq('id', existing.cellar_id).maybeSingle()
     const { data: photo } = await admin
       .from('discovery_photos').select('path').eq('discovery_id', id).maybeSingle()
-    if (photo) {
+    if (photo && cellar && isPhotoPathOwnedByFamily(photo.path, cellar.family_id)) {
       await admin.storage.from(BUCKET).remove([photo.path])
     }
 

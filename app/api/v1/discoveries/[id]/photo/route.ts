@@ -2,7 +2,7 @@ import { requireApiUser, apiAuthErrorResponse } from '@/lib/api/auth'
 import { resolveDiscoveryFamily } from '@/lib/api/discovery'
 import { createAdminClient } from '@/lib/supabase/server'
 import {
-  signPhotoPath, buildDiscoveryPhotoPath, ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, BUCKET,
+  signPhotoPath, buildDiscoveryPhotoPath, isPhotoPathOwnedByFamily, ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES, BUCKET,
 } from '@/lib/storage/wine-photos'
 
 // discovery_photos ist, wie wine_photos, bewusst nicht PowerSync-
@@ -47,10 +47,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!ext) return Response.json({ error: 'Format nicht unterstützt (JPEG, PNG, WebP, HEIC)' }, { status: 400 })
     if (file.size > MAX_PHOTO_BYTES) return Response.json({ error: 'Foto zu groß (max 5 MB)' }, { status: 400 })
 
+    // discovery_photos hat keinen update-Grant, aber ein Familienmitglied
+    // könnte trotzdem per direktem PostgREST-Insert eine Zeile mit
+    // beliebigem path unterschieben (die insert-Policy prüft nur die
+    // Cellar-Zugehörigkeit, nicht die Pfad-Form) -- also vor dem remove()
+    // wie bei wine_photos validieren.
     const { data: existing } = await admin
       .from('discovery_photos').select('path').eq('discovery_id', id).maybeSingle()
     if (existing) {
-      await admin.storage.from(BUCKET).remove([existing.path])
+      if (isPhotoPathOwnedByFamily(existing.path, familyId)) {
+        await admin.storage.from(BUCKET).remove([existing.path])
+      }
       await admin.from('discovery_photos').delete().eq('discovery_id', id)
     }
 
@@ -76,12 +83,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const user = await requireApiUser(request)
     const { id } = await params
     const admin = createAdminClient()
-    await resolveDiscoveryFamily(admin, user.id, id)
+    const { familyId } = await resolveDiscoveryFamily(admin, user.id, id)
 
     const { data: existing } = await admin
       .from('discovery_photos').select('path').eq('discovery_id', id).maybeSingle()
     if (existing) {
-      await admin.storage.from(BUCKET).remove([existing.path])
+      if (isPhotoPathOwnedByFamily(existing.path, familyId)) {
+        await admin.storage.from(BUCKET).remove([existing.path])
+      }
       await admin.from('discovery_photos').delete().eq('discovery_id', id)
     }
 

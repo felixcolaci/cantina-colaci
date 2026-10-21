@@ -1,6 +1,6 @@
 import { requireApiUser, apiAuthErrorResponse } from '@/lib/api/auth'
 import { createAdminClient } from '@/lib/supabase/server'
-import { parseSkuInsertExtra, parseSkuPatch, requireOwnCellarForWine } from '@/lib/api/sku'
+import { parseSkuInsertExtra, parseSkuPatch, requireOwnCellarForWine, requireOwnStorageLocation } from '@/lib/api/sku'
 
 // Insert-only, same scope as app/api/v1/wines/[id]/route.ts: the PowerSync
 // upload connector's target for a local `skus` row's first upload. Ownership
@@ -27,7 +27,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!extra) return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
 
     const admin = createAdminClient()
-    await requireOwnCellarForWine(admin, user, wineId)
+    const cellarId = await requireOwnCellarForWine(admin, user, wineId)
+    if (extra.storage_location_id) {
+      await requireOwnStorageLocation(admin, cellarId, extra.storage_location_id)
+    }
 
     // insert(), not upsert() -- see the same note in
     // app/api/v1/wines/[id]/route.ts. A 23505 means this id already landed.

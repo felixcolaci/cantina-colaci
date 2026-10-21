@@ -82,13 +82,37 @@ export function parseSkuPatch(body: unknown): SkuPatchFields | null {
  * don't carry a cellar_id directly, so every /api/v1/skus/[id] handler
  * (PUT's insert, PATCH's update) walks wine_id -> wines.cellar_id and then
  * reuses the same requireOwnCellar check every other write route applies.
+ * Returns the resolved cellarId so callers can also validate other
+ * caller-supplied foreign keys (e.g. storage_location_id) against it.
  */
 export async function requireOwnCellarForWine(
   admin: ReturnType<typeof createAdminClient>,
   user: User,
   wineId: string,
-): Promise<void> {
+): Promise<string> {
   const { data: wine } = await admin.from('wines').select('cellar_id').eq('id', wineId).maybeSingle()
   if (!wine) throw new ApiAuthError('Wein nicht gefunden', 404)
   await requireOwnCellar(admin, user, wine.cellar_id)
+  return wine.cellar_id
+}
+
+/**
+ * Confirms a caller-supplied storage_location_id actually belongs to the
+ * sku's own cellar before it's allowed to land -- storage_locations has no
+ * ownership check of its own on this path, so a guessed/known id from
+ * another family's cellar would otherwise silently link to it (IDOR).
+ */
+export async function requireOwnStorageLocation(
+  admin: ReturnType<typeof createAdminClient>,
+  cellarId: string,
+  storageLocationId: string,
+): Promise<void> {
+  const { data } = await admin
+    .from('storage_locations')
+    .select('cellar_id')
+    .eq('id', storageLocationId)
+    .maybeSingle()
+  if (!data || data.cellar_id !== cellarId) {
+    throw new ApiAuthError('Ungültiger Lagerort', 400)
+  }
 }

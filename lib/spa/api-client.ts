@@ -67,3 +67,22 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
   }
   return res.json()
 }
+
+/**
+ * Raw-bytes upload for the AttachmentQueue's remote transport
+ * (lib/powersync/attachment-queues.ts) -- apiMutate always JSON-encodes its
+ * body, which photo bytes can't go through. Response is an empty 204, not
+ * JSON, so there's nothing to parse on success.
+ */
+export async function apiPutBytes(path: string, data: ArrayBuffer, contentType: string): Promise<void> {
+  const headers = await authHeaders()
+  const res = await fetch(`/api/v1${path}`, {
+    method: 'PUT',
+    headers: { ...headers, 'Content-Type': contentType },
+    body: data,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new ApiError(body?.error ?? res.statusText, res.status)
+  }
+}

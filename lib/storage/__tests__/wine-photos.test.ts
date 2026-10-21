@@ -1,60 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { createAdminClient } from '@/lib/supabase/server'
+import { describe, it, expect } from 'vitest'
 import {
-  signPhotoPath, signPhotoPaths, isPhotoPathOwnedByFamily, isDemoPhotoPath, buildWinePhotoPath,
+  isPhotoPathOwnedByFamily, isDemoPhotoPath, buildWinePhotoPath, buildDiscoveryPhotoPath,
+  isValidPhotoPath, isUuid,
 } from '../wine-photos'
 
-const mockCreateSignedUrl = vi.fn()
-const mockCreateSignedUrls = vi.fn()
-const mockStorageFrom = vi.fn((bucket: string) => {
-  if (bucket !== 'wine-photos') throw new Error(`unexpected bucket: ${bucket}`)
-  return { createSignedUrl: mockCreateSignedUrl, createSignedUrls: mockCreateSignedUrls }
-})
-
-const admin = { storage: { from: mockStorageFrom } } as unknown as ReturnType<typeof createAdminClient>
-
-describe('signPhotoPath', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-  })
-
-  it('signs a path and returns the signed URL', async () => {
-    mockCreateSignedUrl.mockResolvedValue({
-      data: { signedUrl: 'https://proj.supabase.co/storage/v1/object/sign/wine-photos/demo/brunello.jpg?token=abc' },
-      error: null,
-    })
-
-    const url = await signPhotoPath(admin, 'demo/brunello.jpg', 'f1')
-
-    expect(mockStorageFrom).toHaveBeenCalledWith('wine-photos')
-    expect(mockCreateSignedUrl).toHaveBeenCalledWith('demo/brunello.jpg', 3600)
-    expect(url).toBe('https://proj.supabase.co/storage/v1/object/sign/wine-photos/demo/brunello.jpg?token=abc')
-  })
-
-  it('respects a custom TTL', async () => {
-    mockCreateSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://x/y' }, error: null })
-
-    await signPhotoPath(admin, 'demo/brunello.jpg', 'f1', 120)
-
-    expect(mockCreateSignedUrl).toHaveBeenCalledWith('demo/brunello.jpg', 120)
-  })
-
-  it('degrades to null (instead of throwing) when signing fails', async () => {
-    mockCreateSignedUrl.mockResolvedValue({ data: null, error: { message: 'object not found' } })
-
-    const url = await signPhotoPath(admin, 'families/f1/wines/missing.jpg', 'f1')
-
-    expect(url).toBeNull()
-  })
-
-  it('refuses to sign a path outside the caller\'s own family, without calling the API', async () => {
-    const url = await signPhotoPath(admin, 'families/OTHER_FAMILY/wines/w1/secret.jpg', 'f1')
-
-    expect(mockCreateSignedUrl).not.toHaveBeenCalled()
-    expect(url).toBeNull()
-  })
-})
+const FAMILY_ID = '11111111-1111-1111-1111-111111111111'
+const WINE_ID = '22222222-2222-2222-2222-222222222222'
+const PHOTO_ID = '33333333-3333-3333-3333-333333333333'
 
 describe('buildWinePhotoPath', () => {
   it('builds a path under the family prefix that isPhotoPathOwnedByFamily accepts', () => {
@@ -78,74 +30,52 @@ describe('isPhotoPathOwnedByFamily / isDemoPhotoPath', () => {
   })
 })
 
-describe('signPhotoPaths', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+describe('isUuid', () => {
+  it('accepts a canonical UUID', () => {
+    expect(isUuid(WINE_ID)).toBe(true)
   })
 
-  it('returns an empty map without calling the API when given no paths', async () => {
-    const result = await signPhotoPaths(admin, [], 'f1')
+  it('rejects a non-UUID, including one carrying a path-traversal attempt', () => {
+    expect(isUuid('../../../etc/passwd')).toBe(false)
+    expect(isUuid('w1')).toBe(false)
+    expect(isUuid('')).toBe(false)
+  })
+})
 
-    expect(mockCreateSignedUrls).not.toHaveBeenCalled()
-    expect(result.size).toBe(0)
+describe('isValidPhotoPath', () => {
+  it('accepts a well-formed wine photo path', () => {
+    expect(isValidPhotoPath(buildWinePhotoPath(FAMILY_ID, WINE_ID, PHOTO_ID, 'jpg'))).toBe(true)
   })
 
-  it('de-dupes paths before signing and maps each path to its signed URL', async () => {
-    mockCreateSignedUrls.mockResolvedValue({
-      data: [
-        { error: null, path: 'demo/brunello.jpg', signedUrl: 'https://x/demo/brunello.jpg?token=a' },
-        { error: null, path: 'demo/barolo.jpg', signedUrl: 'https://x/demo/barolo.jpg?token=b' },
-      ],
-      error: null,
-    })
-
-    const result = await signPhotoPaths(admin, ['demo/brunello.jpg', 'demo/barolo.jpg', 'demo/brunello.jpg'], 'f1')
-
-    expect(mockCreateSignedUrls).toHaveBeenCalledWith(['demo/brunello.jpg', 'demo/barolo.jpg'], 3600)
-    expect(result.get('demo/brunello.jpg')).toBe('https://x/demo/brunello.jpg?token=a')
-    expect(result.get('demo/barolo.jpg')).toBe('https://x/demo/barolo.jpg?token=b')
-    expect(result.size).toBe(2)
+  it('accepts a well-formed discovery photo path', () => {
+    expect(isValidPhotoPath(buildDiscoveryPhotoPath(FAMILY_ID, WINE_ID, PHOTO_ID, 'png'))).toBe(true)
   })
 
-  it('omits entries that individually failed to sign, keeping the ones that succeeded', async () => {
-    mockCreateSignedUrls.mockResolvedValue({
-      data: [
-        { error: null, path: 'demo/brunello.jpg', signedUrl: 'https://x/demo/brunello.jpg?token=a' },
-        { error: 'not found', path: 'demo/missing.jpg', signedUrl: null },
-      ],
-      error: null,
-    })
-
-    const result = await signPhotoPaths(admin, ['demo/brunello.jpg', 'demo/missing.jpg'], 'f1')
-
-    expect(result.get('demo/brunello.jpg')).toBe('https://x/demo/brunello.jpg?token=a')
-    expect(result.has('demo/missing.jpg')).toBe(false)
-    expect(result.size).toBe(1)
+  it('accepts a well-formed demo path', () => {
+    expect(isValidPhotoPath('demo/brunello.jpg')).toBe(true)
   })
 
-  it('returns an empty map (instead of throwing) when the whole batch call fails', async () => {
-    mockCreateSignedUrls.mockResolvedValue({ data: null, error: { message: 'network error' } })
-
-    const result = await signPhotoPaths(admin, ['demo/brunello.jpg'], 'f1')
-
-    expect(result.size).toBe(0)
+  it('rejects a path-traversal attempt smuggled into an id segment, even inside the right family prefix', () => {
+    const traversal = `families/${FAMILY_ID}/wines/../../../demo/secret.jpg`
+    expect(isValidPhotoPath(traversal)).toBe(false)
+    // isPhotoPathOwnedByFamily alone (a bare prefix check) would wrongly let this through --
+    // this is exactly the gap isValidPhotoPath exists to close.
+    expect(isPhotoPathOwnedByFamily(traversal, FAMILY_ID)).toBe(true)
   })
 
-  it('filters out-of-family paths before calling the API, keeping in-scope ones', async () => {
-    mockCreateSignedUrls.mockResolvedValue({
-      data: [{ error: null, path: 'families/f1/wines/w1/a.jpg', signedUrl: 'https://x/a.jpg?token=a' }],
-      error: null,
-    })
+  it('rejects an extra path segment', () => {
+    expect(isValidPhotoPath(`families/${FAMILY_ID}/wines/${WINE_ID}/sub/${PHOTO_ID}.jpg`)).toBe(false)
+  })
 
-    const result = await signPhotoPaths(
-      admin,
-      ['families/f1/wines/w1/a.jpg', 'families/OTHER_FAMILY/wines/w2/secret.jpg'],
-      'f1'
-    )
+  it('rejects a disallowed extension', () => {
+    expect(isValidPhotoPath(`families/${FAMILY_ID}/wines/${WINE_ID}/${PHOTO_ID}.svg`)).toBe(false)
+  })
 
-    expect(mockCreateSignedUrls).toHaveBeenCalledWith(['families/f1/wines/w1/a.jpg'], 3600)
-    expect(result.get('families/f1/wines/w1/a.jpg')).toBe('https://x/a.jpg?token=a')
-    expect(result.has('families/OTHER_FAMILY/wines/w2/secret.jpg')).toBe(false)
+  it('rejects a non-UUID id segment', () => {
+    expect(isValidPhotoPath(`families/${FAMILY_ID}/wines/not-a-uuid/${PHOTO_ID}.jpg`)).toBe(false)
+  })
+
+  it('rejects a demo path with a nested segment', () => {
+    expect(isValidPhotoPath('demo/../families/f1/secret.jpg')).toBe(false)
   })
 })

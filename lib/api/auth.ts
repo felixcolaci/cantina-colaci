@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient, type User } from '@supabase/supabase-js'
+import { createClient as createCookieClient } from '@/lib/supabase/server'
 import type { createAdminClient } from '@/lib/supabase/server'
 
 export class ApiAuthError extends Error {
@@ -32,6 +33,23 @@ export async function requireApiUser(request: Request): Promise<User> {
   const { data, error } = await supabase.auth.getUser(token)
   if (error || !data.user) throw new ApiAuthError('Invalid or expired token')
 
+  return data.user
+}
+
+/**
+ * Verifies the caller's Supabase session cookie instead of a bearer token.
+ *
+ * Only for GET /api/v1/photos/[...path]: that route is loaded by plain
+ * <img>/<Image> tags, which never carry a custom Authorization header, so
+ * requireApiUser() can never succeed there. proxy.ts's matcher excludes
+ * /api/** (see lib/supabase/server.ts's getAuthenticatedUser comment), so
+ * nothing has already validated this cookie -- this makes its own real
+ * getUser() network call rather than trusting a local getSession() read.
+ */
+export async function requireApiUserFromCookie(): Promise<User> {
+  const supabase = await createCookieClient()
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) throw new ApiAuthError('Invalid or missing session')
   return data.user
 }
 

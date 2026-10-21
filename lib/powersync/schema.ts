@@ -1,10 +1,17 @@
-import { Schema, Table, column } from '@powersync/web'
+import { Schema, Table, column, AttachmentTable } from '@powersync/web'
 
-// Mirrors the 8 streams in the self-hosted PowerSync instance's
+// Mirrors the 10 streams in the self-hosted PowerSync instance's
 // sync-config.yaml (`SELECT <table>.*` queries, scoped by auth.user_id()
 // through family_members) -- keep both in sync when the Postgres schema
 // changes. See supabase/migrations/001_initial_schema.sql for the source
 // of truth on columns/types.
+//
+// wine_photos/discovery_photos carry no binary data -- just `path` (a bare
+// Storage object key, same as skus.photo_path already does), same as every
+// other column here. The actual photo bytes never go through PowerSync's
+// CRUD sync; they travel over a separate AttachmentQueue remote transport
+// (lib/powersync/attachment-queues.ts) that targets the Storage bucket
+// directly through its own endpoints.
 
 const families = new Table({
   name: column.text,
@@ -118,6 +125,33 @@ const discoveries = new Table(
   { indexes: { cellar: ['cellar_id'] } }
 )
 
+const wine_photos = new Table(
+  {
+    wine_id: column.text,
+    path: column.text,
+    sort_order: column.integer,
+    created_at: column.text,
+  },
+  { indexes: { wine: ['wine_id'] } }
+)
+
+const discovery_photos = new Table(
+  {
+    discovery_id: column.text,
+    path: column.text,
+    created_at: column.text,
+  },
+  { indexes: { discovery: ['discovery_id'] } }
+)
+
+// Local-only bookkeeping tables for the two AttachmentQueues
+// (lib/powersync/attachment-queues.ts) -- never synced, just tracks each
+// queued photo upload's local state (QUEUED_UPLOAD/SYNCED/etc). One per
+// queue (not the shared 'attachments' default) so a wine photo's row can
+// never collide with a discovery photo's.
+const wine_photo_attachments = new AttachmentTable({ viewName: 'wine_photo_attachments' })
+const discovery_photo_attachments = new AttachmentTable({ viewName: 'discovery_photo_attachments' })
+
 export const AppSchema = new Schema({
   families,
   family_members,
@@ -128,6 +162,10 @@ export const AppSchema = new Schema({
   trips,
   tastings,
   discoveries,
+  wine_photos,
+  discovery_photos,
+  wine_photo_attachments,
+  discovery_photo_attachments,
 })
 
 export type Database = (typeof AppSchema)['types']

@@ -2,34 +2,37 @@
 
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePowerSync } from '@powersync/react'
-import { apiGet } from '@/lib/spa/api-client'
+import { useDiscoveryPhoto } from '@/lib/powersync/queries'
 import type { DiscoverySummary } from '@/lib/powersync/queries'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
-// Foto-URL kommt separat über react-query (GET /discoveries/[id]/photo),
-// nicht aus dem lokalen PowerSync-Query -- discovery_photos ist bewusst
-// nicht synchronisiert (siehe lib/api/discovery.ts).
+// Foto kommt reaktiv aus der lokalen discovery_photos-Tabelle (PowerSync-
+// synced seit dem Offline-Upload-Umbau, siehe lib/powersync/queries.ts),
+// nicht mehr aus einem REST-Fetch.
 export function DiscoveryCard({ discovery }: { discovery: DiscoverySummary }) {
   const db = usePowerSync()
-  const queryClient = useQueryClient()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const { data: photo } = useQuery<{ url: string | null }>({
-    queryKey: ['discovery-photo', discovery.id],
-    queryFn: () => apiGet<{ url: string | null }>(`/discoveries/${discovery.id}/photo`),
-  })
+  const { photo } = useDiscoveryPhoto(discovery.id)
 
   async function handleDelete() {
     setIsDeleting(true)
     try {
-      await db.execute(`DELETE FROM discoveries WHERE id = ?`, [discovery.id])
-      queryClient.removeQueries({ queryKey: ['discovery-photo', discovery.id] })
+      // discovery_photos hat keine FK-Kaskade im lokalen SQLite-Spiegel
+      // (anders als serverseitig in Postgres) -- ohne dieses Delete würde
+      // ein noch nicht synctes, wartendes Foto weiter in der
+      // AttachmentQueue versucht werden, obwohl die Entdeckung schon weg ist.
+      // Eine Transaktion, damit nie nur eine der beiden Zeilen verschwindet.
+      await db.writeTransaction(async tx => {
+        await tx.execute('DELETE FROM discovery_photos WHERE discovery_id = ?', [discovery.id])
+        await tx.execute('DELETE FROM discoveries WHERE id = ?', [discovery.id])
+      })
+      if (photo) await caches.open('photo-cache').then(c => c.delete(photo.url)).catch(() => {})
     } finally {
       setIsDeleting(false)
       setConfirmDelete(false)
@@ -91,9 +94,21 @@ export function DiscoveryCard({ discovery }: { discovery: DiscoverySummary }) {
         </div>
       </div>
 
-      {photo?.url && (
-        // eslint-disable-next-line @next/next/no-img-element -- einmaliges, signiertes URL-Thumbnail
+      {photo && !photo.pending && (
+        // eslint-disable-next-line @next/next/no-img-element -- stabile, dauerhaft cachebare Foto-URL
         <img src={photo.url} alt="" className="mt-3 rounded-md object-cover" style={{ width: '100%', height: 140 }} />
+      )}
+      {photo?.pending && (
+        <div
+          className="mt-3 rounded-md flex items-center justify-center gap-1.5"
+          style={{ width: '100%', height: 140, background: 'var(--muted)', color: 'var(--muted-foreground)' }}
+        >
+          <div
+            className="w-3 h-3 border-2 rounded-full animate-spin"
+            style={{ borderColor: 'var(--border)', borderTopColor: 'var(--muted-foreground)' }}
+          />
+          <span className="text-xs">wird hochgeladen</span>
+        </div>
       )}
 
       {discovery.notes && (

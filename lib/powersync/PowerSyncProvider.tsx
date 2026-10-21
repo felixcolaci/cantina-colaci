@@ -5,14 +5,17 @@ import { PowerSyncDatabase } from '@powersync/web'
 import { PowerSyncContext } from '@powersync/react'
 import { AppSchema } from './schema'
 import { ApiBackendConnector } from './connector'
+import { createWineAttachmentQueue, createDiscoveryAttachmentQueue } from './attachment-queues'
 
 // Lazy singleton: created once, in the browser only (the SDK no-ops under
 // SSR rather than throwing, but there's no reason to construct it there).
 // Module-level `let`, not useState/useMemo, so React StrictMode's double-
 // invoke in dev doesn't open two SQLite connections against the same file.
 let db: PowerSyncDatabase | undefined
+let wineAttachmentQueue: ReturnType<typeof createWineAttachmentQueue> | undefined
+let discoveryAttachmentQueue: ReturnType<typeof createDiscoveryAttachmentQueue> | undefined
 
-function getDB() {
+export function getDB() {
   if (!db) {
     db = new PowerSyncDatabase({
       schema: AppSchema,
@@ -30,8 +33,26 @@ function getDB() {
       },
     })
     db.connect(new ApiBackendConnector())
+
+    // Offline photo uploads: metadata rows (wine_photos/discovery_photos)
+    // sync through the connector above like any other table; the bytes
+    // travel separately through these queues (see lib/powersync/attachment-queues.ts).
+    wineAttachmentQueue = createWineAttachmentQueue(db)
+    discoveryAttachmentQueue = createDiscoveryAttachmentQueue(db)
+    void wineAttachmentQueue.startSync()
+    void discoveryAttachmentQueue.startSync()
   }
   return db
+}
+
+export function getWineAttachmentQueue() {
+  getDB() // ensures the queues exist
+  return wineAttachmentQueue!
+}
+
+export function getDiscoveryAttachmentQueue() {
+  getDB()
+  return discoveryAttachmentQueue!
 }
 
 export function PowerSyncProvider({ children }: { children: ReactNode }) {

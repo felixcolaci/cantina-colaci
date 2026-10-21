@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@powersync/react'
+import { AttachmentState } from '@powersync/web'
 import type { EntryStatus, WineType } from '@/lib/types'
 
 export type CellarWine = {
@@ -631,4 +632,51 @@ export function useDiscoveries(cellarId: string) {
     createdByName: row.created_by_name,
   }))
   return { discoveries, isLoading, error }
+}
+
+export type GalleryPhoto = { id: string; url: string; pending: boolean }
+
+// `pending` comes from a LEFT JOIN against the AttachmentQueue's own local
+// bookkeeping table (lib/powersync/attachment-queues.ts) -- a row with no
+// attachment match (attachment_state IS NULL) synced down from another
+// device that already finished the upload, so it's never pending here; one
+// whose state isn't yet SYNCED is still queued/uploading on this device.
+const WINE_PHOTOS_SQL = `
+  SELECT wine_photos.id AS id, wine_photos.path AS path,
+         wine_photo_attachments.state AS attachment_state
+  FROM wine_photos
+  LEFT JOIN wine_photo_attachments ON wine_photo_attachments.id = wine_photos.id
+  WHERE wine_photos.wine_id = ?
+  ORDER BY wine_photos.sort_order
+`
+
+type WinePhotoRow = { id: string; path: string; attachment_state: number | null }
+
+export function useWinePhotos(wineId: string) {
+  const { data, isLoading } = useQuery<WinePhotoRow>(WINE_PHOTOS_SQL, [wineId])
+  const photos: GalleryPhoto[] = data.map(row => ({
+    id: row.id,
+    url: `/api/v1/photos/${row.path}`,
+    pending: row.attachment_state != null && row.attachment_state !== AttachmentState.SYNCED,
+  }))
+  return { photos, isLoading }
+}
+
+const DISCOVERY_PHOTO_SQL = `
+  SELECT discovery_photos.id AS id, discovery_photos.path AS path,
+         discovery_photo_attachments.state AS attachment_state
+  FROM discovery_photos
+  LEFT JOIN discovery_photo_attachments ON discovery_photo_attachments.id = discovery_photos.id
+  WHERE discovery_photos.discovery_id = ?
+`
+
+export function useDiscoveryPhoto(discoveryId: string) {
+  const { data, isLoading } = useQuery<WinePhotoRow>(DISCOVERY_PHOTO_SQL, [discoveryId])
+  const row = data[0] ?? null
+  const photo: GalleryPhoto | null = row && {
+    id: row.id,
+    url: `/api/v1/photos/${row.path}`,
+    pending: row.attachment_state != null && row.attachment_state !== AttachmentState.SYNCED,
+  }
+  return { photo, isLoading }
 }

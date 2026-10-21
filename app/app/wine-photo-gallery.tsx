@@ -2,25 +2,25 @@
 
 import { useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { usePowerSync } from '@powersync/react'
 import { Camera, Trash2 } from 'lucide-react'
-import { apiGet, apiMutate, apiUpload } from '@/lib/spa/api-client'
+import { getWineAttachmentQueue } from '@/lib/powersync/PowerSyncProvider'
+import { useWinePhotos } from '@/lib/powersync/queries'
 import { compressImage } from '@/lib/image-compress'
+import { ALLOWED_PHOTO_TYPES, buildWinePhotoPath } from '@/lib/storage/wine-photos'
 import { BottleGlyph } from '@/components/cellar/wine-card'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
-type Photo = { id: string; url: string }
-
-// wine_photos is deliberately not a PowerSync-synced table (binary-heavy,
-// see lib/powersync/schema.ts's comment) -- reads go through plain
-// react-query + GET /api/v1/wines/[id]/photos instead of a local SQL query,
-// and writes go straight to the network (apiUpload/apiMutate), not the
-// PowerSync CRUD queue. There's therefore no offline photo upload yet; an
-// upload or delete attempted while offline just fails with the generic
-// network error below, same as any other direct fetch would.
+// wine_photos is a PowerSync-synced table (metadata only) read reactively
+// via useWinePhotos, not a network fetch -- a photo taken offline appears
+// here immediately (pending: true) and its bytes upload in the background
+// through the wine AttachmentQueue (lib/powersync/attachment-queues.ts),
+// automatically retried on reconnect. There is therefore no "upload
+// failed" error path here anymore: a failed/queued upload just stays
+// pending until it succeeds.
 export function WinePhotoGallery({
   wineId,
   heroBg,
@@ -30,19 +30,14 @@ export function WinePhotoGallery({
   heroBg: string
   children: ReactNode
 }) {
-  const queryClient = useQueryClient()
+  const db = usePowerSync()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const queryKey = ['wine-photos', wineId]
-  const { data } = useQuery<{ photos: Photo[] }>({
-    queryKey,
-    queryFn: () => apiGet<{ photos: Photo[] }>(`/wines/${wineId}/photos`),
-  })
-  const photos = data?.photos ?? []
+  const { photos } = useWinePhotos(wineId)
   const hasPhotos = photos.length > 0
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -52,10 +47,32 @@ export function WinePhotoGallery({
     setIsUploading(true)
     try {
       const compressed = await compressImage(file)
-      const formData = new FormData()
-      formData.append('photo', compressed)
-      await apiUpload(`/wines/${wineId}/photos`, formData)
-      await queryClient.invalidateQueries({ queryKey })
+      const ext = ALLOWED_PHOTO_TYPES[compressed.type]
+      if (!ext) return // unsupported format -- same silent no-op as before
+
+      const { family_id: familyId } = await db.get<{ family_id: string }>(
+        'SELECT cellars.family_id AS family_id FROM wines JOIN cellars ON cellars.id = wines.cellar_id WHERE wines.id = ?',
+        [wineId],
+      )
+
+      const queue = getWineAttachmentQueue()
+      const id = await queue.generateAttachmentId()
+      const path = buildWinePhotoPath(familyId, wineId, id, ext)
+      const nextSortOrder = photos.length
+
+      await queue.saveFile({
+        id,
+        data: await compressed.arrayBuffer(),
+        fileExtension: ext,
+        mediaType: compressed.type,
+        metaData: JSON.stringify({ wineId }),
+        updateHook: async tx => {
+          await tx.execute(
+            'INSERT INTO wine_photos (id, wine_id, path, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
+            [id, wineId, path, nextSortOrder, new Date().toISOString()],
+          )
+        },
+      })
     } catch {
       // Degrades to "nothing changed" -- the camera button stays available
       // to retry.
@@ -67,8 +84,17 @@ export function WinePhotoGallery({
   async function handleDelete(photoId: string) {
     setIsDeleting(true)
     try {
-      await apiMutate('DELETE', `/wines/${wineId}/photos/${photoId}`)
-      await queryClient.invalidateQueries({ queryKey })
+      const url = photos.find(p => p.id === photoId)?.url
+      await getWineAttachmentQueue().deleteFile({
+        id: photoId,
+        updateHook: async tx => {
+          await tx.execute('DELETE FROM wine_photos WHERE id = ?', [photoId])
+        },
+      })
+      // Best-effort: Cache Storage holds the bytes, not the metadata row --
+      // nothing re-requests this URL once it's gone, but no reason to keep
+      // it occupying cache quota either.
+      if (url) await caches.open('photo-cache').then(c => c.delete(url)).catch(() => {})
     } catch {
       // see handleFileChange
     } finally {
@@ -90,14 +116,35 @@ export function WinePhotoGallery({
         >
           {photos.map((photo, index) => (
             <div key={photo.id} className="relative flex-none w-full h-full" style={{ scrollSnapAlign: 'start' }}>
-              <Image
-                src={photo.url}
-                alt=""
-                fill
-                sizes="100vw"
-                className="object-cover"
-                preload={index === 0}
-              />
+              {photo.pending ? (
+                <div className="absolute inset-0 flex items-center justify-center" style={{ background: heroBg }}>
+                  <div style={{ opacity: 0.35 }}>
+                    <BottleGlyph width={48} height={120} opacity={1} />
+                  </div>
+                </div>
+              ) : (
+                <Image
+                  src={photo.url}
+                  alt=""
+                  fill
+                  sizes="100vw"
+                  className="object-cover"
+                  preload={index === 0}
+                  unoptimized
+                />
+              )}
+              {photo.pending && (
+                <div
+                  className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full"
+                  style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', color: 'white' }}
+                >
+                  <div
+                    className="w-3 h-3 border-2 rounded-full animate-spin"
+                    style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }}
+                  />
+                  <span className="text-xs">wird hochgeladen</span>
+                </div>
+              )}
               <button
                 onClick={() => setPendingDeleteId(photo.id)}
                 disabled={isDeleting}

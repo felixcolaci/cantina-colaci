@@ -12,9 +12,10 @@ import { RatingInput } from '@/components/ui/rating-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { SubmitButton } from '@/components/ui/submit-button'
-import { apiUpload } from '@/lib/spa/api-client'
 import { compressImage } from '@/lib/image-compress'
 import { useTrips } from '@/lib/powersync/queries'
+import { getDiscoveryAttachmentQueue } from '@/lib/powersync/PowerSyncProvider'
+import { ALLOWED_PHOTO_TYPES, buildDiscoveryPhotoPath } from '@/lib/storage/wine-photos'
 import type { WineType } from '@/lib/types'
 
 const WINE_TYPES: { value: WineType; label: string }[] = [
@@ -25,11 +26,10 @@ const WINE_TYPES: { value: WineType; label: string }[] = [
 ]
 
 // Lokaler Insert zuerst (wie QuickAddSheet), danach -- falls ein Foto
-// gewählt wurde -- ein direkter Upload-Versuch. Dieser kann fehlschlagen,
-// solange die Zeile noch nicht beim Server gelandet ist (der Connector
-// drained den Insert asynchron); der Fehler wird dann verschluckt, der
-// Eintrag bleibt ohne Foto -- gleiches Degradationsverhalten wie
-// WinePhotoGallery bei einem Upload ohne Netz.
+// gewählt wurde -- ein saveFile() auf die Discovery-AttachmentQueue. Das
+// legt die discovery_photos-Zeile sofort lokal an (synct normal über die
+// PowerSync-CRUD-Queue) und queued die Bytes separat zum Hochladen, auch
+// ganz ohne Netz -- siehe lib/powersync/attachment-queues.ts.
 export function AddDiscoverySheet({ cellarId, userId }: { cellarId: string; userId: string }) {
   const db = usePowerSync()
   const { trips } = useTrips(cellarId)
@@ -82,9 +82,35 @@ export function AddDiscoverySheet({ cellarId, userId }: { cellarId: string; user
       if (photoFile) {
         try {
           const compressed = await compressImage(photoFile)
-          const formData = new FormData()
-          formData.append('photo', compressed)
-          await apiUpload(`/discoveries/${id}/photo`, formData)
+          const ext = ALLOWED_PHOTO_TYPES[compressed.type]
+          if (ext) {
+            const { family_id: familyId } = await db.get<{ family_id: string }>(
+              'SELECT family_id FROM cellars WHERE id = ?',
+              [cellarId],
+            )
+            const queue = getDiscoveryAttachmentQueue()
+            const photoId = await queue.generateAttachmentId()
+            const path = buildDiscoveryPhotoPath(familyId, id, photoId, ext)
+
+            await queue.saveFile({
+              id: photoId,
+              data: await compressed.arrayBuffer(),
+              fileExtension: ext,
+              mediaType: compressed.type,
+              metaData: JSON.stringify({ discoveryId: id }),
+              // Nur ein Foto pro Entdeckung -- eine evtl. noch wartende,
+              // unsynced Zeile wird hier ersetzt, nicht ergänzt (das
+              // Attachment dahinter wird dadurch verwaist und nie
+              // hochgeladen, siehe AttachmentQueue.startSync()'s Diffing).
+              updateHook: async tx => {
+                await tx.execute('DELETE FROM discovery_photos WHERE discovery_id = ?', [id])
+                await tx.execute(
+                  'INSERT INTO discovery_photos (id, discovery_id, path, created_at) VALUES (?, ?, ?, ?)',
+                  [photoId, id, path, new Date().toISOString()],
+                )
+              },
+            })
+          }
         } catch {
           // Siehe Kommentar oben am Export -- Eintrag bleibt ohne Foto.
         }

@@ -295,7 +295,8 @@ function CellarScreenRoute() {
 
 function WineDetailRoute() {
   const { id } = wineDetailRoute.useParams()
-  return <WineDetailScreen wineId={id} />
+  const cellarId = useCellarId()
+  return <WineDetailScreen wineId={id} cellarId={cellarId} />
 }
 
 const rootRoute = createRootRoute({ component: RootShell })

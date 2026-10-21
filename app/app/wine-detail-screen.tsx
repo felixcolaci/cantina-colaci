@@ -5,6 +5,8 @@ import { ChevronLeft } from 'lucide-react'
 import { useWineDetail } from '@/lib/powersync/queries'
 import { WinePhotoGallery } from '@/app/app/wine-photo-gallery'
 import { WineEditSheet } from '@/app/app/wine-edit-sheet'
+import { AddSkuSheet } from '@/app/app/add-sku-sheet'
+import { OpenBottleButton } from '@/app/app/open-bottle-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { WineType } from '@/lib/types'
 
@@ -43,7 +45,7 @@ function formatMoney(value: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
 }
 
-export function WineDetailScreen({ wineId }: { wineId: string }) {
+export function WineDetailScreen({ wineId, cellarId }: { wineId: string; cellarId: string }) {
   const { wine, entries, tastings, isLoading } = useWineDetail(wineId)
 
   if (isLoading) {
@@ -163,9 +165,12 @@ export function WineDetailScreen({ wineId }: { wineId: string }) {
           )}
         </div>
 
-        {/* Keller section (read-only) */}
+        {/* Keller section */}
         <div>
-          <p className="eyebrow mb-3">Im Keller</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="eyebrow">Im Keller</p>
+            <AddSkuSheet wineId={wine.id} cellarId={cellarId} />
+          </div>
           {inStockEntries.length === 0 ? (
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
               Keine Flaschen mehr vorhanden.
@@ -229,6 +234,10 @@ export function WineDetailScreen({ wineId }: { wineId: string }) {
                         .join(' · ')}
                     </p>
                   )}
+
+                  <div className="mt-3">
+                    <OpenBottleButton skuId={entry.id} quantity={entry.quantity} />
+                  </div>
                 </div>
               ))}
               {inStockEntries.length > 1 && (

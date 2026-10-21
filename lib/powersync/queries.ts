@@ -201,3 +201,17 @@ export function useWineDetail(wineId: string) {
 
   return { wine, entries, tastings, isLoading }
 }
+
+export type StorageLocation = {
+  id: string
+  name: string
+}
+
+const STORAGE_LOCATIONS_SQL = `SELECT id, name FROM storage_locations WHERE cellar_id = ? ORDER BY name`
+
+// Read-only picker for AddSkuSheet (app/app/add-sku-sheet.tsx) -- managing
+// storage locations themselves (create/rename) is a separate migration.
+export function useStorageLocations(cellarId: string) {
+  const { data, isLoading, error } = useQuery<StorageLocation>(STORAGE_LOCATIONS_SQL, [cellarId])
+  return { storageLocations: data, isLoading, error }
+}

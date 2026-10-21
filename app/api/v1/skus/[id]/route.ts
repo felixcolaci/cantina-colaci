@@ -1,5 +1,6 @@
-import { requireApiUser, requireOwnCellar, apiAuthErrorResponse } from '@/lib/api/auth'
+import { requireApiUser, apiAuthErrorResponse } from '@/lib/api/auth'
 import { createAdminClient } from '@/lib/supabase/server'
+import { parseSkuInsertExtra, parseSkuPatch, requireOwnCellarForWine } from '@/lib/api/sku'
 
 // Insert-only, same scope as app/api/v1/wines/[id]/route.ts: the PowerSync
 // upload connector's target for a local `skus` row's first upload. Ownership
@@ -22,10 +23,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
     }
 
+    const extra = parseSkuInsertExtra(body)
+    if (!extra) return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
+
     const admin = createAdminClient()
-    const { data: wine } = await admin.from('wines').select('cellar_id').eq('id', wineId).maybeSingle()
-    if (!wine) return Response.json({ error: 'Wein nicht gefunden' }, { status: 404 })
-    await requireOwnCellar(admin, user, wine.cellar_id)
+    await requireOwnCellarForWine(admin, user, wineId)
 
     // insert(), not upsert() -- see the same note in
     // app/api/v1/wines/[id]/route.ts. A 23505 means this id already landed.
@@ -34,16 +36,44 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       wine_id: wineId,
       vintage: vintage ?? null,
       quantity,
-      storage_location_id: null,
       status: 'in_stock',
-      purchase_price: null,
-      purchase_date: null,
-      purchase_location: null,
-      shelf_location: null,
       trip_id: null,
       photo_path: null,
+      ...extra,
     })
     if (error && error.code !== '23505') return Response.json({ error: error.message }, { status: 500 })
+
+    return new Response(null, { status: 204 })
+  } catch (err) {
+    return apiAuthErrorResponse(err) ?? Response.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+// Edit path for an existing sku: the PowerSync upload connector's target for
+// a local `skus` row's UPDATE (UpdateType.PATCH, see lib/powersync/connector.ts).
+// Currently only driven by the "open bottle" action (app/app/open-bottle-button.tsx),
+// which decrements quantity and flips status client-side, then lets this route
+// persist exactly those two columns -- it doesn't (yet) write a tasting row the
+// way the legacy openBottle action did in one transaction; that's the tasting-
+// migration's job to add back, either here or alongside its own insert.
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireApiUser(request)
+    const { id } = await params
+    const body = await request.json().catch(() => null)
+
+    const fields = parseSkuPatch(body)
+    if (!fields || Object.keys(fields).length === 0) {
+      return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
+    }
+
+    const admin = createAdminClient()
+    const { data: existing } = await admin.from('skus').select('wine_id').eq('id', id).maybeSingle()
+    if (!existing) return Response.json({ error: 'Eintrag nicht gefunden' }, { status: 404 })
+    await requireOwnCellarForWine(admin, user, existing.wine_id)
+
+    const { error } = await admin.from('skus').update(fields).eq('id', id)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
 
     return new Response(null, { status: 204 })
   } catch (err) {

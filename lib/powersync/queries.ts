@@ -202,6 +202,114 @@ export function useWineDetail(wineId: string) {
   return { wine, entries, tastings, isLoading }
 }
 
+export type CellarStats = {
+  totalBottles: number
+  distinctWines: number
+  distinctOrigins: number
+  byType: { type: WineType; bottles: number }[]
+  totalValue: number | null
+  avgRating: number | null
+  ratedCount: number
+  oldestVintage: number | null
+  lastAdded: { wineName: string; vintage: number | null } | null
+}
+
+type StatsRow = {
+  wine_id: string
+  wine_name: string
+  type: string
+  region: string | null
+  country: string | null
+  quantity: number
+  purchase_price: number | null
+  vintage: number | null
+  created_at: string
+}
+
+type RatingRow = { avg_rating: number | null; rated_count: number }
+
+// In-stock skus joined with their wine, scoped to this cellar -- the same
+// base shape as useCellarWines's BASE_SQL, but aggregated differently
+// (across types/origins/value instead of grouped per-wine) so it stays a
+// second query rather than overloading groupByWine's job.
+const STATS_SQL = `
+  SELECT
+    wines.id AS wine_id,
+    wines.name AS wine_name,
+    wines.type AS type,
+    wines.region AS region,
+    wines.country AS country,
+    skus.quantity AS quantity,
+    skus.purchase_price AS purchase_price,
+    skus.vintage AS vintage,
+    skus.created_at AS created_at
+  FROM skus
+  JOIN wines ON wines.id = skus.wine_id
+  WHERE wines.cellar_id = ? AND skus.status = 'in_stock' AND skus.quantity > 0
+`
+
+const RATING_SQL = `
+  SELECT AVG(tastings.rating) AS avg_rating, COUNT(tastings.id) AS rated_count
+  FROM tastings
+  JOIN skus ON skus.id = tastings.cellar_entry_id
+  JOIN wines ON wines.id = skus.wine_id
+  WHERE wines.cellar_id = ?
+`
+
+// Everything the home screen's "Kellerstatistik" panel shows, aggregated
+// client-side from one flat query -- cheaper than a SQL query per metric,
+// and keeps the shape (one row per in-stock sku) easy to reason about.
+export function useCellarStats(cellarId: string): CellarStats & { isLoading: boolean } {
+  const statsQuery = useQuery<StatsRow>(STATS_SQL, [cellarId])
+  const ratingQuery = useQuery<RatingRow>(RATING_SQL, [cellarId])
+
+  const rows = statsQuery.data
+
+  let totalBottles = 0
+  let totalValue = 0
+  let hasValue = false
+  let oldestVintage: number | null = null
+  const wineIds = new Set<string>()
+  const origins = new Set<string>()
+  const byTypeMap = new Map<string, number>()
+  let lastAddedRow: StatsRow | null = null
+
+  for (const row of rows) {
+    totalBottles += row.quantity
+    wineIds.add(row.wine_id)
+    const origin = row.region ?? row.country
+    if (origin) origins.add(origin)
+    byTypeMap.set(row.type, (byTypeMap.get(row.type) ?? 0) + row.quantity)
+    if (row.purchase_price != null) {
+      totalValue += row.purchase_price * row.quantity
+      hasValue = true
+    }
+    if (row.vintage != null && (oldestVintage == null || row.vintage < oldestVintage)) {
+      oldestVintage = row.vintage
+    }
+    if (!lastAddedRow || row.created_at > lastAddedRow.created_at) lastAddedRow = row
+  }
+
+  const byType = [...byTypeMap.entries()]
+    .map(([type, bottles]) => ({ type: type as WineType, bottles }))
+    .sort((a, b) => b.bottles - a.bottles)
+
+  const ratingRow = ratingQuery.data[0] ?? null
+
+  return {
+    totalBottles,
+    distinctWines: wineIds.size,
+    distinctOrigins: origins.size,
+    byType,
+    totalValue: hasValue ? totalValue : null,
+    avgRating: ratingRow?.avg_rating ?? null,
+    ratedCount: ratingRow?.rated_count ?? 0,
+    oldestVintage,
+    lastAdded: lastAddedRow ? { wineName: lastAddedRow.wine_name, vintage: lastAddedRow.vintage } : null,
+    isLoading: statsQuery.isLoading || ratingQuery.isLoading,
+  }
+}
+
 export type StorageLocation = {
   id: string
   name: string

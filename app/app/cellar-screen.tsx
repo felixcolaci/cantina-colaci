@@ -3,8 +3,9 @@
 import { useState, type CSSProperties } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Plane, History, Users, Settings } from 'lucide-react'
-import { useCellarWines } from '@/lib/powersync/queries'
+import { useCellarWines, useCellar } from '@/lib/powersync/queries'
 import { WineCard, BottleGlyph } from '@/components/cellar/wine-card'
+import { CellarStatsPanel } from '@/components/cellar/cellar-stats'
 import { QuickAddSheet } from '@/app/app/quick-add-sheet'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -32,17 +33,36 @@ function chipStyle(active: boolean): CSSProperties {
   }
 }
 
+// Greeting changes with the time of day -- this screen is only ever
+// rendered client-side (the whole SPA shell opts out of SSR, see
+// app/app/[[...slug]]/page.tsx), so reading the clock directly on render
+// can't cause a hydration mismatch.
+function greeting(): string {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 11) return 'Guten Morgen'
+  if (hour >= 11 && hour < 17) return 'Guten Tag'
+  if (hour >= 17 && hour < 22) return 'Guten Abend'
+  return 'Noch wach?'
+}
+
 export function CellarScreen({ cellarId }: { cellarId: string }) {
   const [type, setType] = useState<WineType | null>(null)
   const { wines, isLoading } = useCellarWines(cellarId, type)
+  const { name: cellarName } = useCellar(cellarId)
 
   return (
     <div className="px-4 pb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 style={{ fontSize: 'var(--text-xl)', fontFamily: 'var(--font-display)' }}>
-          Weinkeller
-        </h2>
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-3 mb-5 pt-1">
+        <div>
+          <p className="eyebrow mb-1">{cellarName ?? 'Weinkeller'}</p>
+          <h1
+            className="display-hero"
+            style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}
+          >
+            {greeting()}
+          </h1>
+        </div>
+        <div className="flex-none flex items-center gap-2 pt-1">
           <Link to="/family">
             <Button size="icon-sm" variant="outline" aria-label="Familie">
               <Users className="h-3.5 w-3.5" />
@@ -66,6 +86,10 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
           <QuickAddSheet cellarId={cellarId} />
         </div>
       </div>
+
+      <CellarStatsPanel cellarId={cellarId} />
+
+      <p className="eyebrow mb-3">Dein Keller</p>
 
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
         <button type="button" style={chipStyle(!type)} onClick={() => setType(null)}>

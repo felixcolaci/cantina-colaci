@@ -1,0 +1,71 @@
+import { requireApiUser, requireOwnCellar, apiAuthErrorResponse } from '@/lib/api/auth'
+import { createAdminClient } from '@/lib/supabase/server'
+import { parseDiscoveryInsert } from '@/lib/api/discovery'
+import { BUCKET } from '@/lib/storage/wine-photos'
+
+// Insert-only PUT, selbes Muster wie app/api/v1/trips/[id]/route.ts: Ziel
+// des PowerSync-Upload-Connectors für den ersten (und, da es kein PATCH
+// gibt, einzigen) Upload einer lokalen `discoveries`-Zeile.
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireApiUser(request)
+    const { id } = await params
+    const body = await request.json().catch(() => null)
+
+    const fields = parseDiscoveryInsert(body)
+    if (!fields) return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
+
+    const admin = createAdminClient()
+    await requireOwnCellar(admin, user, fields.cellar_id)
+
+    // Ein trip_id-Fremdschlüssel wird nicht allein durch requireOwnCellar
+    // auf cellar_id abgedeckt -- ohne diesen Check könnte ein Client die
+    // Trip-ID einer völlig anderen Cellar erraten/kennen und verknüpfen.
+    if (fields.trip_id) {
+      const { data: trip } = await admin
+        .from('trips').select('cellar_id').eq('id', fields.trip_id).maybeSingle()
+      if (!trip || trip.cellar_id !== fields.cellar_id) {
+        return Response.json({ error: 'Trip gehört nicht zu diesem Keller' }, { status: 400 })
+      }
+    }
+
+    // insert(), nicht upsert() -- siehe die gleiche Begründung in
+    // app/api/v1/wines/[id]/route.ts. 23505 heißt, diese id ist schon da.
+    const { error } = await admin.from('discoveries').insert({ id, ...fields })
+    if (error && error.code !== '23505') return Response.json({ error: error.message }, { status: 500 })
+
+    return new Response(null, { status: 204 })
+  } catch (err) {
+    return apiAuthErrorResponse(err) ?? Response.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+// Kein PATCH -- kein Edit in v1 (siehe Spec). Löschen drained der Connector
+// aber als UpdateType.DELETE an dieselbe Route.
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireApiUser(request)
+    const { id } = await params
+    const admin = createAdminClient()
+
+    const { data: existing } = await admin.from('discoveries').select('cellar_id').eq('id', id).maybeSingle()
+    if (!existing) return new Response(null, { status: 204 }) // bereits weg -- ok
+    await requireOwnCellar(admin, user, existing.cellar_id)
+
+    // Foto-Storage-Objekt explizit entfernen -- discovery_photos selbst
+    // cascaded über die FK beim discoveries-Delete unten, aber das Storage-
+    // Objekt muss Postgres dafür separat anstoßen.
+    const { data: photo } = await admin
+      .from('discovery_photos').select('path').eq('discovery_id', id).maybeSingle()
+    if (photo) {
+      await admin.storage.from(BUCKET).remove([photo.path])
+    }
+
+    const { error } = await admin.from('discoveries').delete().eq('id', id)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+
+    return new Response(null, { status: 204 })
+  } catch (err) {
+    return apiAuthErrorResponse(err) ?? Response.json({ error: 'Internal error' }, { status: 500 })
+  }
+}

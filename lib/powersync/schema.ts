@@ -99,6 +99,25 @@ const tastings = new Table(
   { indexes: { sku: ['cellar_entry_id'] } }
 )
 
+const discoveries = new Table(
+  {
+    cellar_id: column.text,
+    created_by: column.text,
+    name: column.text,
+    producer: column.text,
+    vintage: column.integer,
+    type: column.text,
+    location_text: column.text,
+    trip_id: column.text,
+    date: column.text,
+    rating: column.integer,
+    notes: column.text,
+    price: column.real,
+    created_at: column.text,
+  },
+  { indexes: { cellar: ['cellar_id'] } }
+)
+
 export const AppSchema = new Schema({
   families,
   family_members,
@@ -108,6 +127,7 @@ export const AppSchema = new Schema({
   storage_locations,
   trips,
   tastings,
+  discoveries,
 })
 
 export type Database = (typeof AppSchema)['types']

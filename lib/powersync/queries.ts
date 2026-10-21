@@ -215,3 +215,15 @@ export function useStorageLocations(cellarId: string) {
   const { data, isLoading, error } = useQuery<StorageLocation>(STORAGE_LOCATIONS_SQL, [cellarId])
   return { storageLocations: data, isLoading, error }
 }
+
+export type StorageLocationWithType = StorageLocation & { type: StorageLocationTypeValue }
+
+type StorageLocationTypeValue = 'fridge' | 'cellar' | 'climate_cabinet' | 'other'
+
+const STORAGE_LOCATIONS_WITH_TYPE_SQL = `SELECT id, name, type FROM storage_locations WHERE cellar_id = ? ORDER BY name`
+
+// Full read for the Lagerorte settings screen (app/app/storage-locations-screen.tsx).
+export function useStorageLocationsSettings(cellarId: string) {
+  const { data, isLoading, error } = useQuery<StorageLocationWithType>(STORAGE_LOCATIONS_WITH_TYPE_SQL, [cellarId])
+  return { storageLocations: data, isLoading, error }
+}

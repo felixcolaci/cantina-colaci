@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, type CSSProperties } from 'react'
+import { Link } from '@tanstack/react-router'
+import { MapPin } from 'lucide-react'
 import { useCellarWines } from '@/lib/powersync/queries'
 import { WineCard, BottleGlyph } from '@/components/cellar/wine-card'
 import { QuickAddSheet } from '@/app/app/quick-add-sheet'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { WineType } from '@/lib/types'
 
@@ -39,7 +42,14 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
         <h2 style={{ fontSize: 'var(--text-xl)', fontFamily: 'var(--font-display)' }}>
           Weinkeller
         </h2>
-        <QuickAddSheet cellarId={cellarId} />
+        <div className="flex items-center gap-2">
+          <Link to="/settings/locations">
+            <Button size="icon-sm" variant="outline" aria-label="Lagerorte">
+              <MapPin className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+          <QuickAddSheet cellarId={cellarId} />
+        </div>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4">

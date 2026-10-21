@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { CellarScreen } from '@/app/app/cellar-screen'
 import { WineDetailScreen } from '@/app/app/wine-detail-screen'
+import { StorageLocationsScreen } from '@/app/app/storage-locations-screen'
 
 type Me = {
   userId: string
@@ -299,6 +300,11 @@ function WineDetailRoute() {
   return <WineDetailScreen wineId={id} cellarId={cellarId} />
 }
 
+function StorageLocationsRoute() {
+  const cellarId = useCellarId()
+  return <StorageLocationsScreen cellarId={cellarId} />
+}
+
 const rootRoute = createRootRoute({ component: RootShell })
 
 const indexRoute = createRoute({
@@ -313,7 +319,13 @@ const wineDetailRoute = createRoute({
   component: WineDetailRoute,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, wineDetailRoute])
+const storageLocationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/locations',
+  component: StorageLocationsRoute,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, wineDetailRoute, storageLocationsRoute])
 
 const router = createRouter({ routeTree, basepath: '/app' })
 

@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router'
+import { WifiOff, RefreshCw, Check } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
 import { usePowerSync, useStatus } from '@powersync/react'
 import type { AbstractPowerSyncDatabase, SyncStatus } from '@powersync/web'
@@ -77,25 +78,69 @@ function RootShell() {
   return <MeShell />
 }
 
-// Continuous background-sync indicator for screens past the initial sync
-// gate (SyncScreen). hasSynced is already true here, so this only ever
-// reflects ongoing activity -- not whether the app is usable yet.
-function SyncIndicator({ status }: { status: SyncStatus }) {
-  const label = !status.connected
-    ? 'Offline'
-    : status.downloading || status.uploading
-      ? 'Synchronisiert…'
-      : 'Synchron'
-  const dotClass = !status.connected
-    ? 'bg-muted-foreground'
-    : status.downloading || status.uploading
-      ? 'bg-amber-500 animate-pulse'
-      : 'bg-emerald-500'
+// Ring variant of SyncIndicator below: PowerSync's own realtime
+// downloadProgress.downloadedFraction (0..1) drawn as an SVG arc instead of
+// a flat pulsing dot, so an actual long sync (not just the first-ever one,
+// which SyncScreen already bars/numbers) visibly advances instead of just
+// blinking the same way the whole time. currentColor so the caller's text-*
+// class controls the arc's color.
+function SyncProgressRing({ fraction }: { fraction: number }) {
+  const size = 14
+  const strokeWidth = 2
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference * (1 - Math.min(1, Math.max(0, fraction)))
 
   return (
-    <span className="flex items-center gap-1.5 text-xs text-muted-foreground" title={status.getMessage()}>
-      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
-      {label}
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth={strokeWidth} />
+      <circle
+        cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={strokeWidth}
+        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: 'stroke-dashoffset 150ms linear' }}
+      />
+    </svg>
+  )
+}
+
+// Continuous background-sync indicator for screens past the initial sync
+// gate (SyncScreen). hasSynced is already true here, so this only ever
+// reflects ongoing activity -- not whether the app is usable yet. Icon-only
+// by design (no word label beside it) -- the accessible/hover text still
+// lives in the title attribute via status.getMessage().
+function SyncIndicator({ status }: { status: SyncStatus }) {
+  const title = status.getMessage()
+  const progress = status.downloadProgress
+
+  if (!status.connected) {
+    return (
+      <span title={title} className="flex text-muted-foreground">
+        <WifiOff className="h-3.5 w-3.5" />
+      </span>
+    )
+  }
+  // downloadProgress is only ever set while downloading is true, but a
+  // download can be in-flight for a moment before that first progress
+  // report lands -- fall through to the plain spinner for that gap instead
+  // of rendering a ring stuck at 0%.
+  if (status.downloading && progress) {
+    return (
+      <span title={title} className="flex text-amber-500">
+        <SyncProgressRing fraction={progress.downloadedFraction} />
+      </span>
+    )
+  }
+  if (status.downloading || status.uploading) {
+    return (
+      <span title={title} className="flex text-amber-500">
+        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+      </span>
+    )
+  }
+  return (
+    <span title={title} className="flex text-emerald-500">
+      <Check className="h-3.5 w-3.5" />
     </span>
   )
 }

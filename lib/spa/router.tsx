@@ -17,6 +17,7 @@ import { CellarScreen } from '@/app/app/cellar-screen'
 import { WineDetailScreen } from '@/app/app/wine-detail-screen'
 import { StorageLocationsScreen } from '@/app/app/storage-locations-screen'
 import { TripsScreen } from '@/app/app/trips-screen'
+import { DiscoveriesScreen } from '@/app/app/discoveries-screen'
 import { TripDetailScreen } from '@/app/app/trip-detail-screen'
 import { HistoryScreen } from '@/app/app/history-screen'
 import { FamilyScreen } from '@/app/app/family-screen'
@@ -48,6 +49,16 @@ export function useCellarId() {
   const cellarId = useContext(CellarIdContext)
   if (!cellarId) throw new Error('useCellarId() called outside a route with a resolved cellar')
   return cellarId
+}
+
+// Same rationale as CellarIdContext -- discoveries.created_by needs the
+// caller's own user id at insert time (AddDiscoverySheet), not threaded
+// through route params.
+const UserIdContext = createContext<string | null>(null)
+export function useUserId() {
+  const userId = useContext(UserIdContext)
+  if (!userId) throw new Error('useUserId() called outside a route with a resolved user')
+  return userId
 }
 
 function RootShell() {
@@ -264,7 +275,9 @@ function MeShell() {
       {error && <p className="px-4 text-sm text-destructive">{(error as Error).message}</p>}
       {data?.cellarId && (
         <CellarIdContext.Provider value={data.cellarId}>
-          <Outlet />
+          <UserIdContext.Provider value={data.userId}>
+            <Outlet />
+          </UserIdContext.Provider>
         </CellarIdContext.Provider>
       )}
     </div>
@@ -366,6 +379,12 @@ function TripDetailRoute() {
   return <TripDetailScreen tripId={id} />
 }
 
+function DiscoveriesRoute() {
+  const cellarId = useCellarId()
+  const userId = useUserId()
+  return <DiscoveriesScreen cellarId={cellarId} userId={userId} />
+}
+
 function HistoryRoute() {
   const cellarId = useCellarId()
   return <HistoryScreen cellarId={cellarId} />
@@ -416,6 +435,12 @@ const tripDetailRoute = createRoute({
   component: TripDetailRoute,
 })
 
+const discoveriesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/discoveries',
+  component: DiscoveriesRoute,
+})
+
 const historyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/history',
@@ -446,6 +471,7 @@ const routeTree = rootRoute.addChildren([
   storageLocationsRoute,
   tripsRoute,
   tripDetailRoute,
+  discoveriesRoute,
   historyRoute,
   familyRoute,
   cellarSettingsRoute,

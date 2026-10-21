@@ -18,6 +18,7 @@ import { WineDetailScreen } from '@/app/app/wine-detail-screen'
 import { StorageLocationsScreen } from '@/app/app/storage-locations-screen'
 import { TripsScreen } from '@/app/app/trips-screen'
 import { DiscoveriesScreen } from '@/app/app/discoveries-screen'
+import { DiscoveryDetailScreen } from '@/app/app/discovery-detail-screen'
 import { TripDetailScreen } from '@/app/app/trip-detail-screen'
 import { HistoryScreen } from '@/app/app/history-screen'
 import { FamilyScreen } from '@/app/app/family-screen'
@@ -391,6 +392,11 @@ function DiscoveriesRoute() {
   return <DiscoveriesScreen cellarId={cellarId} userId={userId} />
 }
 
+function DiscoveryDetailRoute() {
+  const { id } = discoveryDetailRoute.useParams()
+  return <DiscoveryDetailScreen discoveryId={id} />
+}
+
 function HistoryRoute() {
   const cellarId = useCellarId()
   return <HistoryScreen cellarId={cellarId} />
@@ -447,6 +453,12 @@ const discoveriesRoute = createRoute({
   component: DiscoveriesRoute,
 })
 
+const discoveryDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/discoveries/$id',
+  component: DiscoveryDetailRoute,
+})
+
 const historyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/history',
@@ -478,6 +490,7 @@ const routeTree = rootRoute.addChildren([
   tripsRoute,
   tripDetailRoute,
   discoveriesRoute,
+  discoveryDetailRoute,
   historyRoute,
   familyRoute,
   cellarSettingsRoute,

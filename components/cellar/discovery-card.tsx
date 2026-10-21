@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 import { usePowerSync } from '@powersync/react'
 import { useDiscoveryPhoto } from '@/lib/powersync/queries'
@@ -42,7 +43,10 @@ export function DiscoveryCard({ discovery }: { discovery: DiscoverySummary }) {
   const fundort = discovery.tripName ?? discovery.locationText
 
   return (
-    <div
+    <Link
+      to="/discoveries/$id"
+      params={{ id: discovery.id }}
+      className="block"
       style={{
         background: 'var(--card)',
         border: '1px solid var(--border)',
@@ -84,7 +88,7 @@ export function DiscoveryCard({ discovery }: { discovery: DiscoverySummary }) {
             </div>
           )}
           <button
-            onClick={() => setConfirmDelete(true)}
+            onClick={e => { e.preventDefault(); e.stopPropagation(); setConfirmDelete(true) }}
             className="flex items-center justify-center w-7 h-7 rounded-full"
             style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}
             aria-label="Entdeckung löschen"
@@ -132,7 +136,11 @@ export function DiscoveryCard({ discovery }: { discovery: DiscoverySummary }) {
       )}
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent showCloseButton={false}>
+        {/* Portaled, but still a React descendant of the <Link> above --
+            onClick here stops that bubbling before it reaches Link's
+            navigation handler (confirming/cancelling the delete must not
+            also navigate to the detail route). */}
+        <DialogContent showCloseButton={false} onClick={e => e.stopPropagation()}>
           <DialogHeader>
             <DialogTitle>Entdeckung löschen?</DialogTitle>
             <DialogDescription>„{discovery.name}“ wird unwiderruflich entfernt.</DialogDescription>
@@ -143,6 +151,6 @@ export function DiscoveryCard({ discovery }: { discovery: DiscoverySummary }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Link>
   )
 }

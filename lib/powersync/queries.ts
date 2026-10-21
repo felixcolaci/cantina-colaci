@@ -662,6 +662,69 @@ export function useWinePhotos(wineId: string) {
   return { photos, isLoading }
 }
 
+export type DiscoveryDetail = {
+  id: string
+  cellarId: string
+  name: string
+  producer: string | null
+  vintage: number | null
+  type: WineType | null
+  locationText: string | null
+  tripId: string | null
+  tripName: string | null
+  date: string
+  rating: number | null
+  notes: string | null
+  price: number | null
+  createdByName: string | null
+}
+
+type DiscoveryDetailRow = DiscoveryRow & { cellar_id: string }
+
+const DISCOVERY_DETAIL_SQL = `
+  SELECT
+    discoveries.id AS id,
+    discoveries.cellar_id AS cellar_id,
+    discoveries.name AS name,
+    discoveries.producer AS producer,
+    discoveries.vintage AS vintage,
+    discoveries.type AS type,
+    discoveries.location_text AS location_text,
+    discoveries.trip_id AS trip_id,
+    trips.name AS trip_name,
+    discoveries.date AS date,
+    discoveries.rating AS rating,
+    discoveries.notes AS notes,
+    discoveries.price AS price,
+    family_members.display_name AS created_by_name
+  FROM discoveries
+  LEFT JOIN trips ON trips.id = discoveries.trip_id
+  LEFT JOIN family_members ON family_members.user_id = discoveries.created_by
+  WHERE discoveries.id = ?
+`
+
+export function useDiscoveryDetail(discoveryId: string) {
+  const { data, isLoading } = useQuery<DiscoveryDetailRow>(DISCOVERY_DETAIL_SQL, [discoveryId])
+  const row = data[0] ?? null
+  const discovery: DiscoveryDetail | null = row && {
+    id: row.id,
+    cellarId: row.cellar_id,
+    name: row.name,
+    producer: row.producer,
+    vintage: row.vintage,
+    type: row.type as WineType | null,
+    locationText: row.location_text,
+    tripId: row.trip_id,
+    tripName: row.trip_name,
+    date: row.date,
+    rating: row.rating,
+    notes: row.notes,
+    price: row.price,
+    createdByName: row.created_by_name,
+  }
+  return { discovery, isLoading }
+}
+
 const DISCOVERY_PHOTO_SQL = `
   SELECT discovery_photos.id AS id, discovery_photos.path AS path,
          discovery_photo_attachments.state AS attachment_state

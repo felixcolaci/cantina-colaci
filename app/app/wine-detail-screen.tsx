@@ -3,7 +3,8 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronLeft } from 'lucide-react'
 import { useWineDetail } from '@/lib/powersync/queries'
-import { BottleGlyph } from '@/components/cellar/wine-card'
+import { WinePhotoGallery } from '@/app/app/wine-photo-gallery'
+import { WineEditSheet } from '@/app/app/wine-edit-sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { WineType } from '@/lib/types'
 
@@ -74,20 +75,7 @@ export function WineDetailScreen({ wineId }: { wineId: string }) {
 
   return (
     <div className="max-w-lg mx-auto">
-      {/* Hero -- no photo source wired up yet in the new architecture
-          (same as the cellar list's WineCard), so this is always the
-          type-colored gradient with the bottle glyph. */}
-      <div className="relative" style={{ height: 224 }}>
-        <div className="absolute inset-0 flex items-center justify-center" style={{ background: typeConf.hero }}>
-          <div style={{ opacity: 0.35 }}>
-            <BottleGlyph width={48} height={120} opacity={1} />
-          </div>
-        </div>
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)' }}
-        />
-
+      <WinePhotoGallery wineId={wine.id} heroBg={typeConf.hero}>
         <Link
           to="/"
           className="absolute top-3 left-3 flex items-center gap-0.5 px-2.5 py-1.5 rounded-full text-sm font-semibold"
@@ -96,6 +84,8 @@ export function WineDetailScreen({ wineId }: { wineId: string }) {
           <ChevronLeft className="h-4 w-4 -ml-0.5" />
           Keller
         </Link>
+
+        <WineEditSheet wine={wine} />
 
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
           {wine.producer && (
@@ -123,7 +113,7 @@ export function WineDetailScreen({ wineId }: { wineId: string }) {
             {wine.name}
           </h1>
         </div>
-      </div>
+      </WinePhotoGallery>
 
       {/* Content */}
       <div className="px-4 py-5 space-y-6">

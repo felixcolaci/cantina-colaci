@@ -48,3 +48,22 @@ export async function apiMutate<T>(
   if (res.status === 204) return undefined
   return res.json()
 }
+
+/**
+ * Multipart upload (e.g. wine photos) -- a plain direct network call, not
+ * drained through the PowerSync CRUD queue like apiMutate's callers. No
+ * Content-Type header: fetch sets the multipart boundary itself from the
+ * FormData body, same as every other multipart upload in the browser.
+ */
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`/api/v1${path}`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: formData,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new ApiError(body?.error ?? res.statusText, res.status)
+  }
+  return res.json()
+}

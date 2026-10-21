@@ -12,6 +12,20 @@ import type { createAdminClient } from '@/lib/supabase/server'
 const BUCKET = 'wine-photos'
 const DEMO_PREFIX = 'demo/'
 
+export const ALLOWED_PHOTO_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+}
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024
+
+/** Storage object path for a new wine photo upload -- always under the caller's
+ * own family prefix, so it satisfies isPhotoPathOwnedByFamily() by construction. */
+export function buildWinePhotoPath(familyId: string, wineId: string, photoId: string, ext: string): string {
+  return `families/${familyId}/wines/${wineId}/${photoId}.${ext}`
+}
+
 // How long a signed URL stays valid. Picked to comfortably outlive a single
 // page render (including any client-side revalidation) while still
 // expiring promptly if a photo is deleted/replaced.

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { createAdminClient } from '@/lib/supabase/server'
-import { signPhotoPath, signPhotoPaths, isPhotoPathOwnedByFamily, isDemoPhotoPath } from '../wine-photos'
+import {
+  signPhotoPath, signPhotoPaths, isPhotoPathOwnedByFamily, isDemoPhotoPath, buildWinePhotoPath,
+} from '../wine-photos'
 
 const mockCreateSignedUrl = vi.fn()
 const mockCreateSignedUrls = vi.fn()
@@ -51,6 +53,16 @@ describe('signPhotoPath', () => {
 
     expect(mockCreateSignedUrl).not.toHaveBeenCalled()
     expect(url).toBeNull()
+  })
+})
+
+describe('buildWinePhotoPath', () => {
+  it('builds a path under the family prefix that isPhotoPathOwnedByFamily accepts', () => {
+    const path = buildWinePhotoPath('f1', 'w1', 'p1', 'jpg')
+
+    expect(path).toBe('families/f1/wines/w1/p1.jpg')
+    expect(isPhotoPathOwnedByFamily(path, 'f1')).toBe(true)
+    expect(isPhotoPathOwnedByFamily(path, 'OTHER_FAMILY')).toBe(false)
   })
 })
 

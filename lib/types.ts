@@ -97,3 +97,20 @@ export interface WineHints {
   ownRegionsByCountry: Record<string, string[]>
   ownCountries: string[]
 }
+
+export interface Discovery {
+  id: string
+  cellar_id: string
+  created_by: string
+  name: string
+  producer: string | null
+  vintage: number | null
+  type: WineType | null
+  location_text: string | null
+  trip_id: string | null
+  date: string
+  rating: number | null
+  notes: string | null
+  price: number | null
+  created_at: string
+}

@@ -243,6 +243,20 @@ export function useOwnFamilyMember(userId: string) {
   return { id: row?.id ?? null, displayName: row?.display_name ?? null, isLoading }
 }
 
+type CellarRow = { name: string }
+
+const CELLAR_SQL = `SELECT name FROM cellars WHERE id = ?`
+
+// Cellar name for the settings/cellar screen's heading and its reset
+// sheet's type-to-confirm check. Role/is_demo for that screen come from
+// GET /api/v1/family instead (already fetched by FamilyScreen too, so the
+// two screens share the ['family'] query cache) -- no separate local read
+// needed for those.
+export function useCellar(cellarId: string) {
+  const { data, isLoading } = useQuery<CellarRow>(CELLAR_SQL, [cellarId])
+  return { name: data[0]?.name ?? null, isLoading }
+}
+
 export type TripSummary = {
   id: string
   name: string

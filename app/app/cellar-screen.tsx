@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from 'react'
 import { Link } from '@tanstack/react-router'
-import { MapPin, Plane, History, Users } from 'lucide-react'
+import { Plane, History, Users, Settings } from 'lucide-react'
 import { useCellarWines } from '@/lib/powersync/queries'
 import { WineCard, BottleGlyph } from '@/components/cellar/wine-card'
 import { QuickAddSheet } from '@/app/app/quick-add-sheet'
@@ -58,9 +58,9 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
               <Plane className="h-3.5 w-3.5" />
             </Button>
           </Link>
-          <Link to="/settings/locations">
-            <Button size="icon-sm" variant="outline" aria-label="Lagerorte">
-              <MapPin className="h-3.5 w-3.5" />
+          <Link to="/settings/cellar">
+            <Button size="icon-sm" variant="outline" aria-label="Einstellungen">
+              <Settings className="h-3.5 w-3.5" />
             </Button>
           </Link>
           <QuickAddSheet cellarId={cellarId} />

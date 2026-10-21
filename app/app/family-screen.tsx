@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
 import { useOwnFamilyMember } from '@/lib/powersync/queries'
 import { EditNameSheet } from '@/app/app/edit-name-sheet'
+import { ResetFamilySheet } from '@/app/app/reset-family-sheet'
+import { StartOwnCellarSheet } from '@/app/app/start-own-cellar-sheet'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { SubmitButton } from '@/components/ui/submit-button'
@@ -194,6 +196,16 @@ export function FamilyScreen() {
         ))}
       </div>
 
+      {data.isDemo && (
+        <div className="mb-6">
+          <h3 className="mb-2" style={{ fontSize: 'var(--text-base)', fontWeight: 500 }}>Demo-Modus</h3>
+          <p className="text-sm mb-3" style={{ color: 'var(--muted-foreground)' }}>
+            Du nutzt aktuell die Demo-Cantina mit Beispielweinen. Starte jetzt mit deinen eigenen.
+          </p>
+          <StartOwnCellarSheet />
+        </div>
+      )}
+
       {data.role === 'owner' && (
         <div className="pt-6" style={{ borderTop: '1px solid var(--border)' }}>
           <h3 className="mb-2" style={{ fontSize: 'var(--text-base)', fontWeight: 500 }}>Mitglied einladen</h3>
@@ -204,9 +216,18 @@ export function FamilyScreen() {
         </div>
       )}
 
-      {/* Demo-mode ("Start own cellar") and the danger-zone family reset are
-          feature #12's scope (Settings: Keller/Demo zurücksetzen), not
-          built here even for an owner/demo family. */}
+      {data.role === 'owner' && !data.isDemo && (
+        <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--border)' }}>
+          <h3 className="mb-2" style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--destructive)' }}>
+            Gefahrenzone
+          </h3>
+          <p className="text-sm mb-3" style={{ color: 'var(--muted-foreground)' }}>
+            Entfernt alle Weine, Flaschen, Fotos, Verkostungen, Reisen und
+            Lagerorte in jedem Keller dieser Familie.
+          </p>
+          <ResetFamilySheet familyName={data.familyName} />
+        </div>
+      )}
     </div>
   )
 }

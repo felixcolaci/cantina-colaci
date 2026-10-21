@@ -9,7 +9,7 @@ import type { createAdminClient } from '@/lib/supabase/server'
 // here, via the admin/service-role client. Signing bypasses RLS regardless
 // of path, so a demo/* path signs exactly like a families/* path -- no
 // special-casing needed.
-const BUCKET = 'wine-photos'
+export const BUCKET = 'wine-photos'
 const DEMO_PREFIX = 'demo/'
 
 export const ALLOWED_PHOTO_TYPES: Record<string, string> = {

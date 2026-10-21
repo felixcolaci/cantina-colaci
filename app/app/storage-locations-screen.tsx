@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { Link } from '@tanstack/react-router'
-import { ChevronLeft } from 'lucide-react'
 import { usePowerSync } from '@powersync/react'
 import { useStorageLocationsSettings } from '@/lib/powersync/queries'
+import { BackLink } from '@/app/app/back-link'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -61,14 +60,7 @@ export function StorageLocationsScreen({ cellarId }: { cellarId: string }) {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-0.5 text-sm font-medium"
-        style={{ color: 'var(--muted-foreground)' }}
-      >
-        <ChevronLeft className="h-4 w-4 -ml-0.5" />
-        Keller
-      </Link>
+      <BackLink to="/">Keller</BackLink>
 
       <h2 style={{ fontSize: 'var(--text-xl)', fontFamily: 'var(--font-display)' }}>Lagerorte</h2>
 

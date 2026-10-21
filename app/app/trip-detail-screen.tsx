@@ -1,9 +1,9 @@
 'use client'
 
 import { Link } from '@tanstack/react-router'
-import { ChevronLeft } from 'lucide-react'
 import { useTripDetail } from '@/lib/powersync/queries'
 import { WineCard, BottleGlyph } from '@/components/cellar/wine-card'
+import { BackLink } from '@/app/app/back-link'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function formatDate(iso: string): string {
@@ -61,10 +61,7 @@ export function TripDetailScreen({ tripId }: { tripId: string }) {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
-      <Link to="/trips" className="inline-flex items-center gap-0.5 text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
-        <ChevronLeft className="h-4 w-4 -ml-0.5" />
-        Reisen
-      </Link>
+      <BackLink to="/trips">Reisen</BackLink>
 
       <div>
         {trip.location && <p className="eyebrow mb-1">{trip.location}</p>}

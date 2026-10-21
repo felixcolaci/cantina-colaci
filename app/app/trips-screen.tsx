@@ -3,6 +3,7 @@
 import { Link } from '@tanstack/react-router'
 import { useTrips } from '@/lib/powersync/queries'
 import { NewTripSheet } from '@/app/app/new-trip-sheet'
+import { BackLink } from '@/app/app/back-link'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function formatDate(iso: string): string {
@@ -31,7 +32,9 @@ export function TripsScreen({ cellarId }: { cellarId: string }) {
 
   return (
     <div className="px-4 pb-6 max-w-lg mx-auto space-y-4">
-      <div className="flex items-center justify-between pt-6">
+      <BackLink to="/" className="pt-6">Keller</BackLink>
+
+      <div className="flex items-center justify-between">
         <h1 style={{
           fontFamily: 'var(--font-display)',
           fontSize: 'var(--text-3xl)',

@@ -1,13 +1,12 @@
 'use client'
 
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from '@tanstack/react-router'
-import { ChevronLeft } from 'lucide-react'
 import { useQuery as useRQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
 import { useOwnFamilyMember } from '@/lib/powersync/queries'
 import { EditNameSheet } from '@/app/app/edit-name-sheet'
+import { BackLink } from '@/app/app/back-link'
 import { ResetFamilySheet } from '@/app/app/reset-family-sheet'
 import { StartOwnCellarSheet } from '@/app/app/start-own-cellar-sheet'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -157,10 +156,7 @@ export function FamilyScreen() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
-      <Link to="/" className="inline-flex items-center gap-0.5 text-sm font-medium mb-4" style={{ color: 'var(--muted-foreground)' }}>
-        <ChevronLeft className="h-4 w-4 -ml-0.5" />
-        Keller
-      </Link>
+      <BackLink to="/" className="mb-4">Keller</BackLink>
 
       <p className="eyebrow mb-2">Familie</p>
       <h1 style={{

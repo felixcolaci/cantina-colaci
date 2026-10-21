@@ -3,6 +3,7 @@
 import { Link } from '@tanstack/react-router'
 import { useTastingsHistory } from '@/lib/powersync/queries'
 import { TastingCard } from '@/components/cellar/tasting-card'
+import { BackLink } from '@/app/app/back-link'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export function HistoryScreen({ cellarId }: { cellarId: string }) {
@@ -10,6 +11,8 @@ export function HistoryScreen({ cellarId }: { cellarId: string }) {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
+      <BackLink to="/">Keller</BackLink>
+
       <h1 style={{
         fontFamily: 'var(--font-display)',
         fontSize: 'var(--text-3xl)',

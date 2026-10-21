@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { Link } from '@tanstack/react-router'
-import { ChevronLeft } from 'lucide-react'
 import { useQuery as useRQuery, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
 import { buildMcpConfigs, MCP_CLIENT_TABS } from '@/lib/mcp/client-config'
+import { BackLink } from '@/app/app/back-link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -122,10 +121,7 @@ export function ApiKeysScreen() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
-      <Link to="/settings/cellar" className="inline-flex items-center gap-0.5 text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
-        <ChevronLeft className="h-4 w-4 -ml-0.5" />
-        Einstellungen
-      </Link>
+      <BackLink to="/settings/cellar">Einstellungen</BackLink>
 
       <div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: 'var(--tracking-tight)', margin: 0 }}>

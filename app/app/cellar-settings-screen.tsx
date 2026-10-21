@@ -1,12 +1,12 @@
 'use client'
 
 import { Link } from '@tanstack/react-router'
-import { ChevronLeft } from 'lucide-react'
 import { useQuery as useRQuery } from '@tanstack/react-query'
 import { apiGet, ApiError } from '@/lib/spa/api-client'
 import { useCellar } from '@/lib/powersync/queries'
 import { ResetCellarSheet } from '@/app/app/reset-cellar-sheet'
 import { StartOwnCellarSheet } from '@/app/app/start-own-cellar-sheet'
+import { BackLink } from '@/app/app/back-link'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type FamilyResponse = { familyName: string; isDemo: boolean; role: string }
@@ -24,10 +24,7 @@ export function CellarSettingsScreen({ cellarId }: { cellarId: string }) {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
-      <Link to="/" className="inline-flex items-center gap-0.5 text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
-        <ChevronLeft className="h-4 w-4 -ml-0.5" />
-        Keller
-      </Link>
+      <BackLink to="/">Keller</BackLink>
 
       <div>
         <p className="eyebrow mb-1">Einstellungen</p>

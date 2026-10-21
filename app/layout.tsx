@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { Cormorant_Garamond, Plus_Jakarta_Sans, DM_Mono } from 'next/font/google'
+import { Fraunces, Figtree, DM_Mono } from 'next/font/google'
 import './globals.css'
 
-const displayFont = Cormorant_Garamond({
+const displayFont = Fraunces({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   style: ['normal', 'italic'],
@@ -10,9 +10,9 @@ const displayFont = Cormorant_Garamond({
   display: 'swap',
 })
 
-const bodyFont = Plus_Jakarta_Sans({
+const bodyFont = Figtree({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
   style: ['normal', 'italic'],
   variable: '--font-body',
   display: 'swap',
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
+    <html lang="de" className={`dark ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
       <body>{children}</body>
     </html>
   )

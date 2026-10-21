@@ -48,95 +48,45 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Design direction: "a cellar at night". Dark bottle-glass is the primary,
+ * signature surface (applied via .dark on <html> in app/layout.tsx); this
+ * :root block holds the "daylight" alternate — pale limestone, deeper
+ * claret and brass for contrast — for whenever a theme switch ships.
+ */
 :root {
-  /* ---- Wine red scale ---- */
-  --wine-50:  #fdf4f0;
-  --wine-100: #f9e4da;
-  --wine-200: #f0c4b2;
-  --wine-300: #e29c83;
-  --wine-400: #cf6f4d;
-  --wine-500: #b04a28;
-  --wine-600: #97391b;
-  --wine-700: #7c2d12;
-  --wine-800: #642611;
-  --wine-900: #4c1d0e;
-  --wine-950: #2d1008;
-
-  --burgundy:      #5b1e22;
-  --burgundy-deep: #3d1417;
-
-  /* ---- Warm neutrals ---- */
-  --cream:       #faf7f2;
-  --cream-soft:  #f5f1e9;
-  --parchment:   #f2ede3;
-  --parchment-2: #e9e1d4;
-  --linen:       #ddd2c2;
-
-  --ink-900: #211a13;
-  --ink-700: #463b2f;
-  --ink-500: #6c6051;
-  --ink-300: #a89c89;
-  --ink-100: #ddd4c5;
-
-  /* ---- Earth tones ---- */
-  --olive: #6f6a47;
-  --clay:  #a8755a;
-  --stone: #8a8174;
-  --umber: #5c4a39;
-  --sage:  #8c9277;
-
-  /* ---- Graphite (cool editorial neutral) ---- */
-  --graphite-50:  #f5f4f6;
-  --graphite-100: #eae8ed;
-  --graphite-200: #d4d0da;
-  --graphite-300: #b0aab8;
-  --graphite-500: #716a7a;
-  --graphite-700: #3d3646;
-  --graphite-900: #1e1824;
-  --midnight:     #0d0b0f;
-
-  /* ---- Verdant (terroir accent) ---- */
-  --verdant:      #4a6b58;
-  --verdant-soft: #6a8f7a;
-  --verdant-pale: #d4e4da;
-
-  /* ---- Gold / amber ---- */
-  --gold:      #c1932f;
-  --gold-soft: #d9b35a;
-  --amber:     #d99a3c;
-
   /* ---- Wine-type badge colors ---- */
-  --type-red-fg:        #7c2d12; --type-red-bg:        #f6e0d6;
-  --type-white-fg:      #9a7611; --type-white-bg:      #f6edc9;
-  --type-rose-fg:       #b06a72; --type-rose-bg:       #f6e3e4;
-  --type-sparkling-fg:  #4f7390; --type-sparkling-bg:  #e3edf4;
+  --type-red-fg:        #7c2d12; --type-red-bg:        #f3ded3;
+  --type-white-fg:      #8a6a10; --type-white-bg:      #f3ecc7;
+  --type-rose-fg:       #a15860; --type-rose-bg:       #f2dfe0;
+  --type-sparkling-fg:  #41657f; --type-sparkling-bg:  #dfe9f0;
 
   /* ---- Status ---- */
   --success: #5d7a4f;
-  --warning: #c1932f;
+  --warning: #8a6a10;
   --danger:  #a3331f;
 
-  /* ---- shadcn / Tailwind semantic aliases — LIGHT ---- */
-  --background:            var(--cream);
-  --foreground:            var(--ink-900);
-  --card:                  #fffefb;
-  --card-foreground:       var(--ink-900);
-  --popover:               #fffefb;
-  --popover-foreground:    var(--ink-900);
-  --primary:               var(--wine-700);
-  --primary-foreground:    #fbf3ec;
-  --secondary:             var(--parchment);
-  --secondary-foreground:  var(--ink-900);
-  --muted:                 var(--cream-soft);
-  --muted-foreground:      var(--ink-500);
-  --accent:                var(--gold);
-  --accent-foreground:     #2d1008;
+  /* ---- shadcn / Tailwind semantic aliases — DAYLIGHT (alternate) ---- */
+  --background:            #eef0e8;
+  --foreground:            #1a211c;
+  --card:                  #ffffff;
+  --card-foreground:       #1a211c;
+  --popover:               #ffffff;
+  --popover-foreground:    #1a211c;
+  --primary:                #7c2430;
+  --primary-foreground:    #f8eee9;
+  --secondary:             #e4e6da;
+  --secondary-foreground:  #1a211c;
+  --muted:                 #e7e9df;
+  --muted-foreground:      #5e665e;
+  --accent:                #8c6a28;
+  --accent-foreground:     #241a06;
   --destructive:           var(--danger);
-  --destructive-foreground:#fbf3ec;
-  --border:                #ebe3d6;
-  --input:                 #e7ded0;
-  --ring:                  var(--wine-500);
-  --radius:                0.75rem;
+  --destructive-foreground:#f8eee9;
+  --border:                #d9dccf;
+  --input:                 #d2d6c6;
+  --ring:                  #7c2430;
+  --radius:                0.9rem;
   --radius-full:           999px;
 
   /* ---- Charts ---- */
@@ -147,27 +97,27 @@
   --chart-5: oklch(0.269 0 0);
 
   /* ---- Sidebar ---- */
-  --sidebar:                    var(--cream-soft);
-  --sidebar-foreground:         var(--ink-900);
-  --sidebar-primary:            var(--wine-700);
-  --sidebar-primary-foreground: #fbf3ec;
-  --sidebar-accent:             var(--parchment);
-  --sidebar-accent-foreground:  var(--ink-900);
-  --sidebar-border:             var(--linen);
-  --sidebar-ring:               var(--wine-500);
+  --sidebar:                    #e7e9df;
+  --sidebar-foreground:         #1a211c;
+  --sidebar-primary:            #7c2430;
+  --sidebar-primary-foreground: #f8eee9;
+  --sidebar-accent:             #e4e6da;
+  --sidebar-accent-foreground:  #1a211c;
+  --sidebar-border:             #d9dccf;
+  --sidebar-ring:               #7c2430;
 
-  /* ---- Shadows (warm umber tint) ---- */
-  --shadow-xs: 0 1px 2px rgba(45, 30, 18, 0.05);
-  --shadow-sm: 0 1px 2px rgba(45, 30, 18, 0.06), 0 2px 6px rgba(45, 30, 18, 0.05);
-  --shadow-md: 0 2px 6px rgba(45, 30, 18, 0.07), 0 8px 20px rgba(45, 30, 18, 0.08);
-  --shadow-lg: 0 6px 16px rgba(40, 24, 12, 0.09), 0 18px 40px rgba(40, 24, 12, 0.11);
-  --shadow-xl: 0 24px 56px rgba(35, 18, 8, 0.18);
-  --shadow-inset: inset 0 1px 2px rgba(45, 30, 18, 0.07);
-  --shadow-nav-top: 0 -4px 16px rgba(61,38,22,0.06);
+  /* ---- Shadows ---- */
+  --shadow-xs: 0 1px 2px rgba(10, 12, 9, 0.05);
+  --shadow-sm: 0 1px 2px rgba(10, 12, 9, 0.06), 0 2px 6px rgba(10, 12, 9, 0.05);
+  --shadow-md: 0 2px 6px rgba(10, 12, 9, 0.07), 0 8px 20px rgba(10, 12, 9, 0.08);
+  --shadow-lg: 0 6px 16px rgba(8, 10, 7, 0.09), 0 18px 40px rgba(8, 10, 7, 0.11);
+  --shadow-xl: 0 24px 56px rgba(6, 8, 5, 0.18);
+  --shadow-inset: inset 0 1px 2px rgba(10, 12, 9, 0.07);
+  --shadow-nav-top: 0 -4px 16px rgba(10, 12, 9, 0.06);
 
   /* ---- Typography ---- */
-  --font-display: 'Cormorant Garamond', 'Hoefler Text', Georgia, 'Times New Roman', serif;
-  --font-body:    'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-display: 'Fraunces', 'Hoefler Text', Georgia, 'Times New Roman', serif;
+  --font-body:    'Figtree', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
   --font-mono:    'DM Mono', 'JetBrains Mono', 'IBM Plex Mono', 'Cascadia Code', monospace;
 
   --text-xs:   0.75rem;
@@ -226,49 +176,45 @@
   --duration-slow: 340ms;
 }
 
-/* ---- Cave dark mode — deep graphite-violet, a candlelit cellar ---- */
+/* ---- Cellar dark mode (default) — bottle-glass near-black, brass foil, claret ---- */
 .dark {
-  --background:            #131118;
-  --foreground:            #ede8e3;
-  --card:                  #1d1a24;
-  --card-foreground:       #ede8e3;
-  --popover:               #1d1a24;
-  --popover-foreground:    #ede8e3;
-  --primary:               #d4795a;
-  --primary-foreground:    #2d1008;
-  --secondary:             #26223033;
-  --secondary-foreground:  #ede8e3;
-  --muted:                 #1a1720;
-  --muted-foreground:      #a89fad;
-  --accent:                var(--gold-soft);
-  --accent-foreground:     #1a1205;
+  --background:            #0b0f0d;
+  --foreground:            #ece6d9;
+  --card:                  #141b17;
+  --card-foreground:       #ece6d9;
+  --popover:               #141b17;
+  --popover-foreground:    #ece6d9;
+  --primary:               #ad4049;
+  --primary-foreground:    #f8eee9;
+  --secondary:             #1a221d;
+  --secondary-foreground:  #ece6d9;
+  --muted:                 #171f1b;
+  --muted-foreground:      #8d968d;
+  --accent:                #cda052;
+  --accent-foreground:     #140a0c;
   --destructive:           #c15a45;
-  --destructive-foreground:#fbf3ec;
-  --border:                #2e2838;
-  --input:                 #2e2838;
-  --ring:                  #d4795a;
+  --destructive-foreground:#f8eee9;
+  --border:                #26302a;
+  --input:                 #26302a;
+  --ring:                  #ad4049;
 
-  --parchment:   #231f2c;
-  --parchment-2: #2c2838;
-  --ink-900: #ede8e3;
-  --ink-700: #cdc4d4;
-  --ink-500: #a89fad;
-  --ink-300: #6a6175;
-  --ink-100: #2e2838;
+  --success: #7a9a68;
+  --warning: #cda052;
+  --danger:  #c15a45;
 
   --type-red-bg:       #3a1f18;  --type-red-fg:       #e29c83;
   --type-white-bg:     #2e2814;  --type-white-fg:     #d9b35a;
   --type-rose-bg:      #361e2a;  --type-rose-fg:      #d39aa3;
   --type-sparkling-bg: #182230;  --type-sparkling-fg: #8fb2cc;
 
-  --sidebar:                    #1d1a24;
-  --sidebar-foreground:         #ede8e3;
-  --sidebar-primary:            #d4795a;
-  --sidebar-primary-foreground: #2d1008;
-  --sidebar-accent:             #1a1720;
-  --sidebar-accent-foreground:  #ede8e3;
-  --sidebar-border:             #2e2838;
-  --sidebar-ring:               #d4795a;
+  --sidebar:                    #141b17;
+  --sidebar-foreground:         #ece6d9;
+  --sidebar-primary:            #ad4049;
+  --sidebar-primary-foreground: #f8eee9;
+  --sidebar-accent:             #171f1b;
+  --sidebar-accent-foreground:  #ece6d9;
+  --sidebar-border:             #26302a;
+  --sidebar-ring:               #ad4049;
 }
 
 @layer base {
@@ -316,12 +262,12 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums lining-nums;
 }
-.rule-gold {
+.rule-brass {
   border: none;
   height: 1px;
   background: linear-gradient(90deg,
-    color-mix(in oklab, var(--gold) 55%, transparent),
-    color-mix(in oklab, var(--gold) 12%, transparent) 60%,
+    color-mix(in oklab, var(--accent) 55%, transparent),
+    color-mix(in oklab, var(--accent) 12%, transparent) 60%,
     transparent);
 }
 .wine-card-hover {

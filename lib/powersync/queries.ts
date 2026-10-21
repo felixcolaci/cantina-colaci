@@ -555,3 +555,80 @@ export function useTripDetail(tripId: string) {
 
   return { trip, wines, stats, isLoading }
 }
+
+export type DiscoverySummary = {
+  id: string
+  name: string
+  producer: string | null
+  vintage: number | null
+  type: WineType | null
+  locationText: string | null
+  tripId: string | null
+  tripName: string | null
+  date: string
+  rating: number | null
+  notes: string | null
+  price: number | null
+  createdByName: string | null
+}
+
+type DiscoveryRow = {
+  id: string
+  name: string
+  producer: string | null
+  vintage: number | null
+  type: string | null
+  location_text: string | null
+  trip_id: string | null
+  trip_name: string | null
+  date: string
+  rating: number | null
+  notes: string | null
+  price: number | null
+  created_by_name: string | null
+}
+
+// LEFT JOIN auf family_members per user_id (nicht family_id) -- exakt das
+// gleiche Matching wie useOwnFamilyMember oben, trägt hier aber jedes
+// Mitglied, nicht nur den Aufrufer selbst.
+const DISCOVERIES_SQL = `
+  SELECT
+    discoveries.id AS id,
+    discoveries.name AS name,
+    discoveries.producer AS producer,
+    discoveries.vintage AS vintage,
+    discoveries.type AS type,
+    discoveries.location_text AS location_text,
+    discoveries.trip_id AS trip_id,
+    trips.name AS trip_name,
+    discoveries.date AS date,
+    discoveries.rating AS rating,
+    discoveries.notes AS notes,
+    discoveries.price AS price,
+    family_members.display_name AS created_by_name
+  FROM discoveries
+  LEFT JOIN trips ON trips.id = discoveries.trip_id
+  LEFT JOIN family_members ON family_members.user_id = discoveries.created_by
+  WHERE discoveries.cellar_id = ?
+  ORDER BY discoveries.date DESC, discoveries.created_at DESC
+`
+
+export function useDiscoveries(cellarId: string) {
+  const { data, isLoading, error } = useQuery<DiscoveryRow>(DISCOVERIES_SQL, [cellarId])
+  const discoveries: DiscoverySummary[] = data.map(row => ({
+    id: row.id,
+    name: row.name,
+    producer: row.producer,
+    vintage: row.vintage,
+    type: row.type as WineType | null,
+    locationText: row.location_text,
+    tripId: row.trip_id,
+    tripName: row.trip_name,
+    date: row.date,
+    rating: row.rating,
+    notes: row.notes,
+    price: row.price,
+    createdByName: row.created_by_name,
+  }))
+  return { discoveries, isLoading, error }
+}

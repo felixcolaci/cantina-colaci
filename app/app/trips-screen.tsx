@@ -11,10 +11,13 @@ function formatDate(iso: string): string {
 }
 
 function LocationPinGlyph() {
+  // --clay doesn't exist in app/globals.css (legacy references it too but
+  // never defines it); var(--muted-foreground) is the closest existing
+  // token to what it was presumably meant to be.
   return (
     <svg
       width="32" height="40" viewBox="0 0 24 32" fill="none"
-      stroke="var(--clay)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+      stroke="var(--muted-foreground)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
       aria-hidden="true" style={{ opacity: 0.5, margin: '0 auto', display: 'block' }}
     >
       <path d="M12 2a7 7 0 0 1 7 7c0 4.5-7 13-7 13S5 13.5 5 9a7 7 0 0 1 7-7Z" />

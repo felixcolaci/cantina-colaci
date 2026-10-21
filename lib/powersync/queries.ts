@@ -334,6 +334,63 @@ const TRIP_STATS_SQL = `
     (SELECT SUM(purchase_price) FROM skus WHERE trip_id = ? AND purchase_price IS NOT NULL) AS total_spend
 `
 
+export type TastingHistoryEntry = {
+  id: string
+  date: string
+  rating: number
+  notes: string | null
+  wineId: string
+  wineName: string
+  wineProducer: string | null
+  vintage: number | null
+}
+
+type TastingHistoryRow = {
+  id: string
+  date: string
+  rating: number
+  notes: string | null
+  wine_id: string
+  wine_name: string
+  wine_producer: string | null
+  vintage: number | null
+}
+
+const TASTINGS_HISTORY_SQL = `
+  SELECT
+    tastings.id AS id,
+    tastings.date AS date,
+    tastings.rating AS rating,
+    tastings.notes AS notes,
+    skus.wine_id AS wine_id,
+    skus.vintage AS vintage,
+    wines.name AS wine_name,
+    wines.producer AS wine_producer
+  FROM tastings
+  JOIN skus ON skus.id = tastings.cellar_entry_id
+  JOIN wines ON wines.id = skus.wine_id
+  WHERE wines.cellar_id = ?
+  ORDER BY tastings.date DESC
+`
+
+// Kellerchronik (app/app/history-screen.tsx): every tasting across the
+// whole cellar, newest first, regardless of which wine or trip it belongs
+// to -- mirrors legacy/app/(app)/history/page.tsx.
+export function useTastingsHistory(cellarId: string) {
+  const { data, isLoading, error } = useQuery<TastingHistoryRow>(TASTINGS_HISTORY_SQL, [cellarId])
+  const tastings: TastingHistoryEntry[] = data.map(row => ({
+    id: row.id,
+    date: row.date,
+    rating: row.rating,
+    notes: row.notes,
+    wineId: row.wine_id,
+    wineName: row.wine_name,
+    wineProducer: row.wine_producer,
+    vintage: row.vintage,
+  }))
+  return { tastings, isLoading, error }
+}
+
 export function useTripDetail(tripId: string) {
   const tripQuery = useQuery<TripDetailRow>(TRIP_SQL, [tripId])
   const winesQuery = useQuery<CellarWineRow>(TRIP_WINES_SQL, [tripId])

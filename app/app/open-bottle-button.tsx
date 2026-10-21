@@ -1,39 +1,60 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { usePowerSync } from '@powersync/react'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { DatePicker } from '@/components/ui/date-picker'
+import { Label } from '@/components/ui/label'
+import { RatingInput } from '@/components/ui/rating-input'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { SubmitButton } from '@/components/ui/submit-button'
+import { Textarea } from '@/components/ui/textarea'
 
-// Decrements a sku's quantity by one and flips it to 'consumed' once it
-// hits zero -- the inventory half of the legacy openBottle action
-// (lib/actions/tasting.ts), which also inserted a tasting row in the same
-// transaction. That half isn't built yet (Verkostungen is a later
-// migration); it should either extend this component's onConfirm or add its
-// own write alongside it once tastings can be created from the SPA.
+// Reunites the two halves of the legacy openBottle action
+// (legacy/lib/actions/tasting.ts) in one local-first writeTransaction:
+// decrementing the sku's quantity (added in the SKU migration) and
+// inserting the tasting that prompted opening it in the first place. Both
+// rows land in the same local transaction, so the connector drains them as
+// two separate uploads (UPDATE skus, INSERT tastings) but they commit
+// locally atomically.
 export function OpenBottleButton({ skuId, quantity }: { skuId: string; quantity: number }) {
   const db = usePowerSync()
   const [open, setOpen] = useState(false)
+  const [date, setDate] = useState<string | null>(new Date().toISOString().split('T')[0])
+  const [rating, setRating] = useState<number | null>(null)
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleConfirm() {
+  function reset() {
+    setDate(new Date().toISOString().split('T')[0])
+    setRating(null)
+  }
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!date || !rating) return
+    const notes = (new FormData(e.currentTarget).get('notes') as string) || null
+
     setIsPending(true)
     setError(null)
     try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Nicht angemeldet')
+
       const newQuantity = quantity - 1
-      await db.execute(
-        `UPDATE skus SET quantity = ?, status = ? WHERE id = ?`,
-        [newQuantity, newQuantity <= 0 ? 'consumed' : 'in_stock', skuId],
-      )
+      await db.writeTransaction(async tx => {
+        await tx.execute(
+          `UPDATE skus SET quantity = ?, status = ? WHERE id = ?`,
+          [newQuantity, newQuantity <= 0 ? 'consumed' : 'in_stock', skuId],
+        )
+        await tx.execute(
+          `INSERT INTO tastings (id, cellar_entry_id, user_id, date, rating, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+          [crypto.randomUUID(), skuId, session.user.id, date, rating, notes],
+        )
+      })
+      reset()
       setOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehlgeschlagen')
@@ -43,33 +64,33 @@ export function OpenBottleButton({ skuId, quantity }: { skuId: string; quantity:
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger render={<Button variant="outline" size="sm" />}>
         Flasche öffnen
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Flasche öffnen?</DialogTitle>
-          <DialogDescription>
-            Reduziert den Bestand um eine Flasche
-            {newQuantityLabel(quantity)}.
-          </DialogDescription>
-        </DialogHeader>
-        {error && <p className="text-sm" style={{ color: 'var(--destructive)' }}>{error}</p>}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Abbrechen</Button>
-          <Button onClick={handleConfirm} disabled={isPending}>
-            {isPending ? 'Wird geöffnet…' : 'Öffnen'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="pb-8 max-h-[90dvh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Verkostung</SheetTitle>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label>Datum</Label>
+            <DatePicker mode="full" name="date" value={date} onChange={v => setDate(v as string | null)} placeholder="Datum" />
+          </div>
+          <div className="space-y-2">
+            <Label>Bewertung</Label>
+            <RatingInput name="rating" value={rating} onChange={setRating} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ob-notes">Verkostungsnotizen</Label>
+            <Textarea id="ob-notes" name="notes" placeholder="Duft, Geschmack, Begleitung…" />
+          </div>
+          {error && <p className="text-sm" style={{ color: 'var(--destructive)' }}>{error}</p>}
+          <SubmitButton isPending={isPending} className="w-full">
+            Verkostung speichern
+          </SubmitButton>
+        </form>
+      </SheetContent>
+    </Sheet>
   )
-}
-
-function newQuantityLabel(quantity: number): string {
-  const remaining = quantity - 1
-  return remaining <= 0
-    ? ' und markiert diesen Posten als verbraucht'
-    : ` (${remaining} verbleiben)`
 }

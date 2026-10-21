@@ -15,6 +15,8 @@ import { SubmitButton } from '@/components/ui/submit-button'
 import { CellarScreen } from '@/app/app/cellar-screen'
 import { WineDetailScreen } from '@/app/app/wine-detail-screen'
 import { StorageLocationsScreen } from '@/app/app/storage-locations-screen'
+import { TripsScreen } from '@/app/app/trips-screen'
+import { TripDetailScreen } from '@/app/app/trip-detail-screen'
 
 type Me = {
   userId: string
@@ -305,6 +307,16 @@ function StorageLocationsRoute() {
   return <StorageLocationsScreen cellarId={cellarId} />
 }
 
+function TripsRoute() {
+  const cellarId = useCellarId()
+  return <TripsScreen cellarId={cellarId} />
+}
+
+function TripDetailRoute() {
+  const { id } = tripDetailRoute.useParams()
+  return <TripDetailScreen tripId={id} />
+}
+
 const rootRoute = createRootRoute({ component: RootShell })
 
 const indexRoute = createRoute({
@@ -325,7 +337,25 @@ const storageLocationsRoute = createRoute({
   component: StorageLocationsRoute,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, wineDetailRoute, storageLocationsRoute])
+const tripsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/trips',
+  component: TripsRoute,
+})
+
+const tripDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/trips/$id',
+  component: TripDetailRoute,
+})
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  wineDetailRoute,
+  storageLocationsRoute,
+  tripsRoute,
+  tripDetailRoute,
+])
 
 const router = createRouter({ routeTree, basepath: '/app' })
 

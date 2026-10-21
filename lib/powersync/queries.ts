@@ -227,3 +227,137 @@ export function useStorageLocationsSettings(cellarId: string) {
   const { data, isLoading, error } = useQuery<StorageLocationWithType>(STORAGE_LOCATIONS_WITH_TYPE_SQL, [cellarId])
   return { storageLocations: data, isLoading, error }
 }
+
+export type TripSummary = {
+  id: string
+  name: string
+  location: string | null
+  dateStart: string | null
+  dateEnd: string | null
+  wineCount: number
+}
+
+type TripRow = {
+  id: string
+  name: string
+  location: string | null
+  date_start: string | null
+  date_end: string | null
+  wine_count: number
+}
+
+// wine_count is scoped to in-stock skus tagged with this trip -- a wine
+// whose trip bottles have since all been consumed drops off the list, same
+// simplification useTripDetail's wines query makes (see its comment).
+const TRIPS_SQL = `
+  SELECT
+    trips.id AS id,
+    trips.name AS name,
+    trips.location AS location,
+    trips.date_start AS date_start,
+    trips.date_end AS date_end,
+    (
+      SELECT COUNT(DISTINCT skus.wine_id) FROM skus
+      WHERE skus.trip_id = trips.id AND skus.status = 'in_stock' AND skus.quantity > 0
+    ) AS wine_count
+  FROM trips
+  WHERE trips.cellar_id = ?
+  ORDER BY trips.created_at DESC
+`
+
+export function useTrips(cellarId: string) {
+  const { data, isLoading, error } = useQuery<TripRow>(TRIPS_SQL, [cellarId])
+  const trips: TripSummary[] = data.map(row => ({
+    id: row.id,
+    name: row.name,
+    location: row.location,
+    dateStart: row.date_start,
+    dateEnd: row.date_end,
+    wineCount: row.wine_count,
+  }))
+  return { trips, isLoading, error }
+}
+
+export type TripDetail = {
+  id: string
+  name: string
+  location: string | null
+  dateStart: string | null
+  dateEnd: string | null
+}
+
+export type TripStats = {
+  totalBottles: number
+  avgRating: number | null
+  totalSpend: number | null
+}
+
+type TripDetailRow = {
+  id: string
+  name: string
+  location: string | null
+  date_start: string | null
+  date_end: string | null
+}
+
+type TripStatsRow = {
+  total_bottles: number
+  avg_rating: number | null
+  total_spend: number | null
+}
+
+const TRIP_SQL = `SELECT id, name, location, date_start, date_end FROM trips WHERE id = ?`
+
+// Wines shown on a trip's page are scoped to skus actually tagged with this
+// trip_id and still in stock -- deliberately narrower than the legacy page,
+// which showed every sku of any wine that had ever had a trip-tagged sku
+// (so a wine bought again elsewhere would show up on an old trip's page
+// too). Stats below use the same trip_id scoping, for the same reason.
+const TRIP_WINES_SQL = `
+  SELECT
+    wines.id AS wine_id,
+    wines.name AS name,
+    wines.producer AS producer,
+    wines.type AS type,
+    skus.vintage AS sku_vintage,
+    skus.quantity AS sku_quantity
+  FROM skus
+  JOIN wines ON wines.id = skus.wine_id
+  WHERE skus.trip_id = ? AND skus.status = 'in_stock' AND skus.quantity > 0
+  ORDER BY wines.name
+`
+
+const TRIP_STATS_SQL = `
+  SELECT
+    (SELECT COALESCE(SUM(quantity), 0) FROM skus WHERE trip_id = ? AND status = 'in_stock') AS total_bottles,
+    (SELECT AVG(rating) FROM tastings JOIN skus ON skus.id = tastings.cellar_entry_id WHERE skus.trip_id = ?) AS avg_rating,
+    (SELECT SUM(purchase_price) FROM skus WHERE trip_id = ? AND purchase_price IS NOT NULL) AS total_spend
+`
+
+export function useTripDetail(tripId: string) {
+  const tripQuery = useQuery<TripDetailRow>(TRIP_SQL, [tripId])
+  const winesQuery = useQuery<CellarWineRow>(TRIP_WINES_SQL, [tripId])
+  const statsQuery = useQuery<TripStatsRow>(TRIP_STATS_SQL, [tripId, tripId, tripId])
+
+  const tripRow = tripQuery.data[0] ?? null
+  const trip: TripDetail | null = tripRow && {
+    id: tripRow.id,
+    name: tripRow.name,
+    location: tripRow.location,
+    dateStart: tripRow.date_start,
+    dateEnd: tripRow.date_end,
+  }
+
+  const wines = groupByWine(winesQuery.data)
+
+  const statsRow = statsQuery.data[0] ?? null
+  const stats: TripStats = {
+    totalBottles: statsRow?.total_bottles ?? 0,
+    avgRating: statsRow?.avg_rating ?? null,
+    totalSpend: statsRow?.total_spend ?? null,
+  }
+
+  const isLoading = tripQuery.isLoading || winesQuery.isLoading || statsQuery.isLoading
+
+  return { trip, wines, stats, isLoading }
+}

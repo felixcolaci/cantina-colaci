@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { CellarScreen } from './cellar-screen'
 
 type Me = {
   userId: string
@@ -185,32 +186,20 @@ function MeCard() {
   if (data && !data.familyId) return <OnboardingCard />
 
   return (
-    <Card className="max-w-sm mx-auto mt-16">
-      <CardHeader>
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle>Verbunden ✓</CardTitle>
-          <SyncIndicator status={status} />
-        </div>
-        <CardDescription>SPA → /api/v1/me → Supabase</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
-        {isLoading && <p>Lade…</p>}
-        {error && <p className="text-destructive">{(error as Error).message}</p>}
-        {data && (
-          <>
-            <p><span className="text-muted-foreground">User:</span> {data.email}</p>
-            <p><span className="text-muted-foreground">Family:</span> {data.familyId ?? '—'}</p>
-            <p><span className="text-muted-foreground">Cellar:</span> {data.cellarId ?? '—'}</p>
-          </>
-        )}
+    <div className="max-w-lg mx-auto">
+      <div className="flex items-center justify-between px-4 pt-6 pb-2">
+        <SyncIndicator status={status} />
         <button
           onClick={() => logout(db)}
-          className="mt-4 text-sm text-muted-foreground hover:text-foreground underline"
+          className="text-sm text-muted-foreground hover:text-foreground underline"
         >
           Abmelden
         </button>
-      </CardContent>
-    </Card>
+      </div>
+      {isLoading && <p className="px-4 text-sm text-muted-foreground">Lade…</p>}
+      {error && <p className="px-4 text-sm text-destructive">{(error as Error).message}</p>}
+      {data?.cellarId && <CellarScreen cellarId={data.cellarId} />}
+    </div>
   )
 }
 

@@ -73,7 +73,7 @@ const SKU_PHOTO_PATH = /^families\/([^/]+)\/wines\/([^/.]+)\.[A-Za-z0-9]+$/
 const WINE_PHOTO_PATH = /^families\/([^/]+)\/wines\/([^/]+)\/[A-Za-z0-9._-]+$/
 const DISCOVERY_PHOTO_PATH = /^families\/([^/]+)\/discoveries\/([^/]+)\/[A-Za-z0-9._-]+$/
 
-function isExpectedPhotoPath(path: string, familyId: string, ownerId: string): boolean {
+export function isExpectedPhotoPath(path: string, familyId: string, ownerId: string): boolean {
   const sku = path.match(SKU_PHOTO_PATH)
   if (sku) return sku[1] === familyId && sku[2] === ownerId
   const photo = path.match(WINE_PHOTO_PATH)

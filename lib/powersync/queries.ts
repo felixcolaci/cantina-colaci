@@ -95,7 +95,7 @@ export function useCellarWines(cellarId: string, type: WineType | null, search =
     WHERE ${where}
     GROUP BY wines.id
     HAVING SUM(skus.quantity) > 0
-    ORDER BY wines.name
+    ORDER BY wines.created_at DESC
     LIMIT ? OFFSET ?
   `
   const countSql = `

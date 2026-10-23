@@ -10,6 +10,7 @@ import type { SyncStatus } from '@powersync/web'
 import { createClient } from '@/lib/supabase/client'
 import { logout } from '@/lib/auth/logout'
 import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
+import { AppLoadingScreen } from '@/components/app-loading-screen'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -103,7 +104,7 @@ function RootShell() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  if (!sessionLoaded) return null
+  if (!sessionLoaded) return <AppLoadingScreen label="Lade…" />
   if (recovery) return <ResetPasswordCard onDone={() => setRecovery(false)} />
   if (!session) return <LoginCard initialError={recoveryError} />
   // hasSynced is undefined while the local DB is still opening, false until
@@ -210,7 +211,10 @@ function SyncScreen({ status }: { status: SyncStatus }) {
             </p>
           </div>
         ) : (
-          <p className="text-muted-foreground">Verbinde…</p>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="h-3.5 w-3.5 rounded-full border-2 border-muted border-t-primary animate-spin" />
+            <p>Verbinde…</p>
+          </div>
         )}
         <button
           onClick={() => logout(db)}

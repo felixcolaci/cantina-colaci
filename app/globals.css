@@ -282,3 +282,20 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Wine-glass "filling up" loop for AppLoadingScreen (components/app-loading-screen.tsx) */
+@keyframes app-loading-glass-fill {
+  0%, 8%   { transform: translateY(100%); }
+  70%, 100%  { transform: translateY(0%); }
+}
+.app-loading-glass-fill {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: app-loading-glass-fill 1.8s var(--ease-standard) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-loading-glass-fill {
+    animation: none;
+    transform: translateY(0%);
+  }
+}

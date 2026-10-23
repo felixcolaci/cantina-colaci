@@ -9,10 +9,11 @@ const LABELS: Record<ThemePreference, string> = {
   dark: 'Dunkel',
 }
 
-// Segmented light/dark/system picker for the family screen's "Darstellung"
-// section (app/app/family-screen.tsx) -- writes through useTheme()'s
-// local-first PowerSync UPDATE (lib/theme/theme-provider.tsx), same
-// pattern as EditNameSheet's direct `db.execute` for display_name.
+// Segmented light/dark/system picker for the settings screen's
+// "Darstellung" section (app/app/cellar-settings-screen.tsx) -- writes
+// through useTheme()'s local-first PowerSync UPDATE
+// (lib/theme/theme-provider.tsx), same pattern as EditNameSheet's direct
+// `db.execute` for display_name.
 export function ThemePreferenceControl() {
   const { preference, setPreference } = useTheme()
 

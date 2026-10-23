@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router'
+import { createRootRoute, createRoute, createRouter, Outlet, redirect, RouterProvider } from '@tanstack/react-router'
 import { WifiOff, RefreshCw, Check } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
 import { usePowerSync, useStatus } from '@powersync/react'
@@ -21,7 +21,6 @@ import { DiscoveriesScreen } from '@/app/app/discoveries-screen'
 import { DiscoveryDetailScreen } from '@/app/app/discovery-detail-screen'
 import { TripDetailScreen } from '@/app/app/trip-detail-screen'
 import { HistoryScreen } from '@/app/app/history-screen'
-import { FamilyScreen } from '@/app/app/family-screen'
 import { CellarSettingsScreen } from '@/app/app/cellar-settings-screen'
 import { ApiKeysScreen } from '@/app/app/api-keys-screen'
 
@@ -402,10 +401,6 @@ function HistoryRoute() {
   return <HistoryScreen cellarId={cellarId} />
 }
 
-function FamilyRoute() {
-  return <FamilyScreen />
-}
-
 function CellarSettingsRoute() {
   const cellarId = useCellarId()
   return <CellarSettingsScreen cellarId={cellarId} />
@@ -465,10 +460,15 @@ const historyRoute = createRoute({
   component: HistoryRoute,
 })
 
+// Family settings now live on the combined /settings/cellar screen --
+// redirect the old standalone route so existing links/bookmarks still land
+// somewhere useful.
 const familyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/family',
-  component: FamilyRoute,
+  beforeLoad: () => {
+    throw redirect({ to: '/settings/cellar' })
+  },
 })
 
 const cellarSettingsRoute = createRoute({

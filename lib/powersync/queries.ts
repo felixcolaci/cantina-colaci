@@ -343,8 +343,8 @@ type OwnFamilyMemberRow = { id: string; display_name: string | null; theme_prefe
 const OWN_FAMILY_MEMBER_SQL = `SELECT id, display_name, theme_preference FROM family_members WHERE user_id = ?`
 
 // The caller's own family_members row -- just enough to drive
-// EditNameSheet's local-first UPDATE (app/app/family-screen.tsx) and
-// ThemeProvider's theme_preference sync (lib/theme/theme-provider.tsx).
+// EditNameSheet's local-first UPDATE (app/app/cellar-settings-screen.tsx)
+// and ThemeProvider's theme_preference sync (lib/theme/theme-provider.tsx).
 // Everyone else's email/display name comes from GET /api/v1/family
 // instead, since resolving another member's email needs a privileged
 // admin call that has no business running on-device.
@@ -360,9 +360,8 @@ type CellarRow = { name: string }
 const CELLAR_SQL = `SELECT name FROM cellars WHERE id = ?`
 
 // Cellar name for the settings/cellar screen's heading and its reset
-// sheet's type-to-confirm check. Role/is_demo for that screen come from
-// GET /api/v1/family instead (already fetched by FamilyScreen too, so the
-// two screens share the ['family'] query cache) -- no separate local read
+// sheet's type-to-confirm check. Role/is_demo/family members for that
+// screen come from GET /api/v1/family instead -- no separate local read
 // needed for those.
 export function useCellar(cellarId: string) {
   const { data, isLoading } = useQuery<CellarRow>(CELLAR_SQL, [cellarId])

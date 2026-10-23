@@ -9,6 +9,10 @@ import { Label } from '@/components/ui/label'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { compressImage } from '@/lib/image-compress'
+import { getWineAttachmentQueue } from '@/lib/powersync/PowerSyncProvider'
+import { ALLOWED_PHOTO_TYPES, buildWinePhotoPath } from '@/lib/storage/wine-photos'
+import { apiMutate } from '@/lib/spa/api-client'
 import type { WineType } from '@/lib/types'
 
 const WINE_TYPES: { value: WineType; label: string }[] = [
@@ -22,8 +26,10 @@ const WINE_TYPES: { value: WineType; label: string }[] = [
 // storage-location picker -- CellarScreen doesn't group by location yet
 // either). PowerSync's own triggers queue both rows for upload the moment
 // the transaction commits locally, so the UI never calls the network
-// directly -- lib/powersync/connector.ts drains the queue into the new
-// PUT /api/v1/wines/[id] and /api/v1/skus/[id] routes, online or not.
+// directly for them -- lib/powersync/connector.ts drains the queue into the
+// PUT /api/v1/wines/[id] and /api/v1/skus/[id] routes, online or not. The
+// optional photo is the one exception, same as AddDiscoverySheet
+// (app/app/add-discovery-sheet.tsx): it needs a direct, awaited network step.
 export function QuickAddSheet({ cellarId }: { cellarId: string }) {
   const db = usePowerSync()
   const [open, setOpen] = useState(false)
@@ -31,6 +37,7 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
   const [producer, setProducer] = useState('')
   const [wineType, setWineType] = useState<WineType>('red')
   const [vintage, setVintage] = useState<number | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,6 +46,7 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
     setProducer('')
     setWineType('red')
     setVintage(null)
+    setPhotoFile(null)
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -53,11 +61,12 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
     try {
       const wineId = crypto.randomUUID()
       const skuId = crypto.randomUUID()
+      const trimmedProducer = producer.trim()
       await db.writeTransaction(async tx => {
         await tx.execute(
           `INSERT INTO wines (id, cellar_id, name, producer, type, region, country, grape_variety, notes)
            VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, NULL)`,
-          [wineId, cellarId, trimmedName, producer.trim(), wineType],
+          [wineId, cellarId, trimmedName, trimmedProducer, wineType],
         )
         await tx.execute(
           `INSERT INTO skus (id, wine_id, vintage, quantity, storage_location_id, status, purchase_price, purchase_date, purchase_location, shelf_location, trip_id, photo_path)
@@ -65,6 +74,52 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
           [skuId, wineId, vintage, quantity],
         )
       })
+
+      if (photoFile) {
+        try {
+          // Same reasoning as AddDiscoverySheet's photo step: the wine row is
+          // only queued locally above, so its photo upload (which authorizes
+          // itself by looking the wine up server-side) would 404 and get
+          // silently discarded if queued before that row lands remotely.
+          // This direct, awaited PUT mirrors the CRUD connector's own insert
+          // and is a no-op 23505 once that catches up.
+          await apiMutate('PUT', `/wines/${wineId}`, {
+            cellar_id: cellarId,
+            name: trimmedName,
+            producer: trimmedProducer,
+            type: wineType,
+          })
+
+          const compressed = await compressImage(photoFile)
+          const ext = ALLOWED_PHOTO_TYPES[compressed.type]
+          if (ext) {
+            const { family_id: familyId } = await db.get<{ family_id: string }>(
+              'SELECT family_id FROM cellars WHERE id = ?',
+              [cellarId],
+            )
+            const queue = getWineAttachmentQueue()
+            const photoId = await queue.generateAttachmentId()
+            const path = buildWinePhotoPath(familyId, wineId, photoId, ext)
+
+            await queue.saveFile({
+              id: photoId,
+              data: await compressed.arrayBuffer(),
+              fileExtension: ext,
+              mediaType: compressed.type,
+              metaData: JSON.stringify({ wineId }),
+              updateHook: async innerTx => {
+                await innerTx.execute(
+                  'INSERT INTO wine_photos (id, wine_id, path, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
+                  [photoId, wineId, path, 0, new Date().toISOString()],
+                )
+              },
+            })
+          }
+        } catch {
+          // See comment above -- the wine stays saved, just without a photo.
+        }
+      }
+
       reset()
       setOpen(false)
     } catch (err) {
@@ -155,6 +210,14 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
                 min="1" max="999" defaultValue={1} required
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="qs-photo">Foto (Etikett)</Label>
+            <Input
+              id="qs-photo" type="file" accept="image/*"
+              onChange={e => setPhotoFile(e.target.files?.[0] ?? null)}
+            />
           </div>
 
           {error && <p className="text-sm" style={{ color: 'var(--destructive)' }}>{error}</p>}

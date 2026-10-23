@@ -61,25 +61,51 @@ function RootShell() {
   // plain `session` branch below, or ResetPasswordCard would never render:
   // the recovery session still satisfies `!!session`.
   const [recovery, setRecovery] = useState(false)
+  const [recoveryError, setRecoveryError] = useState<string | null>(null)
   // Hook must run unconditionally regardless of which branch below renders.
   const status = useStatus()
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setSessionLoaded(true)
-    })
+    // Must subscribe before calling verifyOtp below -- verifyOtp emits
+    // PASSWORD_RECOVERY through this same listener, synchronously relative
+    // to its own promise resolving.
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setSession(newSession)
     })
+
+    // Reset-password email links land here as `?token_hash=...&type=recovery`
+    // -- not Supabase's PKCE `?code=` format -- so the link keeps working
+    // cross-device (request the reset on desktop, open the email on your
+    // phone). A `?code=` link would fail there: its verifier only exists in
+    // the browser that called resetPasswordForEmail. verifyOtp() below
+    // consumes the token explicitly instead of relying on
+    // detectSessionInUrl, which only auto-handles `?code=`.
+    const params = new URLSearchParams(window.location.search)
+    const tokenHash = params.get('token_hash')
+    const type = params.get('type')
+    const verified = tokenHash && type === 'recovery'
+      ? supabase.auth.verifyOtp({ type: 'recovery', token_hash: tokenHash })
+      : Promise.resolve(null)
+
+    verified.then(result => {
+      // Drop the token from the URL either way so a refresh doesn't
+      // resubmit an already-used (or already-failed) token.
+      if (tokenHash) window.history.replaceState(null, '', window.location.pathname)
+      if (result?.error) setRecoveryError(result.error.message)
+      supabase.auth.getSession().then(({ data }) => {
+        setSession(data.session)
+        setSessionLoaded(true)
+      })
+    })
+
     return () => listener.subscription.unsubscribe()
   }, [])
 
   if (!sessionLoaded) return null
   if (recovery) return <ResetPasswordCard onDone={() => setRecovery(false)} />
-  if (!session) return <LoginCard />
+  if (!session) return <LoginCard initialError={recoveryError} />
   // hasSynced is undefined while the local DB is still opening, false until
   // the first full sync checkpoint lands, then stays true for good (it
   // persists locally -- a returning, already-synced user skips this screen
@@ -197,11 +223,11 @@ function SyncScreen({ status }: { status: SyncStatus }) {
   )
 }
 
-function LoginCard() {
+function LoginCard({ initialError = null }: { initialError?: string | null }) {
   const [view, setView] = useState<'login' | 'forgot' | 'forgot-sent'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(initialError)
   const [pending, setPending] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
@@ -215,11 +241,10 @@ function LoginCard() {
   }
 
   // redirectTo points back at /app itself (the SPA shell, not a dedicated
-  // callback route -- there is none here) because createBrowserClient uses
-  // the PKCE flow with detectSessionInUrl on by default: it exchanges the
-  // email link's ?code= for a session automatically on load, before this
-  // component re-renders, and reports it to RootShell's onAuthStateChange
-  // listener as a PASSWORD_RECOVERY event.
+  // callback route -- there is none here). The Supabase "Reset Password"
+  // email template must link to `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`
+  // -- RootShell's effect reads those params and calls verifyOtp() itself,
+  // which is what actually fires PASSWORD_RECOVERY.
   async function handleForgot(e: FormEvent) {
     e.preventDefault()
     setPending(true)

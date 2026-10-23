@@ -70,6 +70,12 @@ export function useUserId() {
 function RootShell() {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionLoaded, setSessionLoaded] = useState(false)
+  // Set when onAuthStateChange reports PASSWORD_RECOVERY -- the user followed
+  // a reset-password email link, which signs them into a short-lived
+  // recovery session rather than a normal one. Must be checked before the
+  // plain `session` branch below, or ResetPasswordCard would never render:
+  // the recovery session still satisfies `!!session`.
+  const [recovery, setRecovery] = useState(false)
   // Hook must run unconditionally regardless of which branch below renders.
   const status = useStatus()
 
@@ -79,13 +85,15 @@ function RootShell() {
       setSession(data.session)
       setSessionLoaded(true)
     })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setSession(newSession)
     })
     return () => listener.subscription.unsubscribe()
   }, [])
 
   if (!sessionLoaded) return null
+  if (recovery) return <ResetPasswordCard onDone={() => setRecovery(false)} />
   if (!session) return <LoginCard />
   // hasSynced is undefined while the local DB is still opening, false until
   // the first full sync checkpoint lands, then stays true for good (it
@@ -205,6 +213,7 @@ function SyncScreen({ status }: { status: SyncStatus }) {
 }
 
 function LoginCard() {
+  const [view, setView] = useState<'login' | 'forgot' | 'forgot-sent'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -218,6 +227,70 @@ function LoginCard() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setPending(false)
     if (error) setError('E-Mail oder Passwort falsch')
+  }
+
+  // redirectTo points back at /app itself (the SPA shell, not a dedicated
+  // callback route -- there is none here) because createBrowserClient uses
+  // the PKCE flow with detectSessionInUrl on by default: it exchanges the
+  // email link's ?code= for a session automatically on load, before this
+  // component re-renders, and reports it to RootShell's onAuthStateChange
+  // listener as a PASSWORD_RECOVERY event.
+  async function handleForgot(e: FormEvent) {
+    e.preventDefault()
+    setPending(true)
+    setError(null)
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/app`,
+    })
+    setPending(false)
+    if (error) { setError(error.message); return }
+    setView('forgot-sent')
+  }
+
+  if (view === 'forgot-sent') {
+    return (
+      <Card className="max-w-sm mx-auto mt-16">
+        <CardHeader>
+          <CardTitle>Schau in deine Mails</CardTitle>
+          <CardDescription>Wir haben dir einen Reset-Link an {email} geschickt.</CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
+
+  if (view === 'forgot') {
+    return (
+      <Card className="max-w-sm mx-auto mt-16">
+        <CardHeader>
+          <CardTitle>Passwort vergessen</CardTitle>
+          <CardDescription>Gib deine E-Mail ein — wir schicken dir einen Reset-Link</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleForgot} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">E-Mail</Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <SubmitButton isPending={pending} className="w-full">Link senden</SubmitButton>
+          </form>
+          <button
+            type="button"
+            onClick={() => { setView('login'); setError(null) }}
+            className="mt-3 text-sm text-muted-foreground hover:text-foreground w-full text-center"
+          >
+            Zurück zum Login
+          </button>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -250,6 +323,77 @@ function LoginCard() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <SubmitButton isPending={pending} className="w-full">Anmelden</SubmitButton>
+        </form>
+        <button
+          type="button"
+          onClick={() => { setView('forgot'); setError(null) }}
+          className="mt-3 text-sm text-muted-foreground hover:text-foreground w-full text-center"
+        >
+          Passwort vergessen?
+        </button>
+      </CardContent>
+    </Card>
+  )
+}
+
+// Rendered by RootShell instead of the normal session/sync gate whenever a
+// PASSWORD_RECOVERY event comes in. updateUser() both sets the new password
+// and promotes the recovery session to a regular one; onDone() then lets
+// RootShell fall through to its usual session/sync branches with that same
+// (now-normal) session already in state.
+function ResetPasswordCard({ onDone }: { onDone: () => void }) {
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (password !== confirm) {
+      setError('Passwörter stimmen nicht überein')
+      return
+    }
+    setPending(true)
+    setError(null)
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ password })
+    setPending(false)
+    if (error) { setError(error.message); return }
+    onDone()
+  }
+
+  return (
+    <Card className="max-w-sm mx-auto mt-16">
+      <CardHeader>
+        <CardTitle>Neues Passwort</CardTitle>
+        <CardDescription>Mindestens 8 Zeichen</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-password">Neues Passwort</Label>
+            <Input
+              id="new-password"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              minLength={8}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Passwort bestätigen</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              minLength={8}
+              required
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <SubmitButton isPending={pending} className="w-full">Passwort speichern</SubmitButton>
         </form>
       </CardContent>
     </Card>

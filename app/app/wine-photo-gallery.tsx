@@ -9,6 +9,7 @@ import { useWinePhotos } from '@/lib/powersync/queries'
 import { compressImage } from '@/lib/image-compress'
 import { ALLOWED_PHOTO_TYPES, buildWinePhotoPath } from '@/lib/storage/wine-photos'
 import { BottleGlyph } from '@/components/cellar/wine-card'
+import { WinePhotoLightbox } from '@/app/app/wine-photo-lightbox'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from '@/components/ui/dialog'
@@ -33,6 +34,7 @@ export function WinePhotoGallery({
   const db = usePowerSync()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -123,15 +125,22 @@ export function WinePhotoGallery({
                   </div>
                 </div>
               ) : (
-                <Image
-                  src={photo.url}
-                  alt=""
-                  fill
-                  sizes="100vw"
-                  className="object-cover"
-                  preload={index === 0}
-                  unoptimized
-                />
+                <button
+                  type="button"
+                  onClick={() => setLightboxIndex(index)}
+                  className="absolute inset-0 block h-full w-full"
+                  aria-label="Foto vergrößern"
+                >
+                  <Image
+                    src={photo.url}
+                    alt=""
+                    fill
+                    sizes="100vw"
+                    className="object-cover"
+                    preload={index === 0}
+                    unoptimized
+                  />
+                </button>
               )}
               {photo.pending && (
                 <div
@@ -207,6 +216,13 @@ export function WinePhotoGallery({
 
       {/* Overlaid content: back link, edit button, wine name */}
       {children}
+
+      <WinePhotoLightbox
+        photos={photos}
+        initialIndex={lightboxIndex ?? 0}
+        open={lightboxIndex !== null}
+        onOpenChange={open => { if (!open) setLightboxIndex(null) }}
+      />
 
       <Dialog open={pendingDeleteId !== null} onOpenChange={open => { if (!open) setPendingDeleteId(null) }}>
         <DialogContent showCloseButton={false}>

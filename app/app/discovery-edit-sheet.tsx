@@ -11,7 +11,7 @@ import { RatingInput } from '@/components/ui/rating-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { SubmitButton } from '@/components/ui/submit-button'
-import { useTrips } from '@/lib/powersync/queries'
+import { useTripOptions } from '@/lib/powersync/queries'
 import type { DiscoveryDetail } from '@/lib/powersync/queries'
 import type { WineType } from '@/lib/types'
 
@@ -27,7 +27,7 @@ const WINE_TYPES: { value: WineType; label: string }[] = [
 // AddDiscoverySheet exactly -- this is that form's edit counterpart.
 export function DiscoveryEditSheet({ discovery, cellarId }: { discovery: DiscoveryDetail; cellarId: string }) {
   const db = usePowerSync()
-  const { trips } = useTrips(cellarId)
+  const { trips } = useTripOptions(cellarId)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(discovery.name)
   const [producer, setProducer] = useState(discovery.producer ?? '')

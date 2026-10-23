@@ -1,10 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTrips } from '@/lib/powersync/queries'
 import { NewTripSheet } from '@/app/app/new-trip-sheet'
 import { BackLink } from '@/app/app/back-link'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SearchField } from '@/components/ui/search-field'
+import { Pagination } from '@/components/ui/pagination'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
+import { useResettablePage } from '@/lib/hooks/use-resettable-page'
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-')
@@ -28,7 +33,10 @@ function LocationPinGlyph() {
 }
 
 export function TripsScreen({ cellarId }: { cellarId: string }) {
-  const { trips, isLoading } = useTrips(cellarId)
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search)
+  const [page, setPage] = useResettablePage(debouncedSearch)
+  const { trips, totalPages, isLoading } = useTrips(cellarId, debouncedSearch, page)
 
   return (
     <div className="px-4 pb-6 max-w-lg mx-auto space-y-4">
@@ -48,6 +56,8 @@ export function TripsScreen({ cellarId }: { cellarId: string }) {
         <NewTripSheet cellarId={cellarId} />
       </div>
 
+      <SearchField value={search} onChange={setSearch} placeholder="Reisen suchen…" />
+
       {isLoading ? (
         <div className="space-y-2">
           <Skeleton className="h-20 w-full" />
@@ -56,45 +66,48 @@ export function TripsScreen({ cellarId }: { cellarId: string }) {
       ) : trips.length === 0 ? (
         <div className="text-center py-12" style={{ color: 'var(--muted-foreground)' }}>
           <LocationPinGlyph />
-          <p className="mt-3">Noch keine Reisen — Andiamo!</p>
+          <p className="mt-3">{debouncedSearch ? 'Keine Reisen gefunden.' : 'Noch keine Reisen — Andiamo!'}</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {trips.map(trip => (
-            <Link
-              key={trip.id}
-              to="/trips/$id"
-              params={{ id: trip.id }}
-              className="block p-4 wine-card-hover"
-              style={{
-                background: 'var(--card)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-sm)',
-              }}
-            >
-              {trip.location && <p className="eyebrow mb-1">{trip.location}</p>}
-              <p style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'var(--text-lg)',
-                fontWeight: 600,
-                color: 'var(--foreground)',
-              }}>
-                {trip.name}
-              </p>
-              <div className="flex items-baseline justify-between mt-1">
-                {trip.dateStart && (
-                  <p className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--muted-foreground)' }}>
-                    {formatDate(trip.dateStart)}{trip.dateEnd ? ` → ${formatDate(trip.dateEnd)}` : ''}
-                  </p>
-                )}
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--muted-foreground)' }}>
-                  {trip.wineCount} {trip.wineCount === 1 ? 'Wein' : 'Weine'}
+        <>
+          <div className="space-y-2">
+            {trips.map(trip => (
+              <Link
+                key={trip.id}
+                to="/trips/$id"
+                params={{ id: trip.id }}
+                className="block p-4 wine-card-hover"
+                style={{
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+              >
+                {trip.location && <p className="eyebrow mb-1">{trip.location}</p>}
+                <p style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 'var(--text-lg)',
+                  fontWeight: 600,
+                  color: 'var(--foreground)',
+                }}>
+                  {trip.name}
                 </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+                <div className="flex items-baseline justify-between mt-1">
+                  {trip.dateStart && (
+                    <p className="mono" style={{ fontSize: 'var(--text-xs)', color: 'var(--muted-foreground)' }}>
+                      {formatDate(trip.dateStart)}{trip.dateEnd ? ` → ${formatDate(trip.dateEnd)}` : ''}
+                    </p>
+                  )}
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--muted-foreground)' }}>
+                    {trip.wineCount} {trip.wineCount === 1 ? 'Wein' : 'Weine'}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} className="pt-2" />
+        </>
       )}
     </div>
   )

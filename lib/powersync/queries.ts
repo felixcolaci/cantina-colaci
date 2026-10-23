@@ -4,6 +4,7 @@ import { useQuery } from '@powersync/react'
 import { AttachmentState } from '@powersync/web'
 import type { EntryStatus, WineType } from '@/lib/types'
 import { isThemePreference, type ThemePreference } from '@/lib/theme/types'
+import { likeTerm, offsetParams, totalPages } from '@/lib/powersync/pagination'
 
 export type CellarWine = {
   id: string
@@ -25,22 +26,9 @@ type CellarWineRow = {
 
 // A wine only counts as "in the cellar" once it has at least one sku that's
 // still in stock -- same rule the legacy /cellar page applied server-side.
-// The LEFT JOIN keeps wines with zero in-stock skus in the result set (as a
-// single null-sku row) so they can be grouped away below, rather than
-// vanishing silently from an INNER JOIN.
-const BASE_SQL = `
-  SELECT
-    wines.id AS wine_id,
-    wines.name AS name,
-    wines.producer AS producer,
-    wines.type AS type,
-    skus.vintage AS sku_vintage,
-    skus.quantity AS sku_quantity
-  FROM wines
-  LEFT JOIN skus ON skus.wine_id = wines.id AND skus.status = 'in_stock' AND skus.quantity > 0
-  WHERE wines.cellar_id = ?
-`
-
+// TRIP_WINES_SQL below's LEFT JOIN keeps wines with zero in-stock skus in
+// the result set (as a single null-sku row) so they can be grouped away
+// here, rather than vanishing silently from an INNER JOIN.
 function groupByWine(rows: CellarWineRow[]): CellarWine[] {
   const byId = new Map<string, { name: string; producer: string; type: string; totalBottles: number; vintage: number | null }>()
 
@@ -64,12 +52,83 @@ function groupByWine(rows: CellarWineRow[]): CellarWine[] {
   return [...byId.entries()].map(([id, w]) => ({ id, ...w, type: w.type as WineType }))
 }
 
-export function useCellarWines(cellarId: string, type: WineType | null) {
-  const sql = type ? `${BASE_SQL} AND wines.type = ? ORDER BY wines.name` : `${BASE_SQL} ORDER BY wines.name`
-  const params = type ? [cellarId, type] : [cellarId]
-  const { data, isLoading, error } = useQuery<CellarWineRow>(sql, params)
+type CellarWineAggRow = {
+  wine_id: string
+  name: string
+  producer: string
+  type: string
+  vintage: number | null
+  total_bottles: number
+}
 
-  return { wines: groupByWine(data), isLoading, error }
+// Same in-stock join as TRIP_WINES_SQL below, but grouped in SQL (not
+// groupByWine) so LIMIT/OFFSET lands on wines, not sku rows -- paginating
+// the ungrouped rowset would split or drop wines across page boundaries.
+function buildCellarWinesWhere(cellarId: string, type: WineType | null, search: string): { where: string; params: unknown[] } {
+  const params: unknown[] = [cellarId]
+  let where = 'wines.cellar_id = ?'
+  if (type) {
+    where += ' AND wines.type = ?'
+    params.push(type)
+  }
+  if (search.trim()) {
+    where += " AND (wines.name LIKE ? ESCAPE '\\' OR wines.producer LIKE ? ESCAPE '\\')"
+    const term = likeTerm(search)
+    params.push(term, term)
+  }
+  return { where, params }
+}
+
+export function useCellarWines(cellarId: string, type: WineType | null, search = '', page = 1) {
+  const { where, params } = buildCellarWinesWhere(cellarId, type, search)
+
+  const dataSql = `
+    SELECT
+      wines.id AS wine_id,
+      wines.name AS name,
+      wines.producer AS producer,
+      wines.type AS type,
+      MAX(skus.vintage) AS vintage,
+      SUM(skus.quantity) AS total_bottles
+    FROM wines
+    LEFT JOIN skus ON skus.wine_id = wines.id AND skus.status = 'in_stock' AND skus.quantity > 0
+    WHERE ${where}
+    GROUP BY wines.id
+    HAVING SUM(skus.quantity) > 0
+    ORDER BY wines.name
+    LIMIT ? OFFSET ?
+  `
+  const countSql = `
+    SELECT COUNT(*) AS total FROM (
+      SELECT wines.id
+      FROM wines
+      LEFT JOIN skus ON skus.wine_id = wines.id AND skus.status = 'in_stock' AND skus.quantity > 0
+      WHERE ${where}
+      GROUP BY wines.id
+      HAVING SUM(skus.quantity) > 0
+    )
+  `
+
+  const dataQuery = useQuery<CellarWineAggRow>(dataSql, [...params, ...offsetParams(page)])
+  const countQuery = useQuery<{ total: number }>(countSql, params)
+
+  const wines: CellarWine[] = dataQuery.data.map(row => ({
+    id: row.wine_id,
+    name: row.name,
+    producer: row.producer,
+    type: row.type as WineType,
+    vintage: row.vintage,
+    totalBottles: row.total_bottles,
+  }))
+  const total = countQuery.data[0]?.total ?? 0
+
+  return {
+    wines,
+    total,
+    totalPages: totalPages(total),
+    isLoading: dataQuery.isLoading || countQuery.isLoading,
+    error: dataQuery.error ?? countQuery.error,
+  }
 }
 
 export type WineDetail = {
@@ -231,9 +290,9 @@ type StatsRow = {
 type RatingRow = { avg_rating: number | null; rated_count: number }
 
 // In-stock skus joined with their wine, scoped to this cellar -- the same
-// base shape as useCellarWines's BASE_SQL, but aggregated differently
-// (across types/origins/value instead of grouped per-wine) so it stays a
-// second query rather than overloading groupByWine's job.
+// shape as useCellarWines's data query, but aggregated differently (across
+// types/origins/value instead of grouped per-wine) so it stays a second
+// query rather than overloading that grouping's job.
 const STATS_SQL = `
   SELECT
     wines.id AS wine_id,
@@ -389,25 +448,42 @@ type TripRow = {
 // wine_count is scoped to in-stock skus tagged with this trip -- a wine
 // whose trip bottles have since all been consumed drops off the list, same
 // simplification useTripDetail's wines query makes (see its comment).
-const TRIPS_SQL = `
-  SELECT
-    trips.id AS id,
-    trips.name AS name,
-    trips.location AS location,
-    trips.date_start AS date_start,
-    trips.date_end AS date_end,
-    (
-      SELECT COUNT(DISTINCT skus.wine_id) FROM skus
-      WHERE skus.trip_id = trips.id AND skus.status = 'in_stock' AND skus.quantity > 0
-    ) AS wine_count
-  FROM trips
-  WHERE trips.cellar_id = ?
-  ORDER BY trips.created_at DESC
-`
+function buildTripsWhere(cellarId: string, search: string): { where: string; params: unknown[] } {
+  const params: unknown[] = [cellarId]
+  let where = 'trips.cellar_id = ?'
+  if (search.trim()) {
+    where += " AND (trips.name LIKE ? ESCAPE '\\' OR trips.location LIKE ? ESCAPE '\\')"
+    const term = likeTerm(search)
+    params.push(term, term)
+  }
+  return { where, params }
+}
 
-export function useTrips(cellarId: string) {
-  const { data, isLoading, error } = useQuery<TripRow>(TRIPS_SQL, [cellarId])
-  const trips: TripSummary[] = data.map(row => ({
+export function useTrips(cellarId: string, search = '', page = 1) {
+  const { where, params } = buildTripsWhere(cellarId, search)
+
+  const dataSql = `
+    SELECT
+      trips.id AS id,
+      trips.name AS name,
+      trips.location AS location,
+      trips.date_start AS date_start,
+      trips.date_end AS date_end,
+      (
+        SELECT COUNT(DISTINCT skus.wine_id) FROM skus
+        WHERE skus.trip_id = trips.id AND skus.status = 'in_stock' AND skus.quantity > 0
+      ) AS wine_count
+    FROM trips
+    WHERE ${where}
+    ORDER BY trips.created_at DESC
+    LIMIT ? OFFSET ?
+  `
+  const countSql = `SELECT COUNT(*) AS total FROM trips WHERE ${where}`
+
+  const dataQuery = useQuery<TripRow>(dataSql, [...params, ...offsetParams(page)])
+  const countQuery = useQuery<{ total: number }>(countSql, params)
+
+  const trips: TripSummary[] = dataQuery.data.map(row => ({
     id: row.id,
     name: row.name,
     location: row.location,
@@ -415,7 +491,28 @@ export function useTrips(cellarId: string) {
     dateEnd: row.date_end,
     wineCount: row.wine_count,
   }))
-  return { trips, isLoading, error }
+  const total = countQuery.data[0]?.total ?? 0
+
+  return {
+    trips,
+    total,
+    totalPages: totalPages(total),
+    isLoading: dataQuery.isLoading || countQuery.isLoading,
+    error: dataQuery.error ?? countQuery.error,
+  }
+}
+
+export type TripOption = { id: string; name: string }
+
+const TRIP_OPTIONS_SQL = `SELECT id, name FROM trips WHERE cellar_id = ? ORDER BY created_at DESC`
+
+// Unpaginated id/name list for the trip picker in AddDiscoverySheet and
+// DiscoveryEditSheet (app/app/add-discovery-sheet.tsx,
+// app/app/discovery-edit-sheet.tsx) -- a <Select> needs every option on
+// screen at once, unlike useTrips's paginated list for the Reisen screen.
+export function useTripOptions(cellarId: string) {
+  const { data, isLoading } = useQuery<TripOption>(TRIP_OPTIONS_SQL, [cellarId])
+  return { trips: data, isLoading }
 }
 
 export type TripDetail = {
@@ -496,29 +593,52 @@ type TastingHistoryRow = {
   vintage: number | null
 }
 
-const TASTINGS_HISTORY_SQL = `
-  SELECT
-    tastings.id AS id,
-    tastings.date AS date,
-    tastings.rating AS rating,
-    tastings.notes AS notes,
-    skus.wine_id AS wine_id,
-    skus.vintage AS vintage,
-    wines.name AS wine_name,
-    wines.producer AS wine_producer
-  FROM tastings
-  JOIN skus ON skus.id = tastings.cellar_entry_id
-  JOIN wines ON wines.id = skus.wine_id
-  WHERE wines.cellar_id = ?
-  ORDER BY tastings.date DESC
-`
+function buildTastingsHistoryWhere(cellarId: string, search: string): { where: string; params: unknown[] } {
+  const params: unknown[] = [cellarId]
+  let where = 'wines.cellar_id = ?'
+  if (search.trim()) {
+    where += " AND (wines.name LIKE ? ESCAPE '\\' OR wines.producer LIKE ? ESCAPE '\\' OR tastings.notes LIKE ? ESCAPE '\\')"
+    const term = likeTerm(search)
+    params.push(term, term, term)
+  }
+  return { where, params }
+}
 
 // Kellerchronik (app/app/history-screen.tsx): every tasting across the
 // whole cellar, newest first, regardless of which wine or trip it belongs
 // to -- mirrors legacy/app/(app)/history/page.tsx.
-export function useTastingsHistory(cellarId: string) {
-  const { data, isLoading, error } = useQuery<TastingHistoryRow>(TASTINGS_HISTORY_SQL, [cellarId])
-  const tastings: TastingHistoryEntry[] = data.map(row => ({
+export function useTastingsHistory(cellarId: string, search = '', page = 1) {
+  const { where, params } = buildTastingsHistoryWhere(cellarId, search)
+
+  const dataSql = `
+    SELECT
+      tastings.id AS id,
+      tastings.date AS date,
+      tastings.rating AS rating,
+      tastings.notes AS notes,
+      skus.wine_id AS wine_id,
+      skus.vintage AS vintage,
+      wines.name AS wine_name,
+      wines.producer AS wine_producer
+    FROM tastings
+    JOIN skus ON skus.id = tastings.cellar_entry_id
+    JOIN wines ON wines.id = skus.wine_id
+    WHERE ${where}
+    ORDER BY tastings.date DESC
+    LIMIT ? OFFSET ?
+  `
+  const countSql = `
+    SELECT COUNT(*) AS total
+    FROM tastings
+    JOIN skus ON skus.id = tastings.cellar_entry_id
+    JOIN wines ON wines.id = skus.wine_id
+    WHERE ${where}
+  `
+
+  const dataQuery = useQuery<TastingHistoryRow>(dataSql, [...params, ...offsetParams(page)])
+  const countQuery = useQuery<{ total: number }>(countSql, params)
+
+  const tastings: TastingHistoryEntry[] = dataQuery.data.map(row => ({
     id: row.id,
     date: row.date,
     rating: row.rating,
@@ -528,7 +648,15 @@ export function useTastingsHistory(cellarId: string) {
     wineProducer: row.wine_producer,
     vintage: row.vintage,
   }))
-  return { tastings, isLoading, error }
+  const total = countQuery.data[0]?.total ?? 0
+
+  return {
+    tastings,
+    total,
+    totalPages: totalPages(total),
+    isLoading: dataQuery.isLoading || countQuery.isLoading,
+    error: dataQuery.error ?? countQuery.error,
+  }
 }
 
 export function useTripDetail(tripId: string) {
@@ -594,31 +722,48 @@ type DiscoveryRow = {
 // LEFT JOIN auf family_members per user_id (nicht family_id) -- exakt das
 // gleiche Matching wie useOwnFamilyMember oben, trägt hier aber jedes
 // Mitglied, nicht nur den Aufrufer selbst.
-const DISCOVERIES_SQL = `
-  SELECT
-    discoveries.id AS id,
-    discoveries.name AS name,
-    discoveries.producer AS producer,
-    discoveries.vintage AS vintage,
-    discoveries.type AS type,
-    discoveries.location_text AS location_text,
-    discoveries.trip_id AS trip_id,
-    trips.name AS trip_name,
-    discoveries.date AS date,
-    discoveries.rating AS rating,
-    discoveries.notes AS notes,
-    discoveries.price AS price,
-    family_members.display_name AS created_by_name
-  FROM discoveries
-  LEFT JOIN trips ON trips.id = discoveries.trip_id
-  LEFT JOIN family_members ON family_members.user_id = discoveries.created_by
-  WHERE discoveries.cellar_id = ?
-  ORDER BY discoveries.date DESC, discoveries.created_at DESC
-`
+function buildDiscoveriesWhere(cellarId: string, search: string): { where: string; params: unknown[] } {
+  const params: unknown[] = [cellarId]
+  let where = 'discoveries.cellar_id = ?'
+  if (search.trim()) {
+    where += " AND (discoveries.name LIKE ? ESCAPE '\\' OR discoveries.producer LIKE ? ESCAPE '\\' OR discoveries.location_text LIKE ? ESCAPE '\\')"
+    const term = likeTerm(search)
+    params.push(term, term, term)
+  }
+  return { where, params }
+}
 
-export function useDiscoveries(cellarId: string) {
-  const { data, isLoading, error } = useQuery<DiscoveryRow>(DISCOVERIES_SQL, [cellarId])
-  const discoveries: DiscoverySummary[] = data.map(row => ({
+export function useDiscoveries(cellarId: string, search = '', page = 1) {
+  const { where, params } = buildDiscoveriesWhere(cellarId, search)
+
+  const dataSql = `
+    SELECT
+      discoveries.id AS id,
+      discoveries.name AS name,
+      discoveries.producer AS producer,
+      discoveries.vintage AS vintage,
+      discoveries.type AS type,
+      discoveries.location_text AS location_text,
+      discoveries.trip_id AS trip_id,
+      trips.name AS trip_name,
+      discoveries.date AS date,
+      discoveries.rating AS rating,
+      discoveries.notes AS notes,
+      discoveries.price AS price,
+      family_members.display_name AS created_by_name
+    FROM discoveries
+    LEFT JOIN trips ON trips.id = discoveries.trip_id
+    LEFT JOIN family_members ON family_members.user_id = discoveries.created_by
+    WHERE ${where}
+    ORDER BY discoveries.date DESC, discoveries.created_at DESC
+    LIMIT ? OFFSET ?
+  `
+  const countSql = `SELECT COUNT(*) AS total FROM discoveries WHERE ${where}`
+
+  const dataQuery = useQuery<DiscoveryRow>(dataSql, [...params, ...offsetParams(page)])
+  const countQuery = useQuery<{ total: number }>(countSql, params)
+
+  const discoveries: DiscoverySummary[] = dataQuery.data.map(row => ({
     id: row.id,
     name: row.name,
     producer: row.producer,
@@ -633,7 +778,15 @@ export function useDiscoveries(cellarId: string) {
     price: row.price,
     createdByName: row.created_by_name,
   }))
-  return { discoveries, isLoading, error }
+  const total = countQuery.data[0]?.total ?? 0
+
+  return {
+    discoveries,
+    total,
+    totalPages: totalPages(total),
+    isLoading: dataQuery.isLoading || countQuery.isLoading,
+    error: dataQuery.error ?? countQuery.error,
+  }
 }
 
 export type GalleryPhoto = { id: string; url: string; pending: boolean }

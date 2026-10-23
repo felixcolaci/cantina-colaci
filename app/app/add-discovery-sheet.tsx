@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { SubmitButton } from '@/components/ui/submit-button'
 import { compressImage } from '@/lib/image-compress'
-import { useTrips } from '@/lib/powersync/queries'
+import { useTripOptions } from '@/lib/powersync/queries'
 import { getDiscoveryAttachmentQueue } from '@/lib/powersync/PowerSyncProvider'
 import { ALLOWED_PHOTO_TYPES, buildDiscoveryPhotoPath } from '@/lib/storage/wine-photos'
 import { apiMutate } from '@/lib/spa/api-client'
@@ -33,7 +33,7 @@ const WINE_TYPES: { value: WineType; label: string }[] = [
 // ganz ohne Netz -- siehe lib/powersync/attachment-queues.ts.
 export function AddDiscoverySheet({ cellarId, userId }: { cellarId: string; userId: string }) {
   const db = usePowerSync()
-  const { trips } = useTrips(cellarId)
+  const { trips } = useTripOptions(cellarId)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [producer, setProducer] = useState('')

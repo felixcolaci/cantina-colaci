@@ -9,6 +9,10 @@ import { CellarStatsPanel } from '@/components/cellar/cellar-stats'
 import { QuickAddSheet } from '@/app/app/quick-add-sheet'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SearchField } from '@/components/ui/search-field'
+import { Pagination } from '@/components/ui/pagination'
+import { useDebouncedValue } from '@/lib/hooks/use-debounced-value'
+import { useResettablePage } from '@/lib/hooks/use-resettable-page'
 import type { WineType } from '@/lib/types'
 
 const WINE_TYPES: { value: WineType; label: string }[] = [
@@ -47,7 +51,10 @@ function greeting(): string {
 
 export function CellarScreen({ cellarId }: { cellarId: string }) {
   const [type, setType] = useState<WineType | null>(null)
-  const { wines, isLoading } = useCellarWines(cellarId, type)
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search)
+  const [page, setPage] = useResettablePage(`${type ?? ''}:${debouncedSearch}`)
+  const { wines, totalPages, isLoading } = useCellarWines(cellarId, type, debouncedSearch, page)
   const { name: cellarName } = useCellar(cellarId)
 
   return (
@@ -91,6 +98,13 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
 
       <p className="eyebrow mb-3">Dein Keller</p>
 
+      <SearchField
+        value={search}
+        onChange={setSearch}
+        placeholder="Wein oder Produzent suchen…"
+        className="mb-3"
+      />
+
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
         <button type="button" style={chipStyle(!type)} onClick={() => setType(null)}>
           Alle
@@ -117,15 +131,22 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
         <div className="text-center py-12 text-muted-foreground">
           <BottleGlyph width={32} height={64} opacity={0.5} />
           <p className="mt-3">
-            {type ? 'Keine Weine dieses Typs im Keller.' : 'Keine Weine im Keller.'}
+            {debouncedSearch
+              ? 'Keine Weine gefunden.'
+              : type
+                ? 'Keine Weine dieses Typs im Keller.'
+                : 'Keine Weine im Keller.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {wines.map(wine => (
-            <WineCard key={wine.id} wine={wine} totalBottles={wine.totalBottles} vintage={wine.vintage} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-2">
+            {wines.map(wine => (
+              <WineCard key={wine.id} wine={wine} totalBottles={wine.totalBottles} vintage={wine.vintage} />
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} className="mt-4" />
+        </>
       )}
     </div>
   )

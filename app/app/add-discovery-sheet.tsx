@@ -16,6 +16,7 @@ import { compressImage } from '@/lib/image-compress'
 import { useTrips } from '@/lib/powersync/queries'
 import { getDiscoveryAttachmentQueue } from '@/lib/powersync/PowerSyncProvider'
 import { ALLOWED_PHOTO_TYPES, buildDiscoveryPhotoPath } from '@/lib/storage/wine-photos'
+import { apiMutate } from '@/lib/spa/api-client'
 import type { WineType } from '@/lib/types'
 
 const WINE_TYPES: { value: WineType; label: string }[] = [
@@ -65,22 +66,45 @@ export function AddDiscoverySheet({ cellarId, userId }: { cellarId: string; user
     setError(null)
     try {
       const id = crypto.randomUUID()
+      const discoveryFields = {
+        cellar_id: cellarId,
+        created_by: userId,
+        name: trimmedName,
+        producer: producer.trim() || null,
+        vintage,
+        type: wineType,
+        location_text: locationMode === 'text' ? (locationText.trim() || null) : null,
+        trip_id: locationMode === 'trip' ? (tripId || null) : null,
+        date,
+        rating,
+        notes: notes.trim() || null,
+        price: price ? parseFloat(price) : null,
+      }
       await db.execute(
         `INSERT INTO discoveries
            (id, cellar_id, created_by, name, producer, vintage, type, location_text, trip_id, date, rating, notes, price)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          id, cellarId, userId, trimmedName,
-          producer.trim() || null, vintage, wineType,
-          locationMode === 'text' ? (locationText.trim() || null) : null,
-          locationMode === 'trip' ? (tripId || null) : null,
-          date, rating, notes.trim() || null,
-          price ? parseFloat(price) : null,
+          id, discoveryFields.cellar_id, discoveryFields.created_by, discoveryFields.name,
+          discoveryFields.producer, discoveryFields.vintage, discoveryFields.type,
+          discoveryFields.location_text, discoveryFields.trip_id,
+          discoveryFields.date, discoveryFields.rating, discoveryFields.notes, discoveryFields.price,
         ],
       )
 
       if (photoFile) {
         try {
+          // The discovery row above is only queued locally -- PowerSync uploads it
+          // asynchronously via the normal CRUD queue. The photo's own upload (both
+          // its discovery_photos metadata row and its bytes) authorizes itself by
+          // looking the discovery up server-side (resolveDiscoveryFamily), so
+          // queuing the photo before that upload lands would 404 and get silently
+          // discarded forever (connector.ts treats any 4xx as permanently invalid,
+          // not transient -- see its comment). This direct, awaited PUT mirrors
+          // exactly what the CRUD connector would send, so it's a no-op 23505 once
+          // that catches up -- it just guarantees the row exists remotely first.
+          await apiMutate('PUT', `/discoveries/${id}`, discoveryFields)
+
           const compressed = await compressImage(photoFile)
           const ext = ALLOWED_PHOTO_TYPES[compressed.type]
           if (ext) {

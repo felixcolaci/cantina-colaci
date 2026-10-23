@@ -1,11 +1,11 @@
 import { requireApiUser, requireOwnCellar, apiAuthErrorResponse } from '@/lib/api/auth'
 import { createAdminClient } from '@/lib/supabase/server'
-import { parseDiscoveryInsert } from '@/lib/api/discovery'
+import { parseDiscoveryInsert, parseDiscoveryPatch } from '@/lib/api/discovery'
 import { BUCKET, isPhotoPathOwnedByFamily } from '@/lib/storage/wine-photos'
 
 // Insert-only PUT, selbes Muster wie app/api/v1/trips/[id]/route.ts: Ziel
-// des PowerSync-Upload-Connectors für den ersten (und, da es kein PATCH
-// gibt, einzigen) Upload einer lokalen `discoveries`-Zeile.
+// des PowerSync-Upload-Connectors für den ersten Upload einer lokalen
+// `discoveries`-Zeile. Spätere Edits laufen über PATCH (siehe unten).
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireApiUser(request)
@@ -40,8 +40,44 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-// Kein PATCH -- kein Edit in v1 (siehe Spec). Löschen drained der Connector
-// aber als UpdateType.DELETE an dieselbe Route.
+// Edit path for an existing discovery: Ziel des PowerSync-Upload-Connectors
+// für die UPDATE einer lokalen `discoveries`-Zeile (UpdateType.PATCH, siehe
+// lib/powersync/connector.ts). Jedes Feld optional -- nur die Spalten, die
+// das lokale UPDATE tatsächlich angefasst hat, sind gesetzt.
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireApiUser(request)
+    const { id } = await params
+    const body = await request.json().catch(() => null)
+
+    const fields = parseDiscoveryPatch(body)
+    if (!fields || Object.keys(fields).length === 0) {
+      return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
+    }
+
+    const admin = createAdminClient()
+    const { data: existing } = await admin.from('discoveries').select('cellar_id').eq('id', id).maybeSingle()
+    if (!existing) return Response.json({ error: 'Entdeckung nicht gefunden' }, { status: 404 })
+    await requireOwnCellar(admin, user, existing.cellar_id)
+
+    if (fields.trip_id) {
+      const { data: trip } = await admin
+        .from('trips').select('cellar_id').eq('id', fields.trip_id).maybeSingle()
+      if (!trip || trip.cellar_id !== existing.cellar_id) {
+        return Response.json({ error: 'Trip gehört nicht zu diesem Keller' }, { status: 400 })
+      }
+    }
+
+    const { error } = await admin.from('discoveries').update(fields).eq('id', id)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+
+    return new Response(null, { status: 204 })
+  } catch (err) {
+    return apiAuthErrorResponse(err) ?? Response.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+// Löschen drained der Connector als UpdateType.DELETE an dieselbe Route.
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireApiUser(request)

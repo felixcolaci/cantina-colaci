@@ -662,6 +662,29 @@ export function useWinePhotos(wineId: string) {
   return { photos, isLoading }
 }
 
+// Just the lead photo (sort_order 0), for list-row thumbnails -- a cheaper
+// watched query than useWinePhotos when the full gallery isn't needed.
+const WINE_THUMBNAIL_SQL = `
+  SELECT wine_photos.id AS id, wine_photos.path AS path,
+         wine_photo_attachments.state AS attachment_state
+  FROM wine_photos
+  LEFT JOIN wine_photo_attachments ON wine_photo_attachments.id = wine_photos.id
+  WHERE wine_photos.wine_id = ?
+  ORDER BY wine_photos.sort_order
+  LIMIT 1
+`
+
+export function useWineThumbnail(wineId: string) {
+  const { data } = useQuery<WinePhotoRow>(WINE_THUMBNAIL_SQL, [wineId])
+  const row = data[0] ?? null
+  const photo: GalleryPhoto | null = row && {
+    id: row.id,
+    url: `/api/v1/photos/${row.path}`,
+    pending: row.attachment_state != null && row.attachment_state !== AttachmentState.SYNCED,
+  }
+  return { photo }
+}
+
 export type DiscoveryDetail = {
   id: string
   cellarId: string

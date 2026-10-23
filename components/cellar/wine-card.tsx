@@ -1,4 +1,7 @@
+'use client'
+
 import { Link } from '@tanstack/react-router'
+import { useWineThumbnail } from '@/lib/powersync/queries'
 import type { Wine } from '@/lib/types'
 
 const TYPE_CONFIG = {
@@ -16,6 +19,7 @@ interface WineCardProps {
 
 export function WineCard({ wine, totalBottles, vintage }: WineCardProps) {
   const type = TYPE_CONFIG[wine.type as keyof typeof TYPE_CONFIG] ?? TYPE_CONFIG.red
+  const { photo } = useWineThumbnail(wine.id)
 
   return (
     <Link
@@ -29,7 +33,7 @@ export function WineCard({ wine, totalBottles, vintage }: WineCardProps) {
         boxShadow: 'var(--shadow-sm)',
       }}
     >
-      {/* Photo well -- no photo source wired up yet in the new architecture, so this always shows the glyph */}
+      {/* Photo well -- shows the wine's lead photo once uploaded, else the glyph */}
       <div
         className="flex-none flex items-center justify-center overflow-hidden"
         style={{
@@ -40,7 +44,17 @@ export function WineCard({ wine, totalBottles, vintage }: WineCardProps) {
           background: 'linear-gradient(160deg, var(--muted), var(--secondary))',
         }}
       >
-        <BottleGlyph />
+        {photo && !photo.pending ? (
+          // eslint-disable-next-line @next/next/no-img-element -- stabile, dauerhaft cachebare Foto-URL
+          <img src={photo.url} alt="" className="w-full h-full object-cover" />
+        ) : photo?.pending ? (
+          <div
+            className="w-3 h-3 border-2 rounded-full animate-spin"
+            style={{ borderColor: 'var(--border)', borderTopColor: 'var(--muted-foreground)' }}
+          />
+        ) : (
+          <BottleGlyph />
+        )}
       </div>
 
       {/* Info */}

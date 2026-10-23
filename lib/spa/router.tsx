@@ -6,8 +6,9 @@ import { createRootRoute, createRoute, createRouter, Outlet, redirect, RouterPro
 import { WifiOff, RefreshCw, Check } from 'lucide-react'
 import type { Session } from '@supabase/supabase-js'
 import { usePowerSync, useStatus } from '@powersync/react'
-import type { AbstractPowerSyncDatabase, SyncStatus } from '@powersync/web'
+import type { SyncStatus } from '@powersync/web'
 import { createClient } from '@/lib/supabase/client'
+import { logout } from '@/lib/auth/logout'
 import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,22 +30,6 @@ type Me = {
   email: string | null
   familyId: string | null
   cellarId: string | null
-}
-
-// Local SQLite persists per browser profile (IndexedDB), independent of the
-// Supabase session. On a shared device, the next person to log in must never
-// see this user's rows -- disconnectAndClear() wipes every synced table;
-// PowerSync repopulates it from scratch, scoped to whichever user logs in
-// next (via a fresh JWT -> auth.user_id() -> fresh sync-config.yaml query).
-// The Service Worker's photo-cache (sw.ts) is origin-scoped, not
-// user-scoped, so it needs the same treatment -- otherwise the next person
-// to log in on this device could still load an old cached photo by hitting
-// the same /api/v1/photos/[...path] URL (unlikely to collide across
-// families, but cheap to rule out).
-async function logout(db: AbstractPowerSyncDatabase) {
-  await db.disconnectAndClear()
-  await createClient().auth.signOut()
-  await caches.delete('photo-cache').catch(() => {})
 }
 
 // Every route below the root needs to know which cellar it's reading from.
@@ -406,20 +391,13 @@ function MeShell() {
     queryFn: () => apiGet<Me>('/me'),
   })
   const status = useStatus()
-  const db = usePowerSync()
 
   if (data && !data.familyId) return <OnboardingCard />
 
   return (
     <div className="max-w-lg mx-auto">
-      <div className="flex items-center justify-between px-4 pt-6 pb-2">
+      <div className="flex items-center justify-end px-4 pt-6 pb-2">
         <SyncIndicator status={status} />
-        <button
-          onClick={() => logout(db)}
-          className="text-sm text-muted-foreground hover:text-foreground underline"
-        >
-          Abmelden
-        </button>
       </div>
       {isLoading && <p className="px-4 text-sm text-muted-foreground">Lade…</p>}
       {error && <p className="px-4 text-sm text-destructive">{(error as Error).message}</p>}

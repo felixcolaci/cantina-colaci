@@ -3,9 +3,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery as useRQuery, useQueryClient } from '@tanstack/react-query'
+import { usePowerSync } from '@powersync/react'
 import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
 import { useCellar, useOwnFamilyMember } from '@/lib/powersync/queries'
 import { useCurrentUserId } from '@/lib/auth/use-current-user-id'
+import { logout } from '@/lib/auth/logout'
 import { ResetCellarSheet } from '@/app/app/reset-cellar-sheet'
 import { ResetFamilySheet } from '@/app/app/reset-family-sheet'
 import { StartOwnCellarSheet } from '@/app/app/start-own-cellar-sheet'
@@ -125,6 +127,7 @@ export function CellarSettingsScreen({ cellarId }: { cellarId: string }) {
     queryFn: () => apiGet<FamilyResponse>('/family'),
   })
   const queryClient = useQueryClient()
+  const db = usePowerSync()
 
   // family_members' display_name syncs down via PowerSync a moment after
   // this route's own PATCH lands -- re-fetch the REST response once that
@@ -248,6 +251,13 @@ export function CellarSettingsScreen({ cellarId }: { cellarId: string }) {
           )}
         </>
       )}
+
+      <div className="pt-6" style={{ borderTop: '1px solid var(--border)' }}>
+        <h3 className="mb-2" style={{ fontSize: 'var(--text-base)', fontWeight: 500 }}>Konto</h3>
+        <Button variant="outline" className="w-full" onClick={() => logout(db)}>
+          Abmelden
+        </Button>
+      </div>
     </div>
   )
 }

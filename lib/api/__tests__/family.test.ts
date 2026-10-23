@@ -22,6 +22,25 @@ describe('parseFamilyMemberPatch', () => {
   it('rejects a wrong-typed display_name', () => {
     expect(parseFamilyMemberPatch({ display_name: 42 })).toBeNull()
   })
+
+  it('accepts a theme_preference on its own', () => {
+    expect(parseFamilyMemberPatch({ theme_preference: 'dark' })).toEqual({ theme_preference: 'dark' })
+    expect(parseFamilyMemberPatch({ theme_preference: 'light' })).toEqual({ theme_preference: 'light' })
+    expect(parseFamilyMemberPatch({ theme_preference: 'system' })).toEqual({ theme_preference: 'system' })
+  })
+
+  it('accepts display_name and theme_preference together', () => {
+    expect(parseFamilyMemberPatch({ display_name: 'Felix', theme_preference: 'dark' })).toEqual({
+      display_name: 'Felix',
+      theme_preference: 'dark',
+    })
+  })
+
+  it('rejects an invalid theme_preference value', () => {
+    expect(parseFamilyMemberPatch({ theme_preference: 'blue' })).toBeNull()
+    expect(parseFamilyMemberPatch({ theme_preference: 42 })).toBeNull()
+    expect(parseFamilyMemberPatch({ theme_preference: null })).toBeNull()
+  })
 })
 
 describe('requireOwnerRole', () => {

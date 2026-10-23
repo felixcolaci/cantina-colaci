@@ -3,7 +3,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { parseFamilyMemberPatch } from '@/lib/api/family'
 
 // The PowerSync upload connector's target for a local `family_members`
-// row's UPDATE (display name edits, see app/app/edit-name-sheet.tsx) --
+// row's UPDATE (display name edits, see app/app/edit-name-sheet.tsx, and
+// theme preference changes, see lib/theme/theme-provider.tsx) --
 // family_members has only a surrogate `id` (added in
 // supabase/migrations/20261021092549_family_members_surrogate_id.sql)
 // specifically so PowerSync can address it. No PUT here: new rows only

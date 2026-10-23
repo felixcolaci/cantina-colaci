@@ -2,6 +2,7 @@ import type { User } from '@supabase/supabase-js'
 import type { createAdminClient } from '@/lib/supabase/server'
 import { ApiAuthError } from '@/lib/api/auth'
 import type { FamilyRole } from '@/lib/types'
+import { isThemePreference, type ThemePreference } from '@/lib/theme/types'
 
 export type FamilyMembership = { familyId: string; role: FamilyRole }
 
@@ -30,16 +31,36 @@ export function requireOwnerRole(membership: FamilyMembership): void {
   }
 }
 
+type FamilyMemberPatchFields = {
+  display_name?: string | null
+  theme_preference?: ThemePreference
+}
+
 /**
- * Validates a PATCH /api/v1/family_members/[id] body. The only field a
- * member can ever patch on their own row is display_name -- role/family_id
- * changes aren't exposed through this route at all.
+ * Validates a PATCH /api/v1/family_members/[id] body. The only fields a
+ * member can ever patch on their own row are display_name and
+ * theme_preference -- role/family_id changes aren't exposed through this
+ * route at all. Either field may be present on its own or both together;
+ * a body with neither (or an invalid value for one that is present) is
+ * rejected.
  */
-export function parseFamilyMemberPatch(body: unknown): { display_name: string | null } | null {
+export function parseFamilyMemberPatch(body: unknown): FamilyMemberPatchFields | null {
   if (!body || typeof body !== 'object') return null
   const b = body as Record<string, unknown>
-  if (!('display_name' in b)) return null
-  const value = b.display_name
-  if (value !== null && typeof value !== 'string') return null
-  return { display_name: typeof value === 'string' ? value.trim().slice(0, 40) || null : null }
+  const fields: FamilyMemberPatchFields = {}
+
+  if ('display_name' in b) {
+    const value = b.display_name
+    if (value !== null && typeof value !== 'string') return null
+    fields.display_name = typeof value === 'string' ? value.trim().slice(0, 40) || null : null
+  }
+
+  if ('theme_preference' in b) {
+    const value = b.theme_preference
+    if (!isThemePreference(value)) return null
+    fields.theme_preference = value
+  }
+
+  if (Object.keys(fields).length === 0) return null
+  return fields
 }

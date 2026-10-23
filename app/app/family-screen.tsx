@@ -2,10 +2,11 @@
 
 import { useEffect, useState, type FormEvent } from 'react'
 import { useQuery as useRQuery, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
 import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
 import { useOwnFamilyMember } from '@/lib/powersync/queries'
+import { useCurrentUserId } from '@/lib/auth/use-current-user-id'
 import { EditNameSheet } from '@/app/app/edit-name-sheet'
+import { ThemePreferenceControl } from '@/app/app/theme-preference-control'
 import { BackLink } from '@/app/app/back-link'
 import { ResetFamilySheet } from '@/app/app/reset-family-sheet'
 import { StartOwnCellarSheet } from '@/app/app/start-own-cellar-sheet'
@@ -29,14 +30,6 @@ type FamilyResponse = {
   isDemo: boolean
   role: string
   members: FamilyMember[]
-}
-
-function useCurrentUserId() {
-  const [userId, setUserId] = useState<string | null>(null)
-  useEffect(() => {
-    createClient().auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? null))
-  }, [])
-  return userId
 }
 
 function InviteSection() {
@@ -190,6 +183,14 @@ export function FamilyScreen() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="pt-6 mb-6" style={{ borderTop: '1px solid var(--border)' }}>
+        <h3 className="mb-2" style={{ fontSize: 'var(--text-base)', fontWeight: 500 }}>Darstellung</h3>
+        <p className="text-sm mb-3" style={{ color: 'var(--muted-foreground)' }}>
+          Hell, dunkel oder automatisch nach Systemeinstellung.
+        </p>
+        <ThemePreferenceControl />
       </div>
 
       {data.isDemo && (

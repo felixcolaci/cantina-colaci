@@ -3,6 +3,7 @@
 import { useQuery } from '@powersync/react'
 import { AttachmentState } from '@powersync/web'
 import type { EntryStatus, WineType } from '@/lib/types'
+import { isThemePreference, type ThemePreference } from '@/lib/theme/types'
 
 export type CellarWine = {
   id: string
@@ -337,19 +338,21 @@ export function useStorageLocationsSettings(cellarId: string) {
   return { storageLocations: data, isLoading, error }
 }
 
-type OwnFamilyMemberRow = { id: string; display_name: string | null }
+type OwnFamilyMemberRow = { id: string; display_name: string | null; theme_preference: string | null }
 
-const OWN_FAMILY_MEMBER_SQL = `SELECT id, display_name FROM family_members WHERE user_id = ?`
+const OWN_FAMILY_MEMBER_SQL = `SELECT id, display_name, theme_preference FROM family_members WHERE user_id = ?`
 
 // The caller's own family_members row -- just enough to drive
-// EditNameSheet's local-first UPDATE (app/app/family-screen.tsx). Everyone
-// else's email/display name comes from GET /api/v1/family instead, since
-// resolving another member's email needs a privileged admin call that has
-// no business running on-device.
+// EditNameSheet's local-first UPDATE (app/app/family-screen.tsx) and
+// ThemeProvider's theme_preference sync (lib/theme/theme-provider.tsx).
+// Everyone else's email/display name comes from GET /api/v1/family
+// instead, since resolving another member's email needs a privileged
+// admin call that has no business running on-device.
 export function useOwnFamilyMember(userId: string) {
   const { data, isLoading } = useQuery<OwnFamilyMemberRow>(OWN_FAMILY_MEMBER_SQL, [userId])
   const row = data[0] ?? null
-  return { id: row?.id ?? null, displayName: row?.display_name ?? null, isLoading }
+  const themePreference: ThemePreference = isThemePreference(row?.theme_preference) ? row.theme_preference : 'system'
+  return { id: row?.id ?? null, displayName: row?.display_name ?? null, themePreference, isLoading }
 }
 
 type CellarRow = { name: string }

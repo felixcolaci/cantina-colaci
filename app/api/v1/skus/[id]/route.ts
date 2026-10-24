@@ -83,3 +83,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return apiAuthErrorResponse(err) ?? Response.json({ error: 'Internal error' }, { status: 500 })
   }
 }
+
+// Drained by the connector as UpdateType.DELETE at the same route -- same
+// not-found-is-ok shape as app/api/v1/wines/[id]/route.ts's DELETE, since a
+// whole-wine delete queues this for every one of its skus too and may well
+// race Postgres's own cascade from the wines delete.
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireApiUser(request)
+    const { id } = await params
+    const admin = createAdminClient()
+
+    const { data: existing } = await admin.from('skus').select('wine_id').eq('id', id).maybeSingle()
+    if (!existing) return new Response(null, { status: 204 }) // already gone -- ok
+    await requireOwnCellarForWine(admin, user, existing.wine_id)
+
+    const { error } = await admin.from('skus').delete().eq('id', id)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+
+    return new Response(null, { status: 204 })
+  } catch (err) {
+    return apiAuthErrorResponse(err) ?? Response.json({ error: 'Internal error' }, { status: 500 })
+  }
+}

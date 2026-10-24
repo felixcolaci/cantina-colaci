@@ -1,13 +1,18 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { Pencil } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
+import { Pencil, Trash2 } from 'lucide-react'
 import { usePowerSync } from '@powersync/react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { SubmitButton } from '@/components/ui/submit-button'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
+} from '@/components/ui/dialog'
 import type { WineDetail } from '@/lib/powersync/queries'
 import type { WineType } from '@/lib/types'
 
@@ -24,6 +29,7 @@ const WINE_TYPES: { value: WineType; label: string }[] = [
 // handler on /api/v1/wines/[id] (lib/powersync/connector.ts), online or not.
 export function WineEditSheet({ wine }: { wine: WineDetail }) {
   const db = usePowerSync()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(wine.name)
   const [producer, setProducer] = useState(wine.producer)
@@ -34,6 +40,8 @@ export function WineEditSheet({ wine }: { wine: WineDetail }) {
   const [notes, setNotes] = useState(wine.notes ?? '')
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -64,6 +72,29 @@ export function WineEditSheet({ wine }: { wine: WineDetail }) {
       setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen')
     } finally {
       setIsPending(false)
+    }
+  }
+
+  // skus and wine_photos have no FK/cascade in the local SQLite schema (see
+  // lib/powersync/schema.ts) -- unlike the Postgres side, they're deleted
+  // explicitly here. The connector then drains a DELETE per row, one of
+  // which (the wines row) also removes the photos' Storage objects server-
+  // side (see app/api/v1/wines/[id]/route.ts).
+  async function handleDelete() {
+    setIsDeleting(true)
+    try {
+      await db.writeTransaction(async tx => {
+        await tx.execute('DELETE FROM skus WHERE wine_id = ?', [wine.id])
+        await tx.execute('DELETE FROM wine_photos WHERE wine_id = ?', [wine.id])
+        await tx.execute('DELETE FROM wines WHERE id = ?', [wine.id])
+      })
+      setOpen(false)
+      navigate({ to: '/' })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Löschen fehlgeschlagen')
+    } finally {
+      setIsDeleting(false)
+      setConfirmDelete(false)
     }
   }
 
@@ -151,8 +182,35 @@ export function WineEditSheet({ wine }: { wine: WineDetail }) {
 
           {error && <p className="text-sm" style={{ color: 'var(--destructive)' }}>{error}</p>}
           <SubmitButton isPending={isPending} className="w-full">Speichern</SubmitButton>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            style={{ color: 'var(--destructive)', borderColor: 'var(--destructive)' }}
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Wein löschen
+          </Button>
         </form>
       </SheetContent>
+
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Wein löschen?</DialogTitle>
+            <DialogDescription>
+              &quot;{wine.name}&quot; und alle zugehörigen Flaschen und Fotos werden unwiderruflich gelöscht.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Abbrechen</DialogClose>
+            <Button variant="destructive" disabled={isDeleting} onClick={handleDelete}>
+              {isDeleting ? 'Wird gelöscht…' : 'Löschen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   )
 }

@@ -1,6 +1,7 @@
 import { requireApiUser, requireOwnCellar, apiAuthErrorResponse } from '@/lib/api/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { parseWinePatch } from '@/lib/api/wine'
+import { BUCKET, isPhotoPathOwnedByFamily } from '@/lib/storage/wine-photos'
 import type { WineType } from '@/lib/types'
 
 const WINE_TYPES: WineType[] = ['red', 'white', 'rosé', 'sparkling']
@@ -74,6 +75,37 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     await requireOwnCellar(admin, user, existing.cellar_id)
 
     const { error } = await admin.from('wines').update(fields).eq('id', id)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+
+    return new Response(null, { status: 204 })
+  } catch (err) {
+    return apiAuthErrorResponse(err) ?? Response.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+// Drained by the connector as UpdateType.DELETE at the same route. skus and
+// wine_photos cascade off the FK in Postgres (see 001_initial_schema.sql /
+// 010_wine_photos.sql), but their Storage objects don't -- those have to be
+// removed explicitly first, same reasoning as discoveries' DELETE
+// (app/api/v1/discoveries/[id]/route.ts).
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireApiUser(request)
+    const { id } = await params
+    const admin = createAdminClient()
+
+    const { data: existing } = await admin.from('wines').select('cellar_id').eq('id', id).maybeSingle()
+    if (!existing) return new Response(null, { status: 204 }) // already gone -- ok
+    await requireOwnCellar(admin, user, existing.cellar_id)
+
+    const { data: cellar } = await admin.from('cellars').select('family_id').eq('id', existing.cellar_id).maybeSingle()
+    const { data: photos } = await admin.from('wine_photos').select('path').eq('wine_id', id)
+    const ownedPaths = cellar
+      ? (photos ?? []).map(p => p.path).filter(path => isPhotoPathOwnedByFamily(path, cellar.family_id))
+      : []
+    if (ownedPaths.length > 0) await admin.storage.from(BUCKET).remove(ownedPaths)
+
+    const { error } = await admin.from('wines').delete().eq('id', id)
     if (error) return Response.json({ error: error.message }, { status: 500 })
 
     return new Response(null, { status: 204 })

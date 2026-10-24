@@ -34,6 +34,7 @@ export function DiscoveryPhotoPanel({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [formatError, setFormatError] = useState(false)
 
   const { photo } = useDiscoveryPhoto(discoveryId)
 
@@ -45,7 +46,7 @@ export function DiscoveryPhotoPanel({
     try {
       const compressed = await compressImage(file)
       const ext = ALLOWED_PHOTO_TYPES[compressed.type]
-      if (!ext) return // unsupported format -- same silent no-op as WinePhotoGallery
+      if (!ext) { setFormatError(true); return } // e.g. ProRAW (.dng) -- same as WinePhotoGallery
 
       const { family_id: familyId } = await db.get<{ family_id: string }>(
         'SELECT family_id FROM cellars WHERE id = ?',
@@ -171,6 +172,20 @@ export function DiscoveryPhotoPanel({
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Abbrechen</DialogClose>
             <Button variant="destructive" disabled={isDeleting} onClick={handleDelete}>Löschen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={formatError} onOpenChange={setFormatError}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Format nicht unterstützt</DialogTitle>
+            <DialogDescription>
+              Dieses Foto kann nicht verwendet werden (z. B. ProRAW/.dng). Bitte JPEG, PNG, WebP oder HEIC verwenden.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button />}>OK</DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>

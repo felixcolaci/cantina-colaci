@@ -38,6 +38,7 @@ export function WinePhotoGallery({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [formatError, setFormatError] = useState(false)
 
   const { photos } = useWinePhotos(wineId)
   const hasPhotos = photos.length > 0
@@ -50,7 +51,7 @@ export function WinePhotoGallery({
     try {
       const compressed = await compressImage(file)
       const ext = ALLOWED_PHOTO_TYPES[compressed.type]
-      if (!ext) return // unsupported format -- same silent no-op as before
+      if (!ext) { setFormatError(true); return } // e.g. ProRAW (.dng)
 
       const { family_id: familyId } = await db.get<{ family_id: string }>(
         'SELECT cellars.family_id AS family_id FROM wines JOIN cellars ON cellars.id = wines.cellar_id WHERE wines.id = ?',
@@ -239,6 +240,20 @@ export function WinePhotoGallery({
             >
               Löschen
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={formatError} onOpenChange={setFormatError}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Format nicht unterstützt</DialogTitle>
+            <DialogDescription>
+              Dieses Foto kann nicht verwendet werden (z. B. ProRAW/.dng). Bitte JPEG, PNG, WebP oder HEIC verwenden.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button />}>OK</DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>

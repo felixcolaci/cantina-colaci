@@ -54,7 +54,10 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
     const trimmedName = name.trim()
     if (!trimmedName) return
 
-    const quantity = parseInt(new FormData(e.currentTarget).get('quantity') as string, 10)
+    const formData = new FormData(e.currentTarget)
+    const quantity = parseInt(formData.get('quantity') as string, 10)
+    const purchasePriceRaw = formData.get('purchase_price') as string
+    const purchasePrice = purchasePriceRaw ? parseFloat(purchasePriceRaw) : null
 
     setIsPending(true)
     setError(null)
@@ -70,8 +73,8 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
         )
         await tx.execute(
           `INSERT INTO skus (id, wine_id, vintage, quantity, storage_location_id, status, purchase_price, purchase_date, purchase_location, shelf_location, trip_id, photo_path)
-           VALUES (?, ?, ?, ?, NULL, 'in_stock', NULL, NULL, NULL, NULL, NULL, NULL)`,
-          [skuId, wineId, vintage, quantity],
+           VALUES (?, ?, ?, ?, NULL, 'in_stock', ?, NULL, NULL, NULL, NULL, NULL)`,
+          [skuId, wineId, vintage, quantity, purchasePrice],
         )
       })
 
@@ -217,6 +220,11 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
                 min="1" max="999" defaultValue={1} required
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="qs-purchase-price">Preis (€)</Label>
+            <Input id="qs-purchase-price" name="purchase_price" type="number" step="0.01" min="0" />
           </div>
 
           <div className="space-y-2">

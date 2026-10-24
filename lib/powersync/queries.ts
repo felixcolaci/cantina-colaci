@@ -151,6 +151,7 @@ export type WineDetailEntry = {
   purchaseLocation: string | null
   shelfLocation: string | null
   status: EntryStatus
+  storageLocationId: string | null
   storageLocationName: string | null
 }
 
@@ -181,6 +182,7 @@ type EntryRow = {
   purchase_location: string | null
   shelf_location: string | null
   status: string
+  storage_location_id: string | null
   storage_location_name: string | null
 }
 
@@ -207,6 +209,7 @@ const ENTRIES_SQL = `
     skus.purchase_location AS purchase_location,
     skus.shelf_location AS shelf_location,
     skus.status AS status,
+    skus.storage_location_id AS storage_location_id,
     storage_locations.name AS storage_location_name
   FROM skus
   LEFT JOIN storage_locations ON storage_locations.id = skus.storage_location_id
@@ -248,6 +251,7 @@ export function useWineDetail(wineId: string) {
     purchaseLocation: row.purchase_location,
     shelfLocation: row.shelf_location,
     status: row.status as EntryStatus,
+    storageLocationId: row.storage_location_id,
     storageLocationName: row.storage_location_name,
   }))
 

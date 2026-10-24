@@ -6,6 +6,7 @@ import { useWineDetail } from '@/lib/powersync/queries'
 import { WinePhotoGallery } from '@/app/app/wine-photo-gallery'
 import { WineEditSheet } from '@/app/app/wine-edit-sheet'
 import { AddSkuSheet } from '@/app/app/add-sku-sheet'
+import { SkuEditSheet } from '@/app/app/sku-edit-sheet'
 import { OpenBottleButton } from '@/app/app/open-bottle-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { WineType } from '@/lib/types'
@@ -183,36 +184,39 @@ export function WineDetailScreen({ wineId, cellarId }: { wineId: string; cellarI
                   className="rounded-xl p-4"
                   style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
                 >
-                  <div className="flex items-baseline gap-1.5 mb-1">
-                    <span
-                      className="nums leading-none"
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: 'var(--text-4xl)',
-                        fontWeight: 700,
-                        color: 'var(--primary)',
-                      }}
-                    >
-                      {entry.quantity}
-                    </span>
-                    <span className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
-                      {entry.quantity === 1 ? 'Flasche' : 'Flaschen'}
-                    </span>
-                    {entry.vintage && (
+                  <div className="flex items-baseline justify-between gap-1.5 mb-1">
+                    <div className="flex items-baseline gap-1.5">
                       <span
-                        className="nums"
+                        className="nums leading-none"
                         style={{
                           fontFamily: 'var(--font-display)',
-                          fontSize: 'var(--text-lg)',
-                          fontStyle: 'italic',
-                          fontWeight: 500,
-                          color: 'var(--muted-foreground)',
-                          marginLeft: 'var(--space-1)',
+                          fontSize: 'var(--text-4xl)',
+                          fontWeight: 700,
+                          color: 'var(--primary)',
                         }}
                       >
-                        {entry.vintage}
+                        {entry.quantity}
                       </span>
-                    )}
+                      <span className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                        {entry.quantity === 1 ? 'Flasche' : 'Flaschen'}
+                      </span>
+                      {entry.vintage && (
+                        <span
+                          className="nums"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 'var(--text-lg)',
+                            fontStyle: 'italic',
+                            fontWeight: 500,
+                            color: 'var(--muted-foreground)',
+                            marginLeft: 'var(--space-1)',
+                          }}
+                        >
+                          {entry.vintage}
+                        </span>
+                      )}
+                    </div>
+                    <SkuEditSheet entry={entry} cellarId={cellarId} />
                   </div>
 
                   {(entry.storageLocationName || entry.shelfLocation) && (

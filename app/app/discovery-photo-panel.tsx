@@ -72,8 +72,11 @@ export function DiscoveryPhotoPanel({
           )
         },
       })
-    } catch {
-      // Degrades to "nothing changed" -- the camera button stays available to retry.
+    } catch (err) {
+      // TEMPORARY diagnostic (remove once the silent-failure cause is found) --
+      // the normal silent "nothing changed, camera button stays available to
+      // retry" catch was hiding a real error with zero way to see it remotely.
+      window.alert(`Foto-Upload-Fehler (debug): ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`)
     } finally {
       setIsUploading(false)
     }

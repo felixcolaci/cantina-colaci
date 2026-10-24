@@ -737,7 +737,7 @@ git commit -m "feat: add wine-matching + local write path for bulk wine import"
 **Acceptance criteria covered:** AC1, AC2, AC3, AC4, AC5, AC8, Edge Case (leere Datei im UI), Edge Case (Abbruch vor Bestätigen)
 **Dependencies:** Task 1, Task 2, Task 3
 
-- [ ] **Schritt 1: `app/app/import-wines-dialog.tsx` anlegen**
+- [x] **Schritt 1: `app/app/import-wines-dialog.tsx` anlegen**
 
 ```tsx
 'use client'
@@ -976,9 +976,9 @@ export function ImportWinesDialog({ cellarId }: { cellarId: string }) {
 }
 ```
 
-> **Hinweis:** Falls `components/ui/checkbox.tsx` noch nicht existiert (aktuell nicht in `components/ui/` vorhanden, siehe Task-Recherche), zuerst per `npx shadcn@latest add checkbox` (gleiches Setup wie die übrigen `components/ui/*`-Dateien, `components.json` ist bereits konfiguriert) hinzufügen, bevor dieser Schritt beginnt.
+`components/ui/checkbox.tsx` existierte noch nicht und wurde per `npx shadcn@latest add checkbox --yes` ergänzt. Der generierte Code hatte zwei Probleme, die direkt korrigiert wurden: `import { cn } from "cn"` (falsch, müsste `"@/lib/utils"` sein wie in jeder anderen `components/ui/*`-Datei) und eine dadurch verursachte, komplett unnötige npm-Abhängigkeit `cn@0.5.0` in `package.json` (entfernt, nichts im Projekt importiert von diesem Paket).
 
-- [ ] **Schritt 2: `app/app/cellar-screen.tsx` verdrahten**
+- [x] **Schritt 2: `app/app/cellar-screen.tsx` verdrahten**
 
 Import ergänzen:
 ```tsx
@@ -991,21 +991,20 @@ In der Quick-Links-Zeile, direkt vor `<QuickAddSheet cellarId={cellarId} />`:
           <QuickAddSheet cellarId={cellarId} />
 ```
 
-- [ ] **Schritt 3: Build**
+- [x] **Schritt 3: Build**
 
 ```bash
 npm run build 2>&1 | tail -30
 ```
-Erwartet: keine TypeScript-Fehler.
+Ergebnis: keine TypeScript-Fehler.
 
-- [ ] **Schritt 4: Manuelle Prüfung (Dev-Server)**
+- [x] **Schritt 4: Manuelle Prüfung (Dev-Server) — teilweise, siehe Hinweis**
 
-```bash
-npm run dev
-```
-Im Browser: Dialog öffnen, eine kleine CSV-Testdatei (z. B. `Name,Produzent,Typ\nBarolo,Gaja,Rotwein\n,Antinori,red`) hochladen, Mapping prüfen (Produzent sollte automatisch vorbelegt sein), zur Vorschau weiter, die Zeile mit leerem Namen sollte als Fehler markiert und abwählbar sein, danach importieren und im Kellerbestand verifizieren.
+Mit genau der in diesem Schritt vorgeschlagenen CSV-Testdatei versucht, per Playwright gegen den echten Dev-Server zu fahren (`npm run dev`, dann ein Wegwerf-Spec unter `e2e/tests/`, nie committed). Login über den bestehenden `e2e/auth.setup.ts`-Magic-Link-Flow schlägt aber unabhängig von dieser Feature-Änderung fehl — die Seite landet auf der (neueren) Passwort-Login-Seite statt eingeloggt zu werden, vermutlich eine Nachwirkung der separaten Passwort-Login-Arbeit (`docs/superpowers/plans/2026-06-30-password-login.md`). Das ist eine vorbestehende, von diesem Feature unabhängige Lücke in der e2e-Infrastruktur, keine Regression durch diesen Plan.
 
-- [ ] **Schritt 5: Commit**
+Ersatzweise verifiziert: `npm run build` + vollständiger Lint sauber, alle 32 Unit-Tests über `lib/import/` grün, und der Code manuell gegen die tatsächlichen Typsignaturen von `@base-ui/react` (Select/Checkbox/Dialog) und `@powersync/common` (`getOptional`/`writeTransaction`) geprüft (siehe Tasks 1–3). Eine echte Browser-Verifikation im Login-Zustand steht noch aus und sollte nachgeholt werden, sobald die e2e-Login-Lücke separat behoben ist.
+
+- [x] **Schritt 5: Commit**
 
 ```bash
 git add app/app/import-wines-dialog.tsx app/app/cellar-screen.tsx

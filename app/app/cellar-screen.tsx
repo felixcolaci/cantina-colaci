@@ -7,6 +7,7 @@ import { useCellarWines, useCellar } from '@/lib/powersync/queries'
 import { WineCard, BottleGlyph } from '@/components/cellar/wine-card'
 import { CellarStatsPanel } from '@/components/cellar/cellar-stats'
 import { QuickAddSheet } from '@/app/app/quick-add-sheet'
+import { ImportWinesDialog } from '@/app/app/import-wines-dialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SearchField } from '@/components/ui/search-field'
@@ -90,6 +91,7 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
               <Settings className="h-3.5 w-3.5" />
             </Button>
           </Link>
+          <ImportWinesDialog cellarId={cellarId} />
           <QuickAddSheet cellarId={cellarId} />
         </div>
       </div>

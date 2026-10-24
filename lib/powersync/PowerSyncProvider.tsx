@@ -37,10 +37,21 @@ export function getDB() {
     // Offline photo uploads: metadata rows (wine_photos/discovery_photos)
     // sync through the connector above like any other table; the bytes
     // travel separately through these queues (see lib/powersync/attachment-queues.ts).
-    wineAttachmentQueue = createWineAttachmentQueue(db)
-    discoveryAttachmentQueue = createDiscoveryAttachmentQueue(db)
-    void wineAttachmentQueue.startSync()
-    void discoveryAttachmentQueue.startSync()
+    //
+    // Unlike PowerSyncDatabase itself, AttachmentQueue.startSync() is NOT
+    // SSR-safe -- it calls straight into IndexDBFileSystemStorageAdapter's
+    // initialize(), which throws ReferenceError: indexedDB is not defined
+    // under Node. Since it's fire-and-forget (void, no .catch), that became
+    // an unhandled rejection that killed the whole server process on every
+    // single /app request (confirmed in production logs) -- so guard it the
+    // same way the dbFilename/worker setup above implicitly assumes a
+    // browser, just explicitly this time.
+    if (typeof indexedDB !== 'undefined') {
+      wineAttachmentQueue = createWineAttachmentQueue(db)
+      discoveryAttachmentQueue = createDiscoveryAttachmentQueue(db)
+      void wineAttachmentQueue.startSync()
+      void discoveryAttachmentQueue.startSync()
+    }
   }
   return db
 }

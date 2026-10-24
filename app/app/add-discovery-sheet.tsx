@@ -94,17 +94,22 @@ export function AddDiscoverySheet({ cellarId, userId }: { cellarId: string; user
 
       if (photoFile) {
         try {
-          // The discovery row above is only queued locally -- PowerSync uploads it
-          // asynchronously via the normal CRUD queue. The photo's own upload (both
-          // its discovery_photos metadata row and its bytes) authorizes itself by
-          // looking the discovery up server-side (resolveDiscoveryFamily), so
-          // queuing the photo before that upload lands would 404 and get silently
-          // discarded forever (connector.ts treats any 4xx as permanently invalid,
-          // not transient -- see its comment). This direct, awaited PUT mirrors
-          // exactly what the CRUD connector would send, so it's a no-op 23505 once
-          // that catches up -- it just guarantees the row exists remotely first.
+          // Best-effort head start, not a prerequisite: if this lands before
+          // the queue below tries to upload bytes, it avoids a 404 (the
+          // bytes upload authorizes itself by looking the discovery up
+          // server-side via resolveDiscoveryFamily). Offline, this just
+          // throws and is ignored -- the photo queues below regardless, and
+          // a failed byte upload retries indefinitely (no errorHandler
+          // configured, see attachment-queues.ts) until the discovery row
+          // itself has synced through the normal CRUD queue. This mirrors
+          // exactly what that queue would send, so it's a no-op 23505 once
+          // it catches up.
           await apiMutate('PUT', `/discoveries/${id}`, discoveryFields)
+        } catch {
+          // See comment above -- queuing the photo below doesn't depend on this.
+        }
 
+        try {
           const compressed = await compressImage(photoFile)
           const ext = ALLOWED_PHOTO_TYPES[compressed.type]
           if (ext) {

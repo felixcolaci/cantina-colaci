@@ -77,19 +77,26 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
 
       if (photoFile) {
         try {
-          // Same reasoning as AddDiscoverySheet's photo step: the wine row is
-          // only queued locally above, so its photo upload (which authorizes
-          // itself by looking the wine up server-side) would 404 and get
-          // silently discarded if queued before that row lands remotely.
-          // This direct, awaited PUT mirrors the CRUD connector's own insert
-          // and is a no-op 23505 once that catches up.
+          // Best-effort head start, not a prerequisite: if this lands before
+          // the queue below tries to upload bytes, it avoids a 404 (the wine
+          // row is otherwise only queued locally above, and the bytes upload
+          // authorizes itself by looking the wine up server-side). Offline,
+          // this just throws and is ignored -- the photo queues below
+          // regardless, and a failed byte upload retries indefinitely (no
+          // errorHandler configured, see attachment-queues.ts) until the
+          // wine row itself has synced. This mirrors the CRUD connector's
+          // own insert and is a no-op 23505 once that catches up.
           await apiMutate('PUT', `/wines/${wineId}`, {
             cellar_id: cellarId,
             name: trimmedName,
             producer: trimmedProducer,
             type: wineType,
           })
+        } catch {
+          // See comment above -- queuing the photo below doesn't depend on this.
+        }
 
+        try {
           const compressed = await compressImage(photoFile)
           const ext = ALLOWED_PHOTO_TYPES[compressed.type]
           if (ext) {

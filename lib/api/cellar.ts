@@ -23,6 +23,24 @@ export function parseCreateCellarBody(body: unknown): CreateCellarInput | null {
   return { name, seed: b.seed === true }
 }
 
+export type CellarRename = { name: string }
+
+/**
+ * Validates a PATCH /api/v1/cellars/[id] body: the only field a cellar can
+ * ever be patched with is its name (app/app/edit-cellar-name-sheet.tsx) --
+ * same trim-and-cap-at-60 shape as a fresh create (parseCreateCellarBody).
+ */
+export function parseCellarRename(body: unknown): CellarRename | null {
+  if (!body || typeof body !== 'object') return null
+  const b = body as Record<string, unknown>
+
+  if (typeof b.name !== 'string') return null
+  const name = b.name.trim().slice(0, 60)
+  if (!name) return null
+
+  return { name }
+}
+
 /**
  * Confirms `cellarId` actually belongs to `familyId` before it's allowed
  * into a cross-table reference -- family_members.current_cellar_id (cellar

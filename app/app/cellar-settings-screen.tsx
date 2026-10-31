@@ -12,6 +12,7 @@ import { ResetCellarSheet } from '@/app/app/reset-cellar-sheet'
 import { ResetFamilySheet } from '@/app/app/reset-family-sheet'
 import { StartOwnCellarSheet } from '@/app/app/start-own-cellar-sheet'
 import { CellarSwitcher } from '@/app/app/cellar-switcher'
+import { EditCellarNameSheet } from '@/app/app/edit-cellar-name-sheet'
 import { EditNameSheet } from '@/app/app/edit-name-sheet'
 import { ThemePreferenceControl } from '@/app/app/theme-preference-control'
 import { BackLink } from '@/app/app/back-link'
@@ -145,9 +146,12 @@ export function CellarSettingsScreen({ cellarId }: { cellarId: string }) {
 
       <div>
         <p className="eyebrow mb-1">Einstellungen</p>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: 'var(--tracking-tight)', margin: 0 }}>
-          {cellarLoading ? '…' : cellarName ?? 'Keller'}
-        </h1>
+        <div className="flex items-center gap-1">
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: 'var(--tracking-tight)', margin: 0 }}>
+            {cellarLoading ? '…' : cellarName ?? 'Keller'}
+          </h1>
+          {!cellarLoading && <EditCellarNameSheet cellarId={cellarId} currentName={cellarName ?? ''} />}
+        </div>
       </div>
 
       <div className="flex flex-col gap-1">

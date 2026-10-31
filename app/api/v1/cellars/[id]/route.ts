@@ -1,8 +1,36 @@
-import { requireApiUser, apiAuthErrorResponse } from '@/lib/api/auth'
+import { requireApiUser, requireOwnCellar, apiAuthErrorResponse } from '@/lib/api/auth'
 import { requireFamilyMembership, requireOwnerRole } from '@/lib/api/family'
-import { requireCellarInFamily } from '@/lib/api/cellar'
+import { requireCellarInFamily, parseCellarRename } from '@/lib/api/cellar'
 import { wipeCellarData, confirmMatches } from '@/lib/api/reset'
 import { createAdminClient } from '@/lib/supabase/server'
+
+// The PowerSync upload connector's target for a local `cellars` row's
+// UPDATE (EditCellarNameSheet's rename, app/app/edit-cellar-name-sheet.tsx)
+// -- same local-first pattern as EditNameSheet's family_members PATCH.
+// requireOwnCellar, not requireCellarInFamily: renaming is scoped to
+// whichever cellar the caller is currently viewing, not any cellar their
+// family happens to have (CellarSwitcher's list only ever shows other
+// cellars' names read-only).
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requireApiUser(request)
+    const { id: cellarId } = await params
+    const body = await request.json().catch(() => null)
+
+    const fields = parseCellarRename(body)
+    if (!fields) return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
+
+    const admin = createAdminClient()
+    await requireOwnCellar(admin, user, cellarId)
+
+    const { error } = await admin.from('cellars').update(fields).eq('id', cellarId)
+    if (error) return Response.json({ error: error.message }, { status: 500 })
+
+    return new Response(null, { status: 204 })
+  } catch (err) {
+    return apiAuthErrorResponse(err) ?? Response.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
 
 // Owner-only, mirrors the reset routes' confirm-by-name gate (the caller
 // must type the cellar's exact name back). Wipes the cellar's data first

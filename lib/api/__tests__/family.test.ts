@@ -41,6 +41,26 @@ describe('parseFamilyMemberPatch', () => {
     expect(parseFamilyMemberPatch({ theme_preference: 42 })).toBeNull()
     expect(parseFamilyMemberPatch({ theme_preference: null })).toBeNull()
   })
+
+  it('accepts a current_cellar_id string on its own', () => {
+    expect(parseFamilyMemberPatch({ current_cellar_id: 'cellar-1' })).toEqual({ current_cellar_id: 'cellar-1' })
+  })
+
+  it('accepts null current_cellar_id (reverting to the fallback cellar)', () => {
+    expect(parseFamilyMemberPatch({ current_cellar_id: null })).toEqual({ current_cellar_id: null })
+  })
+
+  it('rejects a non-string, non-null current_cellar_id', () => {
+    expect(parseFamilyMemberPatch({ current_cellar_id: 42 })).toBeNull()
+  })
+
+  it('accepts current_cellar_id alongside display_name and theme_preference', () => {
+    expect(parseFamilyMemberPatch({ display_name: 'Felix', theme_preference: 'dark', current_cellar_id: 'cellar-1' })).toEqual({
+      display_name: 'Felix',
+      theme_preference: 'dark',
+      current_cellar_id: 'cellar-1',
+    })
+  })
 })
 
 describe('requireOwnerRole', () => {

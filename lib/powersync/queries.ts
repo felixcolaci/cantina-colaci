@@ -401,21 +401,39 @@ export function useStorageLocationsSettings(cellarId: string) {
   return { storageLocations: data, isLoading, error }
 }
 
-type OwnFamilyMemberRow = { id: string; display_name: string | null; theme_preference: string | null }
+type OwnFamilyMemberRow = {
+  id: string
+  family_id: string
+  display_name: string | null
+  theme_preference: string | null
+  current_cellar_id: string | null
+}
 
-const OWN_FAMILY_MEMBER_SQL = `SELECT id, display_name, theme_preference FROM family_members WHERE user_id = ?`
+const OWN_FAMILY_MEMBER_SQL = `
+  SELECT id, family_id, display_name, theme_preference, current_cellar_id
+  FROM family_members WHERE user_id = ?
+`
 
 // The caller's own family_members row -- just enough to drive
-// EditNameSheet's local-first UPDATE (app/app/cellar-settings-screen.tsx)
-// and ThemeProvider's theme_preference sync (lib/theme/theme-provider.tsx).
-// Everyone else's email/display name comes from GET /api/v1/family
-// instead, since resolving another member's email needs a privileged
-// admin call that has no business running on-device.
+// EditNameSheet's local-first UPDATE (app/app/cellar-settings-screen.tsx),
+// ThemeProvider's theme_preference sync (lib/theme/theme-provider.tsx),
+// and ActiveCellarGate / CellarSwitcher's current_cellar_id read+write
+// (lib/spa/router.tsx, app/app/cellar-switcher.tsx). Everyone else's
+// email/display name comes from GET /api/v1/family instead, since
+// resolving another member's email needs a privileged admin call that has
+// no business running on-device.
 export function useOwnFamilyMember(userId: string) {
   const { data, isLoading } = useQuery<OwnFamilyMemberRow>(OWN_FAMILY_MEMBER_SQL, [userId])
   const row = data[0] ?? null
   const themePreference: ThemePreference = isThemePreference(row?.theme_preference) ? row.theme_preference : 'system'
-  return { id: row?.id ?? null, displayName: row?.display_name ?? null, themePreference, isLoading }
+  return {
+    id: row?.id ?? null,
+    familyId: row?.family_id ?? null,
+    displayName: row?.display_name ?? null,
+    themePreference,
+    currentCellarId: row?.current_cellar_id ?? null,
+    isLoading,
+  }
 }
 
 type CellarRow = { name: string }
@@ -429,6 +447,20 @@ const CELLAR_SQL = `SELECT name FROM cellars WHERE id = ?`
 export function useCellar(cellarId: string) {
   const { data, isLoading } = useQuery<CellarRow>(CELLAR_SQL, [cellarId])
   return { name: data[0]?.name ?? null, isLoading }
+}
+
+export type CellarOption = { id: string; name: string }
+
+const CELLARS_SQL = `SELECT id, name FROM cellars WHERE family_id = ? ORDER BY created_at ASC`
+
+// Every cellar the caller's family has, oldest first -- the same
+// ordering get_cellar_context falls back to server-side. Backs
+// CellarSwitcher's list (app/app/cellar-switcher.tsx) and
+// ActiveCellarGate's own fallback when no family_members.current_cellar_id
+// is set yet (lib/spa/router.tsx).
+export function useCellars(familyId: string) {
+  const { data, isLoading } = useQuery<CellarOption>(CELLARS_SQL, [familyId])
+  return { cellars: data, isLoading }
 }
 
 export type TripSummary = {

@@ -10,6 +10,7 @@ import type { SyncStatus } from '@powersync/web'
 import { createClient } from '@/lib/supabase/client'
 import { logout } from '@/lib/auth/logout'
 import { apiGet, apiMutate, ApiError } from '@/lib/spa/api-client'
+import { useOwnFamilyMember, useCellars } from '@/lib/powersync/queries'
 import { AppLoadingScreen } from '@/components/app-loading-screen'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -414,6 +415,36 @@ function ResetPasswordCard({ onDone }: { onDone: () => void }) {
   )
 }
 
+// Resolves which cellar the signed-in user is currently viewing entirely
+// from the local PowerSync DB, instead of /api/v1/me's one-time
+// get_cellar_context read: by the time MeShell renders, hasSynced is
+// already true, so family_members and cellars are already available
+// locally. Preferring the member's own current_cellar_id (switched
+// locally via CellarSwitcher, app/app/cellar-switcher.tsx) over that
+// server snapshot means switching cellars takes effect immediately and
+// offline, the same way theme_preference changes do (lib/theme/
+// theme-provider.tsx) -- no round trip through /api/v1/me needed. Falls
+// back to the family's oldest cellar (same ordering get_cellar_context
+// uses) once the local cellars list has loaded, and only to the one-time
+// /me snapshot while that's still catching up.
+function ActiveCellarGate({ userId, meCellarId }: { userId: string; meCellarId: string | null }) {
+  const { familyId, currentCellarId, isLoading: memberLoading } = useOwnFamilyMember(userId)
+  const { cellars, isLoading: cellarsLoading } = useCellars(familyId ?? '')
+  const stillLoading = memberLoading || (Boolean(familyId) && cellarsLoading)
+
+  const cellarId = currentCellarId ?? cellars[0]?.id ?? (stillLoading ? meCellarId : null)
+
+  if (!cellarId) return <p className="px-4 text-sm text-muted-foreground">Lade Keller…</p>
+
+  return (
+    <CellarIdContext.Provider value={cellarId}>
+      <UserIdContext.Provider value={userId}>
+        <Outlet />
+      </UserIdContext.Provider>
+    </CellarIdContext.Provider>
+  )
+}
+
 function MeShell() {
   const { data, isLoading, error } = useQuery<Me>({
     queryKey: ['me'],
@@ -430,13 +461,7 @@ function MeShell() {
       </div>
       {isLoading && <p className="px-4 text-sm text-muted-foreground">Lade…</p>}
       {error && <p className="px-4 text-sm text-destructive">{(error as Error).message}</p>}
-      {data?.cellarId && (
-        <CellarIdContext.Provider value={data.cellarId}>
-          <UserIdContext.Provider value={data.userId}>
-            <Outlet />
-          </UserIdContext.Provider>
-        </CellarIdContext.Provider>
-      )}
+      {data?.familyId && <ActiveCellarGate userId={data.userId} meCellarId={data.cellarId} />}
     </div>
   )
 }

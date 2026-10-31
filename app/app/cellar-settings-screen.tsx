@@ -11,6 +11,7 @@ import { logout } from '@/lib/auth/logout'
 import { ResetCellarSheet } from '@/app/app/reset-cellar-sheet'
 import { ResetFamilySheet } from '@/app/app/reset-family-sheet'
 import { StartOwnCellarSheet } from '@/app/app/start-own-cellar-sheet'
+import { CellarSwitcher } from '@/app/app/cellar-switcher'
 import { EditNameSheet } from '@/app/app/edit-name-sheet'
 import { ThemePreferenceControl } from '@/app/app/theme-preference-control'
 import { BackLink } from '@/app/app/back-link'
@@ -118,7 +119,7 @@ function InviteSection() {
 export function CellarSettingsScreen({ cellarId }: { cellarId: string }) {
   const { name: cellarName, isLoading: cellarLoading } = useCellar(cellarId)
   const userId = useCurrentUserId()
-  const { id: ownMemberId, displayName: ownDisplayName } = useOwnFamilyMember(userId ?? '')
+  const { id: ownMemberId, familyId, displayName: ownDisplayName } = useOwnFamilyMember(userId ?? '')
   // Single GET /api/v1/family response backs both the cellar's owner/demo
   // flags and the family section below -- one query cache entry instead of
   // the two separate screens that used to each fetch it.
@@ -197,6 +198,17 @@ export function CellarSettingsScreen({ cellarId }: { cellarId: string }) {
               ))}
             </div>
           </div>
+
+          {familyId && (
+            <div className="pt-6" style={{ borderTop: '1px solid var(--border)' }}>
+              <CellarSwitcher
+                familyId={familyId}
+                activeCellarId={cellarId}
+                memberId={ownMemberId}
+                isOwner={data.role === 'owner'}
+              />
+            </div>
+          )}
 
           <div className="pt-6" style={{ borderTop: '1px solid var(--border)' }}>
             <h3 className="mb-2" style={{ fontSize: 'var(--text-base)', fontWeight: 500 }}>Darstellung</h3>

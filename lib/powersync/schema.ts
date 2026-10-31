@@ -28,6 +28,7 @@ const family_members = new Table({
   joined_at: column.text,
   display_name: column.text,
   theme_preference: column.text,
+  current_cellar_id: column.text,
 })
 
 const cellars = new Table(

@@ -1,11 +1,13 @@
 import { requireApiUser, apiAuthErrorResponse, ApiAuthError } from '@/lib/api/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { parseFamilyMemberPatch } from '@/lib/api/family'
+import { requireCellarInFamily } from '@/lib/api/cellar'
 
 // The PowerSync upload connector's target for a local `family_members`
-// row's UPDATE (display name edits, see app/app/edit-name-sheet.tsx, and
-// theme preference changes, see lib/theme/theme-provider.tsx) --
-// family_members has only a surrogate `id` (added in
+// row's UPDATE (display name edits, see app/app/edit-name-sheet.tsx,
+// theme preference changes, see lib/theme/theme-provider.tsx, and cellar
+// switching, see app/app/cellar-switcher.tsx) -- family_members has only
+// a surrogate `id` (added in
 // supabase/migrations/20261021092549_family_members_surrogate_id.sql)
 // specifically so PowerSync can address it. No PUT here: new rows only
 // ever land via the redeem_family_invite RPC, never a direct client
@@ -20,12 +22,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!fields) return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
 
     const admin = createAdminClient()
-    const { data: existing } = await admin.from('family_members').select('user_id').eq('id', id).maybeSingle()
+    const { data: existing } = await admin.from('family_members').select('user_id, family_id').eq('id', id).maybeSingle()
     if (!existing) return Response.json({ error: 'Eintrag nicht gefunden' }, { status: 404 })
     // Self-only: a member can rename themselves, never another member --
     // tighter than the usual requireOwnCellar check since there's no
     // family-wide write to defend here.
     if (existing.user_id !== user.id) throw new ApiAuthError('Ungültiger Eintrag', 403)
+
+    // A member may only ever switch into a cellar their own family
+    // actually has -- otherwise this PATCH would let them point their
+    // cellar context at any uuid, synced table or not.
+    if (fields.current_cellar_id) {
+      await requireCellarInFamily(admin, fields.current_cellar_id, existing.family_id)
+    }
 
     const { error } = await admin.from('family_members').update(fields).eq('id', id)
     if (error) return Response.json({ error: error.message }, { status: 500 })

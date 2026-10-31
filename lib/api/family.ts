@@ -34,15 +34,20 @@ export function requireOwnerRole(membership: FamilyMembership): void {
 type FamilyMemberPatchFields = {
   display_name?: string | null
   theme_preference?: ThemePreference
+  current_cellar_id?: string | null
 }
 
 /**
  * Validates a PATCH /api/v1/family_members/[id] body. The only fields a
- * member can ever patch on their own row are display_name and
- * theme_preference -- role/family_id changes aren't exposed through this
- * route at all. Either field may be present on its own or both together;
- * a body with neither (or an invalid value for one that is present) is
- * rejected.
+ * member can ever patch on their own row are display_name,
+ * theme_preference and current_cellar_id (which cellar they're currently
+ * viewing, app/app/cellar-switcher.tsx) -- role/family_id changes aren't
+ * exposed through this route at all. Any subset of these may be present
+ * together; a body with none of them (or an invalid value for one that
+ * is present) is rejected. Shape only -- the route still has to confirm
+ * current_cellar_id actually names a cellar in the caller's own family
+ * (lib/api/cellar.ts's requireCellarInFamily), which needs a DB lookup
+ * this pure parser can't do.
  */
 export function parseFamilyMemberPatch(body: unknown): FamilyMemberPatchFields | null {
   if (!body || typeof body !== 'object') return null
@@ -59,6 +64,12 @@ export function parseFamilyMemberPatch(body: unknown): FamilyMemberPatchFields |
     const value = b.theme_preference
     if (!isThemePreference(value)) return null
     fields.theme_preference = value
+  }
+
+  if ('current_cellar_id' in b) {
+    const value = b.current_cellar_id
+    if (value !== null && typeof value !== 'string') return null
+    fields.current_cellar_id = value
   }
 
   if (Object.keys(fields).length === 0) return null

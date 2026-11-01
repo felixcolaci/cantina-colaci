@@ -69,6 +69,7 @@ const skus = new Table(
     trip_id: column.text,
     storage_location_id: column.text,
     status: column.text,
+    opened_by: column.text,
     created_at: column.text,
   },
   { indexes: { wine: ['wine_id'] } }

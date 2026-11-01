@@ -48,6 +48,7 @@ export interface Sku {
   photo_path: string | null
   trip_id: string | null
   status: EntryStatus
+  opened_by: string | null
   created_at: string
 }
 

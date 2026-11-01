@@ -153,6 +153,8 @@ export type WineDetailEntry = {
   status: EntryStatus
   storageLocationId: string | null
   storageLocationName: string | null
+  openedBy: string | null
+  ratedByMe: boolean
 }
 
 export type WineDetailTasting = {
@@ -184,6 +186,8 @@ type EntryRow = {
   status: string
   storage_location_id: string | null
   storage_location_name: string | null
+  opened_by: string | null
+  rated_by_me: number
 }
 
 type TastingRow = {
@@ -210,7 +214,11 @@ const ENTRIES_SQL = `
     skus.shelf_location AS shelf_location,
     skus.status AS status,
     skus.storage_location_id AS storage_location_id,
-    storage_locations.name AS storage_location_name
+    storage_locations.name AS storage_location_name,
+    skus.opened_by AS opened_by,
+    EXISTS (
+      SELECT 1 FROM tastings WHERE tastings.cellar_entry_id = skus.id AND tastings.user_id = ?
+    ) AS rated_by_me
   FROM skus
   LEFT JOIN storage_locations ON storage_locations.id = skus.storage_location_id
   WHERE skus.wine_id = ?
@@ -225,9 +233,9 @@ const TASTINGS_SQL = `
   ORDER BY tastings.date DESC
 `
 
-export function useWineDetail(wineId: string) {
+export function useWineDetail(wineId: string, userId: string) {
   const wineQuery = useQuery<WineRow>(WINE_SQL, [wineId])
-  const entriesQuery = useQuery<EntryRow>(ENTRIES_SQL, [wineId])
+  const entriesQuery = useQuery<EntryRow>(ENTRIES_SQL, [userId, wineId])
   const tastingsQuery = useQuery<TastingRow>(TASTINGS_SQL, [wineId])
 
   const wineRow = wineQuery.data[0] ?? null
@@ -253,6 +261,8 @@ export function useWineDetail(wineId: string) {
     status: row.status as EntryStatus,
     storageLocationId: row.storage_location_id,
     storageLocationName: row.storage_location_name,
+    openedBy: row.opened_by,
+    ratedByMe: !!row.rated_by_me,
   }))
 
   const tastings: WineDetailTasting[] = tastingsQuery.data.map(row => ({
@@ -277,6 +287,8 @@ export type CellarStats = {
   ratedCount: number
   oldestVintage: number | null
   lastAdded: { wineName: string; vintage: number | null } | null
+  pendingTastingsCount: number
+  nextPendingWineId: string | null
 }
 
 type StatsRow = {
@@ -321,12 +333,32 @@ const RATING_SQL = `
   WHERE wines.cellar_id = ?
 `
 
+type PendingRow = { wine_id: string; created_at: string }
+
+// Entries the current user opened (any status -- a bottle doesn't need to
+// be fully consumed to be "waiting for your rating") and hasn't rated yet.
+// Scoped to opened_by, not to every cellar member, so nobody is nagged
+// about a bottle they never touched -- see docs/specs/open-rate-separation.md.
+// Oldest-opened first, so the badge always points at the longest-waiting one.
+const PENDING_TASTINGS_SQL = `
+  SELECT skus.wine_id AS wine_id, skus.created_at AS created_at
+  FROM skus
+  JOIN wines ON wines.id = skus.wine_id
+  WHERE wines.cellar_id = ?
+    AND skus.opened_by = ?
+    AND NOT EXISTS (
+      SELECT 1 FROM tastings WHERE tastings.cellar_entry_id = skus.id AND tastings.user_id = ?
+    )
+  ORDER BY skus.created_at ASC
+`
+
 // Everything the home screen's "Kellerstatistik" panel shows, aggregated
 // client-side from one flat query -- cheaper than a SQL query per metric,
 // and keeps the shape (one row per in-stock sku) easy to reason about.
-export function useCellarStats(cellarId: string): CellarStats & { isLoading: boolean } {
+export function useCellarStats(cellarId: string, userId: string): CellarStats & { isLoading: boolean } {
   const statsQuery = useQuery<StatsRow>(STATS_SQL, [cellarId])
   const ratingQuery = useQuery<RatingRow>(RATING_SQL, [cellarId])
+  const pendingQuery = useQuery<PendingRow>(PENDING_TASTINGS_SQL, [cellarId, userId, userId])
 
   const rows = statsQuery.data
 
@@ -371,7 +403,9 @@ export function useCellarStats(cellarId: string): CellarStats & { isLoading: boo
     ratedCount: ratingRow?.rated_count ?? 0,
     oldestVintage,
     lastAdded: lastAddedRow ? { wineName: lastAddedRow.wine_name, vintage: lastAddedRow.vintage } : null,
-    isLoading: statsQuery.isLoading || ratingQuery.isLoading,
+    pendingTastingsCount: pendingQuery.data.length,
+    nextPendingWineId: pendingQuery.data[0]?.wine_id ?? null,
+    isLoading: statsQuery.isLoading || ratingQuery.isLoading || pendingQuery.isLoading,
   }
 }
 

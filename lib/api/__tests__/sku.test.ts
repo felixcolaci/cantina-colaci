@@ -81,4 +81,20 @@ describe('parseSkuPatch', () => {
   it('rejects a status outside the known enum', () => {
     expect(parseSkuPatch({ status: 'lost' })).toBeNull()
   })
+
+  it('accepts an opened_by string field', () => {
+    expect(parseSkuPatch({ quantity: 2, status: 'in_stock', opened_by: 'user-1' })).toEqual({
+      quantity: 2,
+      status: 'in_stock',
+      opened_by: 'user-1',
+    })
+  })
+
+  it('rejects a non-string opened_by', () => {
+    expect(parseSkuPatch({ opened_by: 42 })).toBeNull()
+  })
+
+  it('treats an absent opened_by as a no-op field, same as today', () => {
+    expect(parseSkuPatch({ quantity: 2, status: 'in_stock' })).toEqual({ quantity: 2, status: 'in_stock' })
+  })
 })

@@ -54,11 +54,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 // Edit path for an existing sku: the PowerSync upload connector's target for
 // a local `skus` row's UPDATE (UpdateType.PATCH, see lib/powersync/connector.ts).
-// Currently only driven by the "open bottle" action (app/app/open-bottle-button.tsx),
-// which decrements quantity and flips status client-side, then lets this route
-// persist exactly those two columns -- it doesn't (yet) write a tasting row the
-// way the legacy openBottle action did in one transaction; that's the tasting-
-// migration's job to add back, either here or alongside its own insert.
+// Driven by the "open bottle" action (app/app/open-bottle-button.tsx), which
+// decrements quantity, flips status, and sets opened_by client-side, then
+// lets this route persist those columns. Rating is a fully separate local
+// insert into `tastings` (PUT /api/v1/tastings/[id]) that never touches this
+// route -- see docs/specs/open-rate-separation.md.
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireApiUser(request)
@@ -69,6 +69,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!fields || Object.keys(fields).length === 0) {
       return Response.json({ error: 'Ungültige Eingabe' }, { status: 400 })
     }
+
+    // opened_by is overridden from the verified session, not trusted from
+    // fields.opened_by -- the body's value is only needed so the local
+    // PowerSync row (written before this route ever runs) has something to
+    // display immediately; without this override, any family member could
+    // attribute an open to a different member.
+    if ('opened_by' in fields) fields.opened_by = user.id
 
     const admin = createAdminClient()
     const { data: existing } = await admin.from('skus').select('wine_id').eq('id', id).maybeSingle()

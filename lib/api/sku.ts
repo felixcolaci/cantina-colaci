@@ -50,15 +50,22 @@ export function parseSkuInsertExtra(body: unknown): SkuInsertExtra | null {
 export type SkuPatchFields = {
   quantity?: number
   status?: EntryStatus
+  opened_by?: string
 }
 
 /**
- * Validates a PATCH /api/v1/skus/[id] body. Currently only used by the
- * "open bottle" action (app/app/open-bottle-button.tsx), which only ever
- * sends quantity + status together -- but each field is independently
- * optional/validated the same way parseWinePatch treats wines, so a future
- * caller (e.g. editing an existing sku's purchase details) can PATCH a
- * subset without this needing to change.
+ * Validates a PATCH /api/v1/skus/[id] body. Used by the "open bottle"
+ * action (app/app/open-bottle-button.tsx), which sends quantity + status +
+ * opened_by together -- but each field is independently optional/validated
+ * the same way parseWinePatch treats wines, so a future caller (e.g.
+ * editing an existing sku's purchase details) can PATCH a subset without
+ * this needing to change.
+ *
+ * opened_by's value here is only shape-validated, never trusted as the
+ * actual id to write -- the route overrides it with the authenticated
+ * caller's own id before the update, the same way tastings' PUT route
+ * overrides user_id (see requireOwnCellarForSku's call site), so a family
+ * member can't attribute an open to someone else.
  */
 export function parseSkuPatch(body: unknown): SkuPatchFields | null {
   if (!body || typeof body !== 'object') return null
@@ -72,6 +79,10 @@ export function parseSkuPatch(body: unknown): SkuPatchFields | null {
   if ('status' in b) {
     if (!SKU_PATCH_STATUSES.includes(b.status as EntryStatus)) return null
     fields.status = b.status as EntryStatus
+  }
+  if ('opened_by' in b) {
+    if (typeof b.opened_by !== 'string') return null
+    fields.opened_by = b.opened_by
   }
 
   return fields

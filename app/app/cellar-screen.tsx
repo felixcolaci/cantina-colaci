@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Plane, History, Settings, Compass } from 'lucide-react'
 import { useCellarWines, useCellar } from '@/lib/powersync/queries'
+import { useUserId } from '@/lib/spa/router'
 import { WineCard, BottleGlyph } from '@/components/cellar/wine-card'
 import { CellarStatsPanel } from '@/components/cellar/cellar-stats'
 import { QuickAddSheet } from '@/app/app/quick-add-sheet'
@@ -51,6 +52,7 @@ function greeting(): string {
 }
 
 export function CellarScreen({ cellarId }: { cellarId: string }) {
+  const userId = useUserId()
   const [type, setType] = useState<WineType | null>(null)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
@@ -96,7 +98,7 @@ export function CellarScreen({ cellarId }: { cellarId: string }) {
         </div>
       </div>
 
-      <CellarStatsPanel cellarId={cellarId} />
+      <CellarStatsPanel cellarId={cellarId} userId={userId} />
 
       <p className="eyebrow mb-3">Dein Keller</p>
 

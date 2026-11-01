@@ -1,4 +1,5 @@
-import { Star, Coins, Clock3, Sparkles } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Star, Coins, Clock3, Sparkles, Wine as WineIcon } from 'lucide-react'
 import { useCellarStats } from '@/lib/powersync/queries'
 import type { WineType } from '@/lib/types'
 
@@ -28,8 +29,8 @@ function backgroundForTimeOfDay(): string {
   return '/stats-background-night.jpg'
 }
 
-export function CellarStatsPanel({ cellarId }: { cellarId: string }) {
-  const stats = useCellarStats(cellarId)
+export function CellarStatsPanel({ cellarId, userId }: { cellarId: string; userId: string }) {
+  const stats = useCellarStats(cellarId, userId)
 
   if (stats.isLoading) {
     return (
@@ -57,6 +58,21 @@ export function CellarStatsPanel({ cellarId }: { cellarId: string }) {
         <p className="mt-1 text-sm" style={{ color: 'var(--muted-foreground)' }}>
           Die erste Flasche macht aus dem Keller ein Zuhause.
         </p>
+        {/* totalBottles only counts in-stock skus, so an emptied cellar can
+            still have a last, unrated bottle waiting -- keep the reminder
+            reachable even from this empty state. */}
+        {stats.pendingTastingsCount > 0 && stats.nextPendingWineId && (
+          <Link
+            to="/wine/$id"
+            params={{ id: stats.nextPendingWineId }}
+            className="inline-flex items-center gap-1.5 mt-3 text-sm"
+            style={{ color: 'var(--foreground)' }}
+          >
+            <WineIcon className="h-3.5 w-3.5 flex-none" style={{ color: 'var(--accent)' }} />
+            <span className="nums font-medium">{stats.pendingTastingsCount}</span>{' '}
+            {stats.pendingTastingsCount === 1 ? 'Flasche wartet' : 'Flaschen warten'} auf deine Bewertung
+          </Link>
+        )}
       </div>
     )
   }
@@ -185,6 +201,21 @@ export function CellarStatsPanel({ cellarId }: { cellarId: string }) {
               {stats.lastAdded.wineName}{stats.lastAdded.vintage ? ` ${stats.lastAdded.vintage}` : ''}
             </span>
           </p>
+        )}
+
+        {/* Bottles I opened and haven't rated yet -- scoped to me, never to
+            other family members' opens (see docs/specs/open-rate-separation.md) */}
+        {stats.pendingTastingsCount > 0 && stats.nextPendingWineId && (
+          <Link
+            to="/wine/$id"
+            params={{ id: stats.nextPendingWineId }}
+            className="flex items-center gap-1.5 mt-3 pt-3 text-sm relative"
+            style={{ borderTop: '1px solid var(--border)', color: 'var(--foreground)' }}
+          >
+            <WineIcon className="h-3.5 w-3.5 flex-none" style={{ color: 'var(--accent)' }} />
+            <span className="nums font-medium">{stats.pendingTastingsCount}</span>{' '}
+            {stats.pendingTastingsCount === 1 ? 'Flasche wartet' : 'Flaschen warten'} auf deine Bewertung
+          </Link>
         )}
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
-import { Plus } from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Plus, X } from 'lucide-react'
 import { usePowerSync } from '@powersync/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,8 +28,8 @@ const WINE_TYPES: { value: WineType; label: string }[] = [
 // the transaction commits locally, so the UI never calls the network
 // directly for them -- lib/powersync/connector.ts drains the queue into the
 // PUT /api/v1/wines/[id] and /api/v1/skus/[id] routes, online or not. The
-// optional photo is the one exception, same as AddDiscoverySheet
-// (app/app/add-discovery-sheet.tsx): it needs a direct, awaited network step.
+// optional photos are the one exception, same pattern as AddDiscoverySheet
+// (app/app/add-discovery-sheet.tsx): each needs a direct, awaited network step.
 export function QuickAddSheet({ cellarId }: { cellarId: string }) {
   const db = usePowerSync()
   const [open, setOpen] = useState(false)
@@ -37,16 +37,21 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
   const [producer, setProducer] = useState('')
   const [wineType, setWineType] = useState<WineType>('red')
   const [vintage, setVintage] = useState<number | null>(null)
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoFiles, setPhotoFiles] = useState<File[]>([])
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // One object URL per selected file, recreated whenever the file list
+  // changes and revoked on the next change or unmount -- never left to leak.
+  const previewUrls = useMemo(() => photoFiles.map(f => URL.createObjectURL(f)), [photoFiles])
+  useEffect(() => () => previewUrls.forEach(u => URL.revokeObjectURL(u)), [previewUrls])
 
   function reset() {
     setName('')
     setProducer('')
     setWineType('red')
     setVintage(null)
-    setPhotoFile(null)
+    setPhotoFiles([])
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -78,7 +83,7 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
         )
       })
 
-      if (photoFile) {
+      if (photoFiles.length > 0) {
         try {
           // Best-effort head start, not a prerequisite: if this lands before
           // the queue below tries to upload bytes, it avoids a 404 (the wine
@@ -96,18 +101,24 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
             type: wineType,
           })
         } catch {
-          // See comment above -- queuing the photo below doesn't depend on this.
+          // See comment above -- queuing the photos below doesn't depend on this.
         }
 
-        try {
-          const compressed = await compressImage(photoFile)
-          const ext = ALLOWED_PHOTO_TYPES[compressed.type]
-          if (ext) {
-            const { family_id: familyId } = await db.get<{ family_id: string }>(
-              'SELECT family_id FROM cellars WHERE id = ?',
-              [cellarId],
-            )
-            const queue = getWineAttachmentQueue()
+        const { family_id: familyId } = await db.get<{ family_id: string }>(
+          'SELECT family_id FROM cellars WHERE id = ?',
+          [cellarId],
+        )
+        const queue = getWineAttachmentQueue()
+
+        // Uploaded sequentially (same as WinePhotoGallery's own camera
+        // button) so sort_order comes out in picker order and one failure
+        // can't crowd out the others sharing a queue/compression worker.
+        for (let sortOrder = 0; sortOrder < photoFiles.length; sortOrder++) {
+          try {
+            const compressed = await compressImage(photoFiles[sortOrder])
+            const ext = ALLOWED_PHOTO_TYPES[compressed.type]
+            if (!ext) continue // e.g. ProRAW (.dng)
+
             const photoId = await queue.generateAttachmentId()
             const path = buildWinePhotoPath(familyId, wineId, photoId, ext)
 
@@ -120,13 +131,13 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
               updateHook: async innerTx => {
                 await innerTx.execute(
                   'INSERT INTO wine_photos (id, wine_id, path, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
-                  [photoId, wineId, path, 0, new Date().toISOString()],
+                  [photoId, wineId, path, sortOrder, new Date().toISOString()],
                 )
               },
             })
+          } catch {
+            // See comment above -- the wine stays saved, just missing this one photo.
           }
-        } catch {
-          // See comment above -- the wine stays saved, just without a photo.
         }
       }
 
@@ -228,11 +239,33 @@ export function QuickAddSheet({ cellarId }: { cellarId: string }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="qs-photo">Foto (Etikett)</Label>
+            <Label htmlFor="qs-photo">Fotos (Etikett)</Label>
             <Input
-              id="qs-photo" type="file" accept="image/*"
-              onChange={e => setPhotoFile(e.target.files?.[0] ?? null)}
+              id="qs-photo" type="file" accept="image/*" multiple
+              onChange={e => {
+                setPhotoFiles(prev => [...prev, ...Array.from(e.target.files ?? [])])
+                e.target.value = ''
+              }}
             />
+            {photoFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {previewUrls.map((url, index) => (
+                  <div key={url} className="relative w-16 h-16 rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- transient local blob: preview, not worth next/image's config here */}
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPhotoFiles(prev => prev.filter((_, i) => i !== index))}
+                      className="absolute top-0.5 right-0.5 flex items-center justify-center w-5 h-5 rounded-full"
+                      style={{ background: 'rgba(0,0,0,0.55)', color: 'white' }}
+                      aria-label="Foto entfernen"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {error && <p className="text-sm" style={{ color: 'var(--destructive)' }}>{error}</p>}

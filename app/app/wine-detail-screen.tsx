@@ -2,12 +2,14 @@
 
 import { Link } from '@tanstack/react-router'
 import { ChevronLeft } from 'lucide-react'
-import { useWineDetail } from '@/lib/powersync/queries'
+import { useWineDetail, type WineDetailEntry } from '@/lib/powersync/queries'
+import { useUserId } from '@/lib/spa/router'
 import { WinePhotoGallery } from '@/app/app/wine-photo-gallery'
 import { WineEditSheet } from '@/app/app/wine-edit-sheet'
 import { AddSkuSheet } from '@/app/app/add-sku-sheet'
 import { SkuEditSheet } from '@/app/app/sku-edit-sheet'
 import { OpenBottleButton } from '@/app/app/open-bottle-button'
+import { AddTastingSheet } from '@/app/app/add-tasting-sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { WineType } from '@/lib/types'
 
@@ -46,8 +48,28 @@ function formatMoney(value: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
 }
 
+// Compact row shared by the "Offene Flaschen ohne Bewertung" and "Weitere
+// geöffnete Flaschen" sections -- unlike the in-stock cards above, these
+// entries have no remaining bottles to manage (or aren't mine to manage),
+// so all they need is enough context to recognize the batch + a way to rate it.
+function OpenEntryRow({ entry }: { entry: WineDetailEntry }) {
+  return (
+    <div
+      className="rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+      style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+    >
+      <p className="text-sm" style={{ color: 'var(--foreground)' }}>
+        {entry.vintage ?? 'Ohne Jahrgang'}
+        {entry.storageLocationName && ` · ${entry.storageLocationName}`}
+      </p>
+      <AddTastingSheet skuId={entry.id} />
+    </div>
+  )
+}
+
 export function WineDetailScreen({ wineId, cellarId }: { wineId: string; cellarId: string }) {
-  const { wine, entries, tastings, isLoading } = useWineDetail(wineId)
+  const userId = useUserId()
+  const { wine, entries, tastings, isLoading } = useWineDetail(wineId, userId)
 
   if (isLoading) {
     return (
@@ -75,6 +97,15 @@ export function WineDetailScreen({ wineId, cellarId }: { wineId: string; cellarI
   const typeConf = TYPE_CONFIG[wine.type] ?? TYPE_CONFIG.red
   const inStockEntries = entries.filter(e => e.status === 'in_stock')
   const totalBottles = inStockEntries.reduce((sum, e) => sum + e.quantity, 0)
+
+  // Mine to rate: whatever I opened and haven't rated yet, regardless of
+  // status -- scoped to opened_by so nobody else's open bottles show up
+  // here (see docs/specs/open-rate-separation.md).
+  const pendingEntries = entries.filter(e => e.openedBy === userId && !e.ratedByMe)
+  const pendingIds = new Set(pendingEntries.map(e => e.id))
+  // Consumed entries someone else opened (or that I already rated) --
+  // never a reminder for me, but still visible and rateable (AC8).
+  const otherConsumedEntries = entries.filter(e => e.status === 'consumed' && !pendingIds.has(e.id))
 
   return (
     <div className="max-w-lg mx-auto">
@@ -239,8 +270,9 @@ export function WineDetailScreen({ wineId, cellarId }: { wineId: string; cellarI
                     </p>
                   )}
 
-                  <div className="mt-3">
+                  <div className="mt-3 flex gap-2">
                     <OpenBottleButton skuId={entry.id} quantity={entry.quantity} />
+                    <AddTastingSheet skuId={entry.id} />
                   </div>
                 </div>
               ))}
@@ -256,6 +288,27 @@ export function WineDetailScreen({ wineId, cellarId }: { wineId: string; cellarI
             </div>
           )}
         </div>
+
+        {/* Offene Flaschen ohne Bewertung -- scoped to bottles *I* opened */}
+        {pendingEntries.length > 0 && (
+          <div>
+            <p className="eyebrow mb-3">Offene Flaschen ohne Bewertung ({pendingEntries.length})</p>
+            <div className="space-y-2">
+              {pendingEntries.map(entry => <OpenEntryRow key={entry.id} entry={entry} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Consumed entries opened by someone else, or already rated by me --
+            not a reminder, but still visible and rateable (see AC8). */}
+        {otherConsumedEntries.length > 0 && (
+          <div>
+            <p className="eyebrow mb-3">Weitere geöffnete Flaschen ({otherConsumedEntries.length})</p>
+            <div className="space-y-2">
+              {otherConsumedEntries.map(entry => <OpenEntryRow key={entry.id} entry={entry} />)}
+            </div>
+          </div>
+        )}
 
         {/* Notes */}
         {wine.notes && (
